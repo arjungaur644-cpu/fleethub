@@ -1,0 +1,2519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FleetHub — Bus, Tempo & Taxi Rental · Bulandshahr & Khurja</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+:root{
+  --saffron:#FF9F1C;--saffron2:#E8880A;--saffron-soft:#FFF4E0;
+  --navy:#0F172A;--navy2:#1E293B;--navy3:#334155;
+  --cream:#FFFBF2;--cream2:#FFF6E8;
+  --grad-a:#FFE8C7;--grad-b:#FFD7A0;
+  --ink:#1A1412;--t2:#64748B;--t3:#94A3B8;
+  --green:#16A34A;--green-bg:#DCFCE7;--wa:#25D366;
+  --red:#DC2626;--red-bg:#FEE2E2;
+  --purple:#7C3AED;--purple-bg:#F3E8FF;
+  --blue:#2563EB;--blue-bg:#DBEAFE;
+  --line:#EAE2D2;--line2:#F2ECDE;
+  --r:12px;--r2:18px;
+  --disp:'Bricolage Grotesque',sans-serif;--body:'Inter',sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:var(--body);background:var(--cream);color:var(--ink);font-size:14px;line-height:1.5;-webkit-tap-highlight-color:transparent;}
+
+/* TOPBAR */
+.topbar{background:var(--navy);position:sticky;top:0;z-index:1000;}
+.tb-inner{display:flex;align-items:center;justify-content:space-between;padding:0.8rem 1rem;}
+.brand{display:flex;align-items:center;gap:0.5rem;}
+.brand-mark{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,var(--saffron),var(--saffron2));display:flex;align-items:center;justify-content:center;font-size:1.15rem;}
+.brand-t{font-family:var(--disp);font-weight:800;font-size:1.1rem;color:#fff;}
+.brand-t em{color:var(--saffron);font-style:normal;}
+.brand-s{font-size:0.6rem;color:#94A3B8;}
+.menu-btn{width:38px;height:38px;border-radius:10px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);color:#fff;font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+
+/* DRAWER MENU */
+.drawer-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1999;display:none;}
+.drawer-overlay.on{display:block;}
+.drawer{position:fixed;top:0;right:-290px;width:280px;height:100vh;background:var(--navy);z-index:2000;transition:right .28s ease;padding:1.25rem;display:flex;flex-direction:column;}
+.drawer.on{right:0;}
+.drawer-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;}
+.drawer-title{font-family:var(--disp);font-weight:800;color:#fff;font-size:1.05rem;}
+.drawer-x{width:32px;height:32px;border-radius:8px;background:rgba(255,255,255,0.08);border:none;color:#fff;cursor:pointer;font-size:1rem;}
+.dmenu-item{display:flex;align-items:center;gap:0.75rem;padding:0.85rem 0.9rem;border-radius:12px;color:#CBD5E1;font-size:0.88rem;font-weight:600;cursor:pointer;margin-bottom:0.35rem;border:1px solid transparent;}
+.dmenu-item:hover{background:rgba(255,255,255,0.06);}
+.dmenu-item.hl{background:rgba(255,159,28,0.12);border-color:rgba(255,159,28,0.3);color:var(--saffron);}
+.dmenu-item .di{font-size:1.15rem;width:24px;text-align:center;}
+.dmenu-sep{height:1px;background:rgba(255,255,255,0.08);margin:0.75rem 0;}
+.dmenu-foot{margin-top:auto;font-size:0.66rem;color:#64748B;line-height:1.6;}
+
+/* CITY TABS */
+.city-tabs{display:flex;background:var(--navy);padding:0 1rem 0.75rem;gap:0.5rem;}
+.citytab{flex:1;padding:0.5rem;border-radius:10px;text-align:center;font-size:0.78rem;font-weight:700;cursor:pointer;color:#94A3B8;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);}
+.citytab.on{background:var(--saffron);color:var(--navy);border-color:var(--saffron);}
+
+/* BUYER HERO */
+.bhero{background:var(--navy);color:#fff;padding:1.5rem 1rem 2rem;text-align:center;}
+.bhero h1{font-family:var(--disp);font-size:clamp(1.4rem,5vw,2rem);font-weight:800;letter-spacing:-0.02em;line-height:1.12;margin-bottom:1.1rem;}
+.bhero h1 span{color:var(--saffron);}
+/* Airbnb-style search pill */
+.searchpill{display:flex;align-items:center;background:#fff;border-radius:40px;box-shadow:0 4px 18px rgba(0,0,0,0.18);max-width:560px;margin:0 auto;overflow:hidden;}
+.sp-seg{flex:1;text-align:left;padding:0.6rem 1rem;cursor:pointer;min-width:0;}
+.sp-seg.sp-what{border-left:1px solid var(--line);flex:0 0 38%;}
+.sp-label{font-size:0.62rem;font-weight:700;color:var(--ink);letter-spacing:0.02em;}
+.sp-seg input{width:100%;border:none;outline:none;font-family:var(--body);font-size:0.82rem;color:var(--ink);background:none;margin-top:1px;padding:0;}
+.sp-seg input::placeholder{color:var(--t3);}
+.sp-val{font-size:0.82rem;color:var(--t3);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sp-go{flex-shrink:0;width:42px;height:42px;margin:0 6px;border-radius:50%;background:var(--saffron);border:none;color:#fff;font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.sp-go:active{transform:scale(0.94);}
+
+/* MODE PICKER */
+.wrap{max-width:1080px;margin:0 auto;padding:1rem;}
+.mode-row{display:grid;grid-template-columns:1fr 1fr;gap:0.6rem;margin-bottom:1rem;}
+.mcard{border-radius:var(--r2);padding:0.95rem 0.8rem;cursor:pointer;border:2px solid var(--line);background:#fff;text-align:center;transition:all .15s;}
+.mcard .mi{font-size:1.6rem;display:block;margin-bottom:0.25rem;}
+.mcard .mt{font-family:var(--disp);font-weight:800;font-size:0.9rem;}
+.mcard .ms{font-size:0.66rem;color:var(--t3);margin-top:0.1rem;}
+.mcard.urgent.on{border-color:var(--red);background:#FFF5F5;}
+.mcard.plan.on{border-color:var(--saffron);background:var(--saffron-soft);}
+
+/* URGENT BANNER */
+.urgb{background:#FFF5F5;border:1px solid #FECACA;border-radius:var(--r2);padding:0.8rem 0.95rem;margin-bottom:1rem;display:flex;align-items:center;gap:0.7rem;}
+.urgb-pulse{width:36px;height:36px;border-radius:50%;background:var(--red);display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;animation:pulse 1.5s infinite;}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(220,38,38,0.4)}50%{box-shadow:0 0 0 10px rgba(220,38,38,0)}}
+.urgb-t{font-family:var(--disp);font-weight:700;font-size:0.85rem;color:var(--ink);}
+.urgb-s{font-size:0.7rem;color:var(--t2);}
+
+/* EVENT CHIPS */
+.event-row{display:flex;gap:0.45rem;flex-wrap:wrap;margin-bottom:0.85rem;}
+.echip{padding:0.42rem 0.85rem;border-radius:20px;font-size:0.74rem;font-weight:600;cursor:pointer;border:1.5px solid var(--line);background:#fff;color:var(--t2);}
+.echip.on{background:var(--saffron-soft);border-color:var(--saffron);color:#B45309;}
+
+/* CATEGORIES */
+.cat-row{display:flex;gap:0.55rem;overflow-x:auto;padding-bottom:0.5rem;margin:0.4rem 0 0.6rem;scrollbar-width:none;}
+.cat-row::-webkit-scrollbar{display:none;}
+.cat{flex-shrink:0;padding:0.5rem 0.95rem;border-radius:22px;font-size:0.76rem;font-weight:600;cursor:pointer;border:1.5px solid var(--line);background:#fff;color:var(--t2);white-space:nowrap;transition:all .12s;}
+.cat.on{background:var(--navy);color:#fff;border-color:var(--navy);}
+.section-head{display:flex;align-items:baseline;justify-content:space-between;margin:0.3rem 0 0.9rem;}
+.section-head h2{font-family:var(--disp);font-weight:800;font-size:1.05rem;color:var(--ink);}
+.section-head span{font-size:0.74rem;color:var(--t3);}
+
+/* LISTING CARDS */
+.plist{display:grid;grid-template-columns:1fr;gap:0.8rem;}
+@media(min-width:720px){.plist{grid-template-columns:1fr 1fr;}}
+/* AIRBNB-STYLE CARDS — two modes */
+/* Home: horizontal scroll rows */
+.home-row{margin-bottom:1.6rem;}
+.row-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:0.7rem;}
+.row-head h2{font-family:var(--disp);font-weight:800;font-size:1.1rem;color:var(--ink);}
+.row-see{font-size:0.78rem;color:var(--ink);font-weight:600;cursor:pointer;text-decoration:underline;white-space:nowrap;}
+.row-scroll{display:flex;gap:0.9rem;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:0.4rem;scrollbar-width:none;}
+.row-scroll::-webkit-scrollbar{display:none;}
+.pcard{cursor:pointer;transition:transform .15s;}
+.pcard:active{transform:scale(0.985);}
+.pcard-h{flex:0 0 47%;max-width:230px;scroll-snap-align:start;}
+@media(min-width:560px){.pcard-h{flex:0 0 31%;}}
+@media(min-width:820px){.pcard-h{flex:0 0 220px;}}
+/* City view: vertical full-width big cards */
+.plist-vert{display:flex;flex-direction:column;gap:1.4rem;}
+@media(min-width:720px){.plist-vert{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;}}
+.pcard-v .pc-photo{aspect-ratio:3/2;}
+.pcard-v .pc-name{font-size:0.96rem;}
+.pcard-v .pc-loc,.pcard-v .pc-type{font-size:0.82rem;}
+.pcard-v .pc-price{font-size:0.95rem;}
+/* shared photo + body */
+.pc-photo{position:relative;width:100%;aspect-ratio:1/1;border-radius:14px;overflow:hidden;background:var(--cream2);}
+.pc-photo img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .3s;}
+.pcard:hover .pc-photo img{transform:scale(1.04);}
+.pc-photo-fallback{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:3rem;background:linear-gradient(135deg,var(--grad-a),var(--grad-b));}
+.pc-heart{position:absolute;top:10px;right:10px;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:1.05rem;cursor:pointer;z-index:3;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.4));}
+.pc-badge-tl{position:absolute;top:10px;left:10px;background:rgba(255,255,255,0.95);color:var(--ink);font-size:0.6rem;font-weight:700;padding:4px 9px;border-radius:20px;z-index:3;box-shadow:0 1px 4px rgba(0,0,0,0.12);}
+.pc-online-dot{position:absolute;bottom:10px;left:10px;background:rgba(16,163,74,0.95);color:#fff;font-size:0.58rem;font-weight:700;padding:3px 8px;border-radius:20px;z-index:3;display:flex;align-items:center;gap:4px;}
+.pc-online-dot::before{content:'';width:6px;height:6px;border-radius:50%;background:#fff;}
+.pc-body{padding:0.5rem 0.15rem 0;}
+.pc-row1{display:flex;justify-content:space-between;align-items:baseline;gap:0.4rem;}
+.pc-name{font-family:var(--body);font-weight:600;font-size:0.85rem;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3;}
+.pc-rating{font-size:0.76rem;color:var(--ink);font-weight:500;white-space:nowrap;flex-shrink:0;}
+.pc-loc{font-size:0.78rem;color:var(--t3);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.pc-type{font-size:0.78rem;color:var(--t3);margin-top:1px;}
+.pc-price{margin-top:0.3rem;font-size:0.88rem;color:var(--ink);font-weight:700;}
+.pc-price span{font-weight:400;color:var(--t2);font-size:0.82rem;}
+.vbadge{font-size:0.54rem;background:var(--green-bg);color:var(--green);padding:1px 5px;border-radius:6px;font-weight:700;}
+.pc-foot{display:flex;gap:0.4rem;margin-top:0.5rem;}
+.cbtn{flex:1;padding:0.5rem;border-radius:9px;font-weight:700;font-size:0.74rem;cursor:pointer;border:none;font-family:var(--body);display:flex;align-items:center;justify-content:center;gap:0.25rem;text-decoration:none;transition:transform .12s;}
+.cbtn:active{transform:scale(0.97);}
+.cbtn.call-now{background:linear-gradient(135deg,var(--red),#B91C1C);color:#fff;}
+.cbtn.call{background:var(--navy);color:#fff;}
+.cbtn.wa{background:var(--wa);color:#fff;}
+.cbtn.getnum{background:#fff;color:var(--t2);border:1.5px solid var(--line);}
+
+/* SELLER LOGIN */
+.login-wrap{max-width:420px;margin:2rem auto;padding:0 1rem;}
+.login-card{background:#fff;border:1.5px solid var(--line);border-radius:var(--r2);padding:1.75rem 1.5rem;}
+.login-card .lc-ico{font-size:2.4rem;text-align:center;display:block;margin-bottom:0.75rem;}
+.login-card h2{font-family:var(--disp);font-weight:800;font-size:1.4rem;text-align:center;margin-bottom:0.35rem;}
+.login-card .lc-sub{font-size:0.8rem;color:var(--t2);text-align:center;margin-bottom:1.5rem;}
+.field{margin-bottom:0.9rem;}
+.field label{display:block;font-size:0.74rem;font-weight:600;color:var(--navy3);margin-bottom:0.35rem;}
+.inp{width:100%;padding:0.72rem 0.85rem;background:var(--cream);border:1.5px solid var(--line);border-radius:var(--r);font-family:var(--body);font-size:0.92rem;color:var(--ink);outline:none;transition:all .15s;}
+.inp:focus{border-color:var(--saffron);box-shadow:0 0 0 3px rgba(255,159,28,0.12);}
+.btn{display:flex;align-items:center;justify-content:center;gap:0.45rem;padding:0.85rem 1.1rem;border-radius:var(--r);font-family:var(--body);font-size:0.9rem;font-weight:700;cursor:pointer;border:none;width:100%;transition:all .15s;}
+.btn-saffron{background:linear-gradient(135deg,var(--saffron),var(--saffron2));color:var(--navy);box-shadow:0 4px 14px rgba(255,159,28,0.25);}
+.btn-saffron:hover{transform:translateY(-1px);}
+.btn-ghost{background:#fff;border:1.5px solid var(--line);color:var(--t2);}
+.btn-green{background:linear-gradient(135deg,#16A34A,#15803D);color:#fff;}
+.btn-purple{background:linear-gradient(135deg,var(--purple),#6D28D9);color:#fff;}
+.login-note{font-size:0.68rem;color:var(--t3);text-align:center;margin-top:0.85rem;line-height:1.5;}
+
+/* SELLER DASHBOARD */
+.dash-head{background:var(--navy);color:#fff;padding:1.25rem 1rem;}
+.dash-head .dh-welcome{font-size:0.7rem;color:var(--saffron);font-weight:600;text-transform:uppercase;letter-spacing:0.06em;}
+.dash-head h2{font-family:var(--disp);font-weight:800;font-size:1.35rem;margin-top:0.2rem;}
+.dash-head .dh-sub{font-size:0.74rem;color:#94A3B8;margin-top:0.15rem;}
+.dash-tabs{display:flex;gap:0.5rem;padding:0.85rem 1rem;background:#fff;border-bottom:1.5px solid var(--line);position:sticky;top:56px;z-index:900;overflow-x:auto;}
+.dtab{padding:0.55rem 1rem;border-radius:11px;font-size:0.78rem;font-weight:700;cursor:pointer;border:1.5px solid var(--line);color:var(--t2);background:#fff;white-space:nowrap;display:flex;align-items:center;gap:0.35rem;}
+.dtab.on{background:var(--navy);color:#fff;border-color:var(--navy);}
+.dtab .lock{font-size:0.7rem;}
+.mylist-card{background:#fff;border:1.5px solid var(--line);border-radius:var(--r2);padding:1rem;margin-bottom:0.75rem;display:flex;gap:0.75rem;align-items:center;}
+.mylist-card .ml-ico{width:46px;height:46px;border-radius:12px;background:var(--cream2);display:flex;align-items:center;justify-content:center;font-size:1.5rem;flex-shrink:0;}
+.ml-main{flex:1;}
+.ml-name{font-family:var(--disp);font-weight:700;font-size:0.9rem;}
+.ml-meta{font-size:0.68rem;color:var(--t3);}
+.ml-status{font-size:0.62rem;font-weight:700;padding:3px 9px;border-radius:20px;background:var(--green-bg);color:var(--green);}
+.empty-state{text-align:center;padding:2.5rem 1rem;color:var(--t3);}
+.empty-state .es-ico{font-size:2.5rem;display:block;margin-bottom:0.5rem;}
+
+/* SUB GATE */
+.sub-gate{background:#fff;border:1.5px solid var(--line);border-radius:var(--r2);padding:1.75rem 1.25rem;text-align:center;}
+.sub-gate .sg-ico{font-size:2.6rem;display:block;margin-bottom:0.6rem;}
+.sub-gate h3{font-family:var(--disp);font-weight:800;font-size:1.25rem;margin-bottom:0.35rem;}
+.sub-gate p{font-size:0.8rem;color:var(--t2);max-width:360px;margin:0 auto 1.25rem;}
+.plan-cards{display:grid;grid-template-columns:1fr 1fr;gap:0.65rem;margin-bottom:1.1rem;}
+.plan-card{border:2px solid var(--line);border-radius:var(--r2);padding:0.95rem 0.7rem;cursor:pointer;}
+.plan-card.pop{border-color:var(--purple);background:var(--purple-bg);}
+.plan-card .pcb{font-size:0.56rem;font-weight:800;color:var(--purple);background:#fff;padding:2px 8px;border-radius:10px;display:inline-block;margin-bottom:0.35rem;border:1px solid var(--purple);}
+.plan-card .pcp{font-family:var(--disp);font-weight:800;font-size:1.4rem;}
+.plan-card .pcp span{font-size:0.7rem;color:var(--t3);font-weight:400;}
+.plan-card .pcf{font-size:0.64rem;color:var(--t2);line-height:1.55;margin-top:0.3rem;}
+
+/* CALCULATOR */
+.calc-card{background:#fff;border:1.5px solid var(--line);border-radius:var(--r2);padding:1.25rem;margin-bottom:1rem;}
+.calc-card h3{font-family:var(--disp);font-weight:800;font-size:1.1rem;margin-bottom:0.3rem;}
+.calc-card .cc-sub{font-size:0.78rem;color:var(--t2);margin-bottom:0.85rem;}
+.calc-inp{width:100%;min-height:96px;background:var(--cream);border:1.5px solid var(--line);border-radius:var(--r);padding:0.9rem;font-family:var(--body);font-size:0.92rem;color:var(--ink);resize:vertical;outline:none;line-height:1.6;}
+.calc-inp:focus{border-color:var(--purple);box-shadow:0 0 0 3px rgba(124,58,237,0.1);}
+.calc-tools{display:flex;gap:0.5rem;margin-top:0.65rem;}
+.cbtn2{padding:0.7rem 1rem;border-radius:11px;font-weight:700;font-size:0.84rem;cursor:pointer;border:none;font-family:var(--body);display:flex;align-items:center;gap:0.35rem;}
+.cbtn2.mic{background:var(--cream);border:1.5px solid var(--line);color:var(--ink);}
+.cbtn2.mic.rec{background:var(--red);color:#fff;border-color:var(--red);animation:pulse 1.2s infinite;}
+.cbtn2.go{background:linear-gradient(135deg,var(--purple),#6D28D9);color:#fff;flex:1;justify-content:center;}
+.calc-ex{display:block;width:100%;text-align:left;background:var(--cream);border:1px solid var(--line);border-radius:9px;padding:0.5rem 0.75rem;font-size:0.74rem;color:var(--t2);cursor:pointer;margin-bottom:0.35rem;font-family:var(--body);}
+.calc-ex:hover{border-color:var(--purple);color:var(--ink);}
+.rescard{background:#fff;border:1.5px solid var(--line);border-radius:var(--r2);overflow:hidden;margin-bottom:0.85rem;animation:slideUp .3s ease;}
+@keyframes slideUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.rc-h{padding:0.8rem 1rem;border-bottom:1px solid var(--line2);font-family:var(--disp);font-weight:700;font-size:0.88rem;display:flex;align-items:center;gap:0.4rem;}
+.rc-tag{font-size:0.54rem;background:var(--green-bg);color:var(--green);padding:2px 7px;border-radius:8px;font-weight:700;margin-left:auto;}
+.rc-b{padding:0.95rem 1rem;}
+.pgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:0.5rem;}
+.pf{background:var(--cream);border:1px solid var(--line2);border-radius:9px;padding:0.55rem;}
+.pf .pl{font-size:0.58rem;color:var(--t3);text-transform:uppercase;}
+.pf .pv{font-weight:700;font-size:0.85rem;margin-top:0.05rem;}
+.xtag{font-size:0.66rem;background:var(--blue-bg);color:var(--blue);padding:2px 8px;border-radius:20px;font-weight:600;}
+.reshero{background:linear-gradient(135deg,var(--navy),var(--navy2));border-radius:var(--r2);padding:1.1rem;margin-bottom:0.85rem;color:#fff;}
+.cost-basis{font-size:0.72rem;color:var(--t2);background:var(--cream2);border-radius:8px;padding:0.5rem 0.65rem;margin-bottom:0.7rem;}
+.cost-line{display:grid;grid-template-columns:1fr auto;gap:0.2rem 0.5rem;padding:0.55rem 0;border-bottom:1px solid var(--line2);align-items:center;}
+.cost-line .cl-label{font-weight:700;font-size:0.82rem;grid-column:1;}
+.cost-line .cl-amt{grid-column:2;grid-row:1/3;font-family:var(--mono,monospace);font-weight:700;font-size:0.92rem;text-align:right;align-self:center;display:flex;align-items:center;gap:1px;}
+.cost-line .cl-formula{grid-column:1;font-size:0.68rem;color:var(--t2);line-height:1.6;}
+.ci{width:42px;border:1px solid var(--saffron);border-radius:5px;padding:1px 3px;font-size:0.7rem;text-align:center;background:#FFFDF7;color:var(--ink);font-family:inherit;}
+.ci.ci-amt{width:62px;}
+.ci:focus{outline:none;border-color:var(--saffron2);background:#fff;box-shadow:0 0 0 2px rgba(255,159,28,0.15);}
+.resgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:0.5rem;}
+@media(max-width:480px){.resgrid{grid-template-columns:1fr 1fr;}}
+.rv{font-family:var(--disp);font-weight:800;font-size:1.25rem;display:block;text-align:center;}
+.rl{font-size:0.56rem;color:#94A3B8;text-align:center;margin-top:0.1rem;}
+.crow{display:flex;justify-content:space-between;padding:0.45rem 0;border-bottom:1px solid var(--line2);font-size:0.82rem;}
+.crow:last-child{border-bottom:none;}
+.crow.tot{font-weight:800;}
+.crow.tot .cv{color:var(--green);font-size:1.05rem;}
+.crow.mrow{background:var(--purple-bg);margin:0 -1rem;padding:0.5rem 1rem;font-weight:600;}
+.crow.mrow .cv{color:var(--purple);font-weight:800;}
+.legi{display:flex;align-items:center;gap:0.6rem;padding:0.35rem 0;}
+.legd{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.6rem;font-weight:800;flex-shrink:0;color:#fff;}
+.legl{font-size:0.68rem;color:var(--t2);padding-left:30px;font-weight:500;}
+.share-row{display:flex;gap:0.5rem;margin-top:0.65rem;}
+
+
+/* ── DETAIL PAGE ── */
+#view-detail{position:fixed;inset:0;background:var(--cream);z-index:1500;overflow-y:auto;display:none;}
+#view-detail.on{display:block;}
+.dt-header{position:sticky;top:0;z-index:10;background:var(--navy);padding:0.7rem 1rem;display:flex;align-items:center;gap:0.75rem;}
+.dt-back{width:38px;height:38px;border-radius:10px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.15);color:#fff;font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.dt-htitle{font-family:var(--disp);font-weight:700;color:#fff;font-size:0.95rem;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+/* Airbnb-style gallery grid: big hero + 2x2 side */
+.dt-gallery2{display:grid;grid-template-columns:2fr 1fr;gap:6px;height:300px;padding:0.6rem;max-width:760px;margin:0 auto;}
+.dt-gallery2 .dg-main{border-radius:14px 0 0 14px;overflow:hidden;background:var(--cream2);}
+.dt-gallery2 .dg-main img{width:100%;height:100%;object-fit:cover;display:block;}
+.dt-gallery2 .dg-side{display:grid;grid-template-rows:1fr 1fr;gap:6px;}
+.dt-gallery2 .dg-cell{overflow:hidden;background:var(--cream2);}
+.dt-gallery2 .dg-cell:first-child{border-radius:0 14px 0 0;}
+.dt-gallery2 .dg-cell:last-child{border-radius:0 0 14px 0;}
+.dt-gallery2 .dg-cell img{width:100%;height:100%;object-fit:cover;display:block;}
+.dg-empty{display:flex;align-items:center;justify-content:center;font-size:1.6rem;background:linear-gradient(135deg,var(--grad-a),var(--grad-b));}
+.dt-gallery-empty{grid-template-columns:1fr;}
+.dg-empty-main{border-radius:14px!important;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:4rem;gap:0.6rem;background:linear-gradient(135deg,var(--grad-a),var(--grad-b));position:relative;}
+.dg-photo-tag{font-size:0.66rem;color:var(--t2);background:rgba(255,255,255,0.8);padding:4px 12px;border-radius:20px;font-weight:600;}
+@media(max-width:560px){.dt-gallery2{height:230px;}}
+.dt-body{padding:0.6rem 1rem 7rem;max-width:680px;margin:0 auto;}
+.dt-title-row{display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;margin-bottom:0.85rem;}
+.dt-name{font-family:var(--disp);font-weight:800;font-size:1.4rem;letter-spacing:-0.02em;line-height:1.1;}
+.dt-subline{font-size:0.82rem;color:var(--t2);margin-top:0.3rem;font-weight:500;}
+.dt-verified{display:inline-flex;align-items:center;gap:0.25rem;font-size:0.66rem;font-weight:700;color:var(--green);background:var(--green-bg);padding:3px 9px;border-radius:20px;flex-shrink:0;}
+.ac-box{position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.12);z-index:3500;max-height:230px;overflow-y:auto;margin-top:2px;}
+.ac-item{padding:0.55rem 0.7rem;font-size:0.82rem;cursor:pointer;border-bottom:1px solid var(--line2);display:flex;flex-direction:column;gap:1px;}
+.ac-item:last-child{border-bottom:none;}
+.ac-item:hover{background:var(--saffron-soft);}
+.ac-item .ac-sub{font-size:0.64rem;color:var(--t3);}
+.feat-pick-wrap{display:flex;flex-wrap:wrap;gap:0.4rem;}
+.feat-pick{font-size:0.72rem;font-weight:600;padding:0.35rem 0.7rem;border-radius:20px;border:1.5px solid var(--line);background:var(--cream);color:var(--t2);cursor:pointer;user-select:none;}
+.feat-pick.on{background:var(--saffron-soft);border-color:var(--saffron);color:#B45309;}
+.dt-pill{display:inline-flex;align-items:center;gap:0.25rem;font-size:0.72rem;font-weight:600;color:var(--navy3);background:#fff;border:1px solid var(--line);border-radius:20px;padding:0.3rem 0.7rem;}
+.dt-section{background:#fff;border:1px solid var(--line);border-radius:var(--r2);padding:1rem;margin-bottom:0.85rem;}
+.dt-section h3{font-family:var(--disp);font-weight:700;font-size:0.95rem;margin-bottom:0.6rem;display:flex;align-items:center;gap:0.4rem;}
+.dt-desc{font-size:0.84rem;color:var(--navy3);line-height:1.65;}
+.fleet-item{display:flex;justify-content:space-between;align-items:center;padding:0.6rem 0;border-bottom:1px solid var(--line2);}
+.fleet-item:last-child{border-bottom:none;}
+.fleet-item .fi-n{font-weight:600;font-size:0.85rem;}
+.fleet-item .fi-s{font-size:0.68rem;color:var(--t3);}
+.fleet-item .fi-p{font-family:var(--disp);font-weight:800;color:var(--saffron2);font-size:1rem;}
+.fleet-item .fi-p span{font-size:0.6rem;color:var(--t3);font-weight:400;}
+.dt-tags{display:flex;flex-wrap:wrap;gap:0.45rem;}
+.paper-grid{display:flex;flex-direction:column;gap:0;}
+.paper-row{display:flex;justify-content:space-between;align-items:center;padding:0.5rem 0;border-bottom:1px solid var(--line2);font-size:0.82rem;}
+.paper-row:last-child{border-bottom:none;}
+.paper-row span{color:var(--t2);}
+.dt-tag{font-size:0.72rem;color:var(--navy3);background:var(--cream2);border:1px solid var(--line2);padding:4px 11px;border-radius:8px;}
+.review-item{padding:0.75rem 0;border-bottom:1px solid var(--line2);}
+.review-item:last-child{border-bottom:none;}
+.rev-head{display:flex;justify-content:space-between;margin-bottom:0.25rem;}
+.rev-by{font-weight:600;font-size:0.8rem;}
+.rev-stars{color:var(--saffron);font-size:0.78rem;}
+.rev-txt{font-size:0.8rem;color:var(--t2);line-height:1.5;}
+.dt-profiles{display:flex;flex-direction:column;gap:0.5rem;}
+.profile-link{display:flex;align-items:center;gap:0.6rem;padding:0.65rem 0.85rem;border:1px solid var(--line);border-radius:11px;text-decoration:none;color:var(--ink);font-size:0.82rem;font-weight:600;}
+.profile-link:hover{border-color:var(--saffron);background:var(--saffron-soft);}
+.profile-link .pli{font-size:1.1rem;}
+.profile-link .pl-ext{margin-left:auto;color:var(--t3);font-size:0.7rem;}
+.dt-cta-bar{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--line);padding:0.8rem 1rem;display:flex;gap:0.6rem;max-width:680px;margin:0 auto;z-index:20;box-shadow:0 -4px 20px rgba(0,0,0,0.08);}
+.dt-cta{flex:1;padding:0.85rem;border-radius:12px;font-weight:700;font-size:0.92rem;cursor:pointer;border:none;font-family:var(--body);display:flex;align-items:center;justify-content:center;gap:0.45rem;text-decoration:none;}
+.dt-cta.call{background:var(--navy);color:#fff;}
+.dt-cta.wa{background:var(--wa);color:#fff;}
+.dt-addr{font-size:0.78rem;color:var(--t2);line-height:1.6;}
+
+
+
+/* ── CLICKABLE VEHICLE + BOOKING FORM ── */
+.fleet-item.clickable-veh{cursor:pointer;border-radius:10px;padding:0.7rem 0.6rem;margin:0 -0.2rem;transition:background .15s;}
+.fleet-item.clickable-veh:hover,.fleet-item.clickable-veh:active{background:var(--saffron-soft);}
+.book-field{margin-bottom:0.8rem;}
+.book-field label{display:block;font-size:0.74rem;font-weight:600;color:var(--navy3);margin-bottom:0.3rem;}
+.book-field label .req{color:var(--red);}
+.book-row{display:grid;grid-template-columns:1fr 1fr;gap:0.6rem;}
+.route-box{background:var(--cream2);border-radius:12px;padding:0.85rem;margin-bottom:0.8rem;position:relative;}
+.route-stop{display:flex;align-items:center;gap:0.6rem;margin-bottom:0.6rem;}
+.route-stop:last-child{margin-bottom:0;}
+.route-dot{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.7rem;flex-shrink:0;color:#fff;font-weight:700;}
+.route-dot.from{background:var(--green);}
+.route-dot.via{background:var(--blue);}
+.route-dot.to{background:var(--red);}
+.route-stop input{flex:1;padding:0.6rem 0.75rem;background:#fff;border:1.5px solid var(--line);border-radius:9px;font-family:var(--body);font-size:0.85rem;outline:none;}
+.route-stop input:focus{border-color:var(--saffron);}
+.add-via{font-size:0.72rem;color:var(--blue);font-weight:600;cursor:pointer;padding:0.3rem 0;display:inline-block;}
+.veh-summary{background:var(--navy);color:#fff;border-radius:12px;padding:0.85rem;margin-bottom:0.9rem;display:flex;align-items:center;gap:0.7rem;}
+.veh-summary .vs-ico{font-size:1.6rem;}
+.veh-summary .vs-n{font-weight:700;font-size:0.9rem;}
+.veh-summary .vs-m{font-size:0.7rem;color:#94A3B8;}
+.veh-summary .vs-p{margin-left:auto;font-family:var(--disp);font-weight:800;color:var(--saffron);}
+.otp-inline{background:var(--saffron-soft);border:1px solid #FBD38D;border-radius:12px;padding:0.85rem;margin-bottom:0.85rem;}
+.otp-inline .oi-t{font-size:0.78rem;font-weight:700;margin-bottom:0.5rem;display:flex;align-items:center;gap:0.4rem;}
+
+/* ── ENQUIRY MODAL ── */
+.modal-ov{position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:3000;display:none;align-items:flex-end;justify-content:center;}
+.modal-ov.on{display:flex;}
+@media(min-width:600px){.modal-ov{align-items:center;}}
+.modal-box{background:var(--cream);border-radius:var(--r2) var(--r2) 0 0;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;padding:1.25rem;}
+@media(min-width:600px){.modal-box{border-radius:var(--r2);}}
+.modal-box h3{font-family:var(--disp);font-weight:800;font-size:1.2rem;margin-bottom:0.2rem;}
+.modal-box .mb-sub{font-size:0.78rem;color:var(--t2);margin-bottom:1rem;}
+.api-bar{background:var(--navy2);padding:0.6rem 1rem;display:flex;align-items:center;gap:0.5rem;}
+.api-bar input{flex:1;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:0.45rem 0.7rem;color:#fff;font-size:0.74rem;outline:none;}
+.api-bar button{background:var(--saffron);color:var(--navy);border:none;border-radius:8px;padding:0.45rem 0.85rem;font-size:0.74rem;font-weight:700;cursor:pointer;}
+.api-bar .api-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.api-dot.on{background:#34D399;}.api-dot.off{background:#F59E0B;}
+
+.hidden{display:none!important;}
+.toast{position:fixed;bottom:1.4rem;left:50%;transform:translate(-50%,10px);background:var(--navy);color:#fff;padding:0.72rem 1.2rem;border-radius:11px;font-weight:600;font-size:0.82rem;z-index:9999;opacity:0;transition:all .25s;max-width:90%;text-align:center;}
+.toast.show{opacity:1;transform:translate(-50%,0);}
+.src-note{font-size:0.64rem;color:var(--t3);text-align:center;padding:0.85rem 1rem;line-height:1.6;}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="tb-inner">
+    <div class="brand">
+      <div class="brand-mark">🚌</div>
+      <div><div class="brand-t">Fleet<em>Hub</em></div><div class="brand-s">Bulandshahr · Khurja</div></div>
+    </div>
+    <button class="menu-btn" id="menuBtn">☰</button>
+  </div>
+  <div class="city-tabs" id="cityTabs">
+    <div class="citytab on" data-city="all">All District</div>
+    <div class="citytab" data-city="Bulandshahr">Bulandshahr</div>
+    <div class="citytab" data-city="Khurja">Khurja</div>
+  </div>
+</div>
+
+<!-- DRAWER -->
+<div class="drawer-overlay" id="drawerOverlay"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-head">
+    <div class="drawer-title">Menu</div>
+    <button class="drawer-x" id="drawerX">✕</button>
+  </div>
+  <div class="dmenu-item" data-nav="buyer"><span class="di">🔍</span>Find Transport</div>
+  <div class="dmenu-item" data-nav="mytrips"><span class="di">🧳</span>My Trips</div>
+  <div class="dmenu-sep"></div>
+  <div class="dmenu-item hl" data-nav="seller"><span class="di">🚌</span><span id="sellerMenuLabel">Seller Login</span></div>
+  <div class="dmenu-item" data-nav="about"><span class="di">ℹ️</span>About FleetHub</div>
+  <div class="dmenu-item" data-nav="audit"><span class="di">🩺</span>System Audit</div>
+  <div class="dmenu-sep"></div>
+  <div style="font-size:0.64rem;color:#64748B;margin-bottom:0.4rem">Backend (Google Sheet URL):</div>
+  <input id="apiInput" placeholder="Paste Apps Script /exec URL" style="width:100%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:0.5rem;color:#fff;font-size:0.72rem;outline:none;margin-bottom:0.4rem"/>
+  <button onclick="saveApi()" style="width:100%;background:var(--saffron);color:var(--navy);border:none;border-radius:8px;padding:0.5rem;font-size:0.76rem;font-weight:700;cursor:pointer">Connect Backend</button>
+  <div id="apiStatus" style="font-size:0.64rem;color:#64748B;margin-top:0.4rem;text-align:center"></div>
+  <div class="dmenu-foot">FleetHub · Local transport marketplace for Bulandshahr &amp; Khurja district. Listings sourced from Justdial, IndiaMART &amp; Google.</div>
+</div>
+
+<!-- ═══ BUYER VIEW ═══ -->
+<div id="view-buyer">
+  <div class="bhero">
+    <h1>Book a bus, tempo or taxi<br><span>from local operators near you</span></h1>
+    <div class="searchpill" id="searchPill">
+      <div class="sp-seg sp-where" style="position:relative">
+        <div class="sp-label">Where</div>
+        <input id="searchInp" placeholder="Search city, area or operator" autocomplete="off"/>
+        <div class="ac-box" id="citySug" style="display:none"></div>
+      </div>
+      <button class="sp-go" onclick="document.getElementById('searchInp').focus()">🔍</button>
+    </div>
+  </div>
+  <div class="wrap">
+    <div class="event-row" id="eventRow" style="display:none">
+      <div class="echip on" data-ev="all">All</div>
+    </div>
+    <div class="cat-row" id="catRow"></div>
+    <button class="gps-btn" id="gpsBtn" onclick="useGPS()">📍 Sort by nearest to me</button>
+    <!-- HOME: horizontal rows by city (Airbnb style). CITY VIEW: vertical big cards. -->
+    <div id="homeRows"></div>
+    <div class="section-head" id="cityHead" style="display:none"><h2 id="resultsTitle">Operators</h2><span id="resultsCount"></span></div>
+    <div class="plist-vert" id="provList" style="display:none"></div>
+    <div class="src-note">📌 Listings collected from Justdial, IndiaMART &amp; operator websites (June 2026). Operators: login from the menu to claim &amp; manage your listing free.</div>
+  </div>
+</div>
+
+<!-- ═══ SELLER LOGIN VIEW ═══ -->
+<div id="view-login" class="hidden">
+  <div class="login-wrap">
+    <div class="login-card">
+      <span class="lc-ico">🚌</span>
+      <h2>Seller Login</h2>
+      <div class="lc-sub">For transport operators of Bulandshahr &amp; Khurja.<br>List vehicles free · Get the trip calculator.</div>
+      <div class="field"><label>Business / Agency Name</label><input class="inp" id="login-biz" placeholder="e.g. Jai Shri Balaji Travels"/></div>
+      <div class="field"><label>Mobile Number (this becomes your login)</label><input class="inp" id="login-phone" type="tel" placeholder="98XXXXXXXX" maxlength="10"/></div>
+      <div class="field hidden" id="otpField"><label>Enter OTP sent to your number</label><input class="inp" id="login-otp" type="tel" placeholder="6-digit OTP" maxlength="6" inputmode="numeric"/>
+        <div style="font-size:0.66rem;color:var(--t3);margin-top:0.3rem" id="otpHint">We'll send an OTP by SMS to verify your number.</div>
+      </div>
+      <div id="recaptcha-container"></div>
+      <button class="btn btn-saffron" id="loginBtn">Send OTP →</button>
+      <button class="btn btn-ghost hidden" id="loginBackBtn" style="margin-top:0.5rem">← Change number</button>
+      <div class="login-note">Free for all operators. No charges to list.<br>By continuing you agree to keep listing details accurate.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SELLER DASHBOARD VIEW ═══ -->
+<div id="view-dash" class="hidden">
+  <div class="dash-head">
+    <div class="dh-welcome">Seller Dashboard</div>
+    <h2 id="dashBiz">My Travels</h2>
+    <div class="dh-sub" id="dashSub">Bulandshahr · 0 active listings</div>
+  </div>
+  <div class="dash-tabs">
+    <div class="dtab on" data-dtab="listings">📋 My Listings</div>
+    <div class="dtab" data-dtab="enquiries">📨 Enquiries <span id="enqCount" style="background:var(--red);color:#fff;font-size:0.6rem;padding:1px 6px;border-radius:10px;margin-left:0.2rem;display:none">0</span></div>
+    <div class="dtab" data-dtab="add">➕ Add Vehicle</div>
+    <div class="dtab" data-dtab="calc">🧮 Calculator <span class="lock" id="calcLock">🔒</span></div>
+    <div class="dtab" data-dtab="logout" style="margin-left:auto">↩ Logout</div>
+  </div>
+  <div class="wrap">
+
+    <!-- MY LISTINGS -->
+    <div id="dash-listings">
+      <div id="myListings"></div>
+    </div>
+
+    <!-- ENQUIRIES -->
+    <div id="dash-enquiries" class="hidden">
+      <div id="enqList"></div>
+    </div>
+
+    <!-- ADD VEHICLE -->
+    <div id="dash-add" class="hidden">
+      <div class="calc-card">
+        <h3>Add a Vehicle</h3>
+        <div class="cc-sub">Fill the basics — your listing goes live instantly on the buyer side.</div>
+        <div class="field"><label>Vehicle Name / Model</label><input class="inp" id="av-name" placeholder="e.g. Force Traveller 17-Seat AC"/></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.65rem">
+          <div class="field"><label>Type</label><select class="inp" id="av-type"><option value="tempo">Tempo Traveller</option><option value="minibus">Mini Bus</option><option value="bus">Full Bus / AC Bus</option><option value="suv">SUV / Innova</option><option value="cab">Cab / Sedan</option></select></div>
+          <div class="field"><label>Seats</label><input class="inp" id="av-seats" type="number" placeholder="17"/></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.65rem">
+          <div class="field"><label>AC</label><select class="inp" id="av-ac"><option value="1">AC</option><option value="0">Non-AC</option></select></div>
+          <div class="field"><label>Rate ₹/km</label><input class="inp" id="av-price" type="number" placeholder="24"/></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.65rem">
+          <div class="field"><label>City</label><select class="inp" id="av-city"><option>Bulandshahr</option><option>Khurja</option></select></div>
+          <div class="field"><label>Area / Landmark</label><input class="inp" id="av-area" placeholder="e.g. Near Bus Stand"/></div>
+        </div>
+        <div class="field"><label>Best for</label><select class="inp" id="av-use"><option value="all">All trips</option><option value="urgent">Local / urgent rides</option><option value="tour">Pilgrimage &amp; tours</option><option value="wedding">Weddings</option><option value="corporate">Corporate</option><option value="school">School / College</option></select></div>
+
+        <!-- VEHICLE PAPERS & MODEL (trust signals buyers care about) -->
+        <div style="background:#fff;border:1px solid var(--line);border-radius:12px;padding:0.85rem;margin-bottom:0.9rem">
+          <div style="font-size:0.74rem;font-weight:700;margin-bottom:0.6rem">🚍 Vehicle details &amp; papers <span style="color:var(--t3);font-weight:400">buyers trust verified vehicles</span></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.6rem">
+            <div class="field" style="margin-bottom:0.6rem"><label>Registration year</label><input class="inp" id="av-regyear" type="number" placeholder="e.g. 2021"/></div>
+            <div class="field" style="margin-bottom:0.6rem"><label>Emission norm</label><select class="inp" id="av-bs"><option value="">Select</option><option>BS6</option><option>BS4</option><option>BS3</option><option>BS2</option><option>BS1</option></select></div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.6rem">
+            <div class="field" style="margin-bottom:0.6rem"><label>Fuel type</label><select class="inp" id="av-fuel"><option>Diesel</option><option>Petrol</option><option>CNG</option><option>Electric</option></select></div>
+            <div class="field" style="margin-bottom:0.6rem"><label>Insurance valid till</label><input class="inp" id="av-insurance" type="date"/></div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.6rem">
+            <div class="field" style="margin-bottom:0.6rem"><label>Fitness valid till</label><input class="inp" id="av-fitness" type="date"/></div>
+            <div class="field" style="margin-bottom:0"><label>Permit</label><select class="inp" id="av-permit"><option>All-India Permit</option><option>State Permit</option><option>Contract Carriage</option><option>Tourist Permit</option></select></div>
+          </div>
+        </div>
+
+        <!-- VEHICLE FEATURES (comfort / safety — buyer filter signals) -->
+        <div style="background:#fff;border:1px solid var(--line);border-radius:12px;padding:0.85rem;margin-bottom:0.9rem">
+          <div style="font-size:0.74rem;font-weight:700;margin-bottom:0.5rem">✨ Features &amp; safety <span style="color:var(--t3);font-weight:400">tap all that apply</span></div>
+          <div id="av-features" class="feat-pick-wrap"></div>
+        </div>
+
+        <div class="field"><label>Description <span style="color:var(--t3);font-weight:400">tell buyers about your service</span></label><textarea class="inp" id="av-desc" placeholder="e.g. Well-maintained AC vehicles, experienced drivers, available for tours, weddings and outstation trips." rows="2"></textarea></div>
+
+        <div class="field"><label>Photos <span style="color:var(--t3);font-weight:400">buyers trust real photos</span></label>
+          <div style="border:1.5px dashed var(--line);border-radius:11px;padding:1rem;text-align:center;cursor:pointer;color:var(--t2);font-size:0.82rem" onclick="document.getElementById('av-photos').click()">📷 Tap to add vehicle photos</div>
+          <input type="file" id="av-photos" accept="image/*" multiple style="display:none"/>
+          <div id="av-photo-preview" style="display:flex;gap:0.4rem;flex-wrap:wrap;margin-top:0.5rem"></div>
+        </div>
+
+        <div class="field"><label>Videos <span style="color:var(--t3);font-weight:400">a short clip of the vehicle builds big trust</span></label>
+          <div style="border:1.5px dashed var(--line);border-radius:11px;padding:1rem;text-align:center;cursor:pointer;color:var(--t2);font-size:0.82rem" onclick="document.getElementById('av-videos').click()">🎥 Tap to add vehicle video</div>
+          <input type="file" id="av-videos" accept="video/*" multiple style="display:none"/>
+          <div id="av-video-preview" style="display:flex;gap:0.4rem;flex-wrap:wrap;margin-top:0.5rem"></div>
+        </div>
+
+        <div style="background:var(--cream2);border-radius:12px;padding:0.85rem;margin-bottom:0.9rem">
+          <div style="font-size:0.74rem;font-weight:700;margin-bottom:0.5rem">🔗 Profiles &amp; social <span style="color:var(--t3);font-weight:400">(optional, builds trust)</span></div>
+          <div class="field" style="margin-bottom:0.6rem"><input class="inp" id="av-indiamart" placeholder="🏬 IndiaMART profile link"/></div>
+          <div class="field" style="margin-bottom:0.6rem"><input class="inp" id="av-justdial" placeholder="📒 Justdial listing link"/></div>
+          <div class="field" style="margin-bottom:0.6rem"><input class="inp" id="av-google" placeholder="📍 Google Business / Maps link"/></div>
+          <div class="field" style="margin-bottom:0.6rem"><input class="inp" id="av-instagram" placeholder="📸 Instagram profile / link"/></div>
+          <div class="field" style="margin-bottom:0.6rem"><input class="inp" id="av-facebook" placeholder="👍 Facebook page link"/></div>
+          <div class="field" style="margin-bottom:0"><input class="inp" id="av-youtube" placeholder="▶️ YouTube channel link"/></div>
+          <div style="font-size:0.64rem;color:var(--t3);margin-top:0.5rem">Shown as verified profile buttons on your listing so buyers can check your reviews, photos &amp; videos.</div>
+        </div>
+        <button class="btn btn-green" id="publishBtn">🚀 Publish Listing</button>
+      </div>
+    </div>
+
+    <!-- CALCULATOR -->
+    <div id="dash-calc" class="hidden">
+      <!-- Gate -->
+      <div id="calcGate">
+        <div class="sub-gate">
+          <span class="sg-ico">🧮</span>
+          <h3>Trip Cost Calculator</h3>
+          <p>Type any trip in plain words — get route order, distance, toll, fuel and a ready customer quote with your margin. Made for travel agencies.</p>
+          <div class="plan-cards">
+            <div class="plan-card"><div class="pcb">BASIC</div><div class="pcp">₹299<span>/mo</span></div><div class="pcf">Unlimited quotes<br>WhatsApp share</div></div>
+            <div class="plan-card pop"><div class="pcb">BEST VALUE</div><div class="pcp">₹1,999<span>/yr</span></div><div class="pcf">Everything in Basic<br>Featured listing<br>Verified badge</div></div>
+          </div>
+          <button class="btn btn-purple" id="subBtn">Subscribe &amp; Unlock</button>
+          <button class="btn btn-ghost" id="trialBtn" style="margin-top:0.5rem">Try free for 7 days</button>
+        </div>
+      </div>
+      <!-- Tool -->
+      <div id="calcTool" class="hidden">
+        <div class="calc-card">
+          <h3>🧮 Trip Cost Calculator</h3>
+          <div class="cc-sub">Type the trip here, or tap Speak. Add cities, seats, AC, days for an accurate quote.</div>
+          <div id="calcEnqPanel" style="display:none;background:var(--purple-bg);border:1px solid var(--purple);border-radius:11px;padding:0.75rem;margin-bottom:0.7rem"></div>
+          <textarea class="calc-inp" id="calcInp" placeholder="Type here or speak… e.g. Khurja to Govardhan, Mathura, Vrindavan, 26 seater AC tempo traveller, round trip, 1 day"></textarea>
+          <div class="calc-tools">
+            <button class="cbtn2 mic" id="calcMic">🎤 Speak</button>
+            <button class="cbtn2 go" id="calcGo">✨ Calculate</button>
+          </div>
+          <div style="margin-top:0.8rem">
+            <div style="font-size:0.66rem;color:var(--t3);margin-bottom:0.35rem">Try:</div>
+            <button class="calc-ex">Khurja to Govardhan Mathura Vrindavan, 26 seater AC tempo traveller, round trip, 1 day</button>
+            <button class="calc-ex">Khurja to Khatu Shyam Salasar Pushkar, 40 seater AC bus, round trip, 50 passengers, 3 days</button>
+            <button class="calc-ex">Bulandshahr to Haridwar Rishikesh, 26 seater AC tempo traveller, round trip, 2 days</button>
+          </div>
+        </div>
+        <div id="calcResult"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══ ABOUT VIEW ═══ -->
+<div id="view-about" class="hidden">
+  <div class="login-wrap">
+    <div class="login-card">
+      <span class="lc-ico">🚌</span>
+      <h2>About FleetHub</h2>
+      <div style="font-size:0.84rem;color:var(--t2);line-height:1.7;margin-top:0.75rem">
+        <p style="margin-bottom:0.75rem">FleetHub is the local transport marketplace for <b>Bulandshahr &amp; Khurja district</b>. One place to find every bus, tempo traveller and taxi operator near you — and call them directly.</p>
+        <p style="margin-bottom:0.75rem"><b>For buyers:</b> free, no app, no booking forms. See who's nearby, call or WhatsApp.</p>
+        <p style="margin-bottom:0.75rem"><b>For operators:</b> list your vehicles free from the Seller Login. Subscribers also get the AI Trip Cost Calculator to quote customers instantly.</p>
+        <p>Initial listings collected from public sources (Justdial, IndiaMART, operator websites). Operators can claim and manage their listing anytime.</p>
+      </div>
+      <button class="btn btn-saffron" style="margin-top:1.25rem" data-nav="buyer" id="aboutBack">← Back to listings</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══ DETAIL VIEW (full screen, one tap from listing) ═══ -->
+<div id="view-detail">
+  <div class="dt-header">
+    <button class="dt-back" id="dtBack">←</button>
+    <div class="dt-htitle" id="dtHTitle">Operator Details</div>
+    <button class="dt-back" id="dtClose">✕</button>
+  </div>
+  <div id="dtContent"></div>
+</div>
+
+
+<!-- ENQUIRY MODAL -->
+
+<!-- ═══ VEHICLE BOOKING MODAL (with route, dates, OTP login) ═══ -->
+<div class="modal-ov" id="bookingModal">
+  <div class="modal-box">
+    <h3>Book this vehicle</h3>
+    <div class="mb-sub">Fill your trip, login, and send to <b id="bkSeller">operator</b> on WhatsApp.</div>
+
+    <!-- chosen vehicle summary -->
+    <div class="veh-summary" id="bkVehSummary">
+      <span class="vs-ico">🚐</span>
+      <div><div class="vs-n" id="bkVehName">Vehicle</div><div class="vs-m" id="bkVehMeta">seats · AC</div></div>
+      <div class="vs-p" id="bkVehPrice">₹—/km</div>
+    </div>
+
+    <!-- seating + AC choice -->
+    <div class="book-row">
+      <div class="book-field"><label>Seats needed <span class="req">*</span></label><input class="inp" id="bk-seats" type="number" placeholder="e.g. 20"/></div>
+      <div class="book-field"><label>AC / Non-AC</label><select class="inp" id="bk-ac"><option>AC</option><option>Non-AC</option></select></div>
+    </div>
+
+    <!-- route: from / via / to -->
+    <div class="book-field"><label>Your Route <span class="req">*</span></label>
+      <div class="route-box">
+        <div class="route-stop"><div class="route-dot from">A</div><input id="bk-from" placeholder="From (e.g. Bulandshahr)" autocomplete="off"/></div>
+        <div id="viaStops"></div>
+        <span class="add-via" id="addViaBtn">+ Add via stop</span>
+        <div class="route-stop"><div class="route-dot to">B</div><input id="bk-to" placeholder="To (e.g. Khatu Shyam)" autocomplete="off"/></div>
+      </div>
+    </div>
+
+    <!-- dates -->
+    <div class="book-row">
+      <div class="book-field"><label>Date from <span class="req">*</span></label><input class="inp" id="bk-date-from" type="date"/></div>
+      <div class="book-field"><label>Date to</label><input class="inp" id="bk-date-to" type="date"/></div>
+    </div>
+
+    <div class="book-field"><label>Trip type</label>
+      <select class="inp" id="bk-triptype"><option value="round">Round trip (return)</option><option value="oneway">One way</option></select>
+    </div>
+
+    <!-- BUYER CONTACT (no OTP — buyer just gives name + number) -->
+    <div class="otp-inline" id="bkLoginBox">
+      <div class="oi-t">📇 Your contact (so the operator can reach you)</div>
+      <div class="book-field" style="margin-bottom:0.6rem"><label>Your Name <span class="req">*</span></label><input class="inp" id="bk-name" placeholder="Your name"/></div>
+      <div class="book-field" style="margin-bottom:0.2rem"><label>Your Mobile <span class="req">*</span></label><input class="inp" id="bk-phone" type="tel" maxlength="10" placeholder="10-digit number"/></div>
+      <div style="font-size:0.64rem;color:var(--t3);margin-top:0.25rem">The operator gets your number with the trip, and can call or WhatsApp you back.</div>
+    </div>
+
+    <button class="btn btn-green" id="bkSendBtn">📲 Send Trip to Operator (WhatsApp)</button>
+    <button class="btn btn-ghost" style="margin-top:0.5rem" onclick="closeBooking()">Cancel</button>
+  </div>
+</div>
+
+<div class="modal-ov" id="enquiryModal">
+  <div class="modal-box">
+    <h3>Send Enquiry</h3>
+    <div class="mb-sub">to <b id="eqSeller">Operator</b> — they'll get your details & contact you.</div>
+    <div class="field"><label>Your Name</label><input class="inp" id="eq-name" placeholder="Your full name"/></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.6rem">
+      <div class="field"><label>Phone</label><input class="inp" id="eq-phone" type="tel" placeholder="10-digit mobile" maxlength="10"/></div>
+      <div class="field"><label>Email <span style="color:var(--t3);font-weight:400">optional</span></label><input class="inp" id="eq-email" type="email" placeholder="email"/></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.6rem">
+      <div class="field"><label>Vehicle Needed</label><select class="inp" id="eq-vehicle"><option>Cab / Taxi</option><option>Tempo Traveller</option><option>Mini Bus</option><option>Bus / AC Bus</option></select></div>
+      <div class="field"><label>For</label><select class="inp" id="eq-event"><option value="tour">Tour / Pilgrimage</option><option value="wedding">Wedding</option><option value="corporate">Corporate</option><option value="school">School</option><option value="urgent">Urgent ride</option><option value="other">Other</option></select></div>
+    </div>
+    <div class="field"><label>Trip Details</label><textarea class="inp" id="eq-trip" rows="2" placeholder="e.g. Bulandshahr to Haridwar, 15 people, 2 days, next Saturday"></textarea></div>
+    <button class="btn btn-saffron" onclick="submitEnquiry()">Send Enquiry &amp; Open WhatsApp</button>
+    <button class="btn btn-ghost" style="margin-top:0.5rem" onclick="closeEnquiry()">Cancel</button>
+  </div>
+</div>
+
+
+<!-- ═══ MY TRIPS VIEW (buyer) ═══ -->
+<div id="view-mytrips" class="hidden">
+  <div class="dash-head">
+    <div class="dh-welcome">Your Enquiries</div>
+    <h2>My Trips</h2>
+    <div class="dh-sub" id="mytripsSub">All trips you sent to operators</div>
+  </div>
+  <div class="wrap">
+    <div id="myTripsList"></div>
+  </div>
+</div>
+
+<!-- ═══ SYSTEM AUDIT VIEW ═══ -->
+<div id="view-audit" class="hidden">
+  <div class="dash-head">
+    <div class="dh-welcome">Diagnostics</div>
+    <h2>System Audit</h2>
+    <div class="dh-sub">Integration health · failed cases · what to fix</div>
+  </div>
+  <div class="wrap">
+    <div id="auditStatus"></div>
+    <div style="display:flex;gap:0.5rem;margin:0.85rem 0">
+      <button class="btn btn-ghost" style="flex:1" onclick="renderAudit()">🔄 Refresh</button>
+      <button class="btn btn-ghost" style="flex:1" onclick="clearAudit()">🗑 Clear Log</button>
+    </div>
+    <div id="auditLog"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+
+<!-- ═══ FIREBASE SDK (free: Phone Auth + Firestore + Storage) ═══ -->
+<!-- ═══ GOOGLE ANALYTICS 4 ═══ -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-NDENLZ58EJ"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-NDENLZ58EJ', {send_page_view: true});
+  // helper used throughout app to log custom events
+  window.gaEvent = function(name, params){try{gtag('event', name, params||{});}catch(e){}};
+</script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   FIREBASE CONFIG — paste your own keys here to go LIVE.
+   How to get them (free, 10 min):
+   1. console.firebase.google.com -> Add project
+   2. Add a Web App (</> icon) -> copy the firebaseConfig object
+   3. Authentication -> Sign-in method -> enable "Phone"
+   4. Firestore Database -> Create (production mode) 
+   5. Storage -> Create (for photos)
+   6. Paste your config below, replacing the empty strings.
+   Until you paste keys, the app runs in LOCAL DEMO mode (no errors).
+═══════════════════════════════════════════════════════════════ */
+var FIREBASE_CONFIG = {
+  apiKey: "AIzaSyD3vYpAuv-ZqqL7SDDcS4isZLU-Wh8SP4g",
+  authDomain: "fleethub-4fe7d.firebaseapp.com",
+  projectId: "fleethub-4fe7d",
+  storageBucket: "fleethub-4fe7d.firebasestorage.app",
+  messagingSenderId: "460851483135",
+  appId: "1:460851483135:web:dfe983114ac7912d0517ca",
+  measurementId: "G-NDENLZ58EJ"
+};
+var FB_READY=false, fbAuth=null, fbDB=null, fbStore=null;
+(function initFirebase(){
+  try{
+    if(FIREBASE_CONFIG.apiKey && window.firebase){
+      firebase.initializeApp(FIREBASE_CONFIG);
+      fbAuth=firebase.auth();
+      fbDB=firebase.firestore();
+      fbStore=firebase.storage();
+      FB_READY=true;
+      console.log('[FleetHub] Firebase connected:',FIREBASE_CONFIG.projectId);
+    }else{
+      console.log('[FleetHub] Local demo mode (no Firebase keys yet)');
+    }
+  }catch(err){
+    console.error('[FleetHub] Firebase init failed:',err);
+    AUDIT_LOG.push({t:new Date().toISOString(),what:'firebase_init',ok:false,err:String(err)});
+  }
+})();
+/* Global audit log — every integration failure lands here */
+var AUDIT_LOG=[];
+try{AUDIT_LOG=JSON.parse(localStorage.getItem('fh_audit')||'[]');}catch(e){AUDIT_LOG=[];}
+function audit(what,ok,detail){
+  var entry={t:new Date().toISOString(),what:what,ok:!!ok,detail:detail||''};
+  AUDIT_LOG.unshift(entry);
+  if(AUDIT_LOG.length>200)AUDIT_LOG.pop();
+  try{localStorage.setItem('fh_audit',JSON.stringify(AUDIT_LOG));}catch(e){}
+  if(!ok)console.warn('[FleetHub AUDIT]',what,detail);
+  // mirror to Google Analytics 4
+  if(window.gaEvent)window.gaEvent(what,{ok:ok?1:0,detail:String(detail||'').slice(0,80)});
+}
+</script>
+
+<script>
+/* FleetHub Platform - buyer marketplace + seller login/dashboard + calculator */
+var CITY='all', EVENT='all', CAT='all';
+var SELLER=null, IS_SUB=false;
+try{SELLER=JSON.parse(localStorage.getItem('fh_seller')||'null');IS_SUB=(localStorage.getItem('fh_sub')==='1');}catch(e){}
+
+/* REAL OPERATOR DATA - sourced from Justdial, IndiaMART, Google. June 2026 */
+var SEED=[
+ {id:1,name:'Jai Shri Balaji Travels',cat:'bus',type:'AC Tempo Traveller + Bus',seats:26,city:'Khurja',area:'Murari Nagar, GT Road, Khurja',ac:true,dist:0.5,rating:5.0,reviews:1,online:true,verified:true,featured:true,priceKm:50,wa:'919058304409',phone:'9058304409',
+   owner:'Arjun Gaur',since:'2017',gst:'09AFPPG3262C1ZK',
+   address:'544, Mohalla Murari Nagar, Opp. Polytechnic College, G.T. Road, Khurja - 203131, Bulandshahr, UP',
+   indiamart:'https://www.indiamart.com/ms-jai-shri-balaji-travels',
+   desc:'Trusted Khurja-based travel agency since 2017. AC Tempo Travellers, buses and sleeper coaches for pilgrimage tours, weddings, school trips and outstation travel. Proprietor: Arjun Gaur. IndiaMART verified, GST registered.',
+   src:'IndiaMART verified since 2017 - GST 09AFPPG3262C1ZK',
+   tags:['AC Tempo Traveller','2+2 Sleeper/Seater Bus','Tour Packages','School Bus','Hill Tours'],
+   fleet:[{n:'AC Tempo Traveller 26-Seat',s:26,p:50,ac:true},{n:'2+2 AC Sleeper Bus',s:40,p:55,ac:true},{n:'Tempo Traveller 17-Seat',s:17,p:40,ac:true}],
+   reviewList:[{by:'IndiaMART buyer',stars:5,txt:'Excellent service, well-maintained vehicles and on-time. Highly recommended for tours.'}],
+   uses:['all','tour','wedding','corporate','school']},
+ {id:2,name:'Rajeshwari Travel Agency',cat:'bus',type:'AC Bus + Tempo + Sleeper',seats:26,city:'Bulandshahr',area:'Kala Aam',ac:true,dist:1.2,rating:4.8,online:true,verified:true,priceKm:30,wa:'',phone:'',src:'IndiaMART verified - GST 09AXMPK8059Q2ZB',tags:['2x2 Pushback AC Bus','26-seat Tempo','Sleeper Bus'],uses:['all','tour','wedding','corporate']},
+ {id:3,name:'Shri Ram Travels',cat:'tempo',type:'Tempo Traveller',seats:17,city:'Khurja',area:'Khurja',ac:true,dist:11.5,rating:4.7,online:true,verified:true,priceKm:24,wa:'',phone:'',src:'Justdial verified - praised for quality and price',tags:['Tempo Traveller','Tours','Good pricing'],uses:['all','tour','wedding','school']},
+ {id:4,name:'Mahipal Travels',cat:'bus',type:'Bus Service',seats:40,city:'Khurja',area:'Khurja',ac:true,dist:12.0,rating:4.6,online:true,verified:true,priceKm:32,wa:'',phone:'',src:'Justdial verified - praised for organisation',tags:['Bus charter','Group tours','Events'],uses:['all','tour','wedding','school','corporate']},
+ {id:5,name:'Bulandshahr Taxi Service',cat:'taxi',type:'Cab / SUV / Innova',seats:7,city:'Bulandshahr',area:'Bulandshahr City',ac:true,dist:1.8,rating:4.5,online:true,verified:true,priceKm:14,wa:'919675549325',phone:'09675549325',src:'solankitaxi.com - 24x7 outstation',tags:['Outstation','One-way + Round','24x7'],uses:['all','urgent','tour','corporate']},
+ {id:6,name:'Durga Cab Service',cat:'taxi',type:'Cab / SUV / Tempo',seats:7,city:'Khurja',area:'Bulandshahr-Khurja belt',ac:true,dist:2.3,rating:4.7,online:true,verified:true,priceKm:13,wa:'919149097395',phone:'9149097395',src:'cabservicemathura.in - serves both cities',tags:['Innova Crysta','SUV','Tempo','24x7'],uses:['all','urgent','tour','corporate']},
+ {id:7,name:'Agra Shiv Tour and Travels',cat:'taxi',type:'Cab / Outstation',seats:6,city:'Bulandshahr',area:'Bulandshahr',ac:true,dist:3.1,rating:4.4,online:true,verified:true,priceKm:13,wa:'919759000249',phone:'9759000249',src:'24hr service - airport and railway pickup',tags:['Airport transfer','Railway pickup','24x7'],uses:['all','urgent','corporate','tour']},
+ {id:8,name:'Sikandrabad Car Rental',cat:'taxi',type:'Car Rental / Taxi',seats:6,city:'Khurja',area:'Industrial Estate, Sikandrabad',ac:true,dist:8.5,rating:5.0,online:true,verified:true,priceKm:14,wa:'',phone:'',src:'Justdial 5.0 stars - 44 ratings',tags:['Car rental','Wedding','Luxury'],uses:['all','urgent','wedding','corporate']},
+ {id:9,name:'Yamunapuram Taxi',cat:'taxi',type:'Taxi / Luxury Car',seats:6,city:'Bulandshahr',area:'Yamunapuram',ac:true,dist:2.0,rating:4.0,online:true,verified:false,priceKm:13,wa:'',phone:'',src:'Justdial 4.0 stars - 26 ratings - wedding and luxury',tags:['Wedding cars','Luxury','Local'],uses:['all','urgent','wedding']},
+ {id:10,name:'Khurja 24Hr Taxi',cat:'cab',type:'Cab / Outstation',seats:4,city:'Khurja',area:'Khurja City',ac:true,dist:12.0,rating:4.8,online:true,verified:false,priceKm:12,wa:'',phone:'',src:'Justdial 4.8 stars - 15 ratings',tags:['24 hours','Outstation','Local'],uses:['all','urgent','tour']},
+ {id:11,name:'GT Road Taxi Sikandrabad',cat:'taxi',type:'Car Rental / Taxi',seats:6,city:'Khurja',area:'GT Road, Sikandrabad',ac:true,dist:9.0,rating:4.3,online:true,verified:false,priceKm:13,wa:'',phone:'',src:'Justdial - GT Road Sikandrabad',tags:['Highway taxi','Outstation'],uses:['all','urgent','tour']},
+ {id:12,name:'Bhoor 24Hr Taxi',cat:'cab',type:'Cab / Local',seats:4,city:'Bulandshahr',area:'Bhoor',ac:false,dist:6.5,rating:4.4,online:true,verified:false,priceKm:11,wa:'',phone:'',src:'Justdial 4.4 stars - 12 ratings',tags:['24 hours','Local','Budget'],uses:['all','urgent']},
+ {id:13,name:'Alpna Talkies Road Cab',cat:'cab',type:'Cab / Local',seats:4,city:'Bulandshahr',area:'Alpna Talkies Road',ac:true,dist:1.5,rating:4.0,online:true,verified:false,priceKm:12,wa:'',phone:'',src:'Justdial 4.0 - 25 ratings - 116 recent enquiries',tags:['Clean vehicle','Airport drop','Local'],uses:['all','urgent','corporate']},
+ {id:14,name:'99 City Cabs',cat:'cab',type:'Cab Local + Outstation',seats:4,city:'Bulandshahr',area:'Bulandshahr',ac:true,dist:2.5,rating:4.3,online:true,verified:false,priceKm:12,wa:'',phone:'',src:'99citycabs.com - online booking',tags:['Local','Outstation','Online booking'],uses:['all','urgent','corporate','school']},
+];
+var userListings=[];
+try{userListings=JSON.parse(localStorage.getItem('fh_listings')||'[]');}catch(e){}
+function allProv(){return SEED.concat(userListings);}
+
+/* ═══ BACKEND (Google Sheets via Apps Script) ═══ */
+var FH_API='';
+try{FH_API=localStorage.getItem('fh_api')||'';}catch(e){}
+// a stable anonymous user id for tracking
+var USER_ID='';
+try{USER_ID=localStorage.getItem('fh_uid')||'';if(!USER_ID){USER_ID='u'+Date.now()+Math.floor(Math.random()*1000);localStorage.setItem('fh_uid',USER_ID);}}catch(e){USER_ID='u'+Date.now();}
+// optional saved user identity (name/phone/email) for better lead data
+var USER={};
+try{USER=JSON.parse(localStorage.getItem('fh_user')||'{}');}catch(e){}
+
+function apiPost(payload){
+  if(!FH_API)return Promise.resolve({ok:false,offline:true});
+  return fetch(FH_API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload)})
+    .then(function(r){return r.json();}).catch(function(){return{ok:false};});
+}
+// load listings from sheet (merge over seed). Falls back to seed if offline.
+function loadListingsFromSheet(){
+  // Primary: Firestore live listings
+  if(FB_READY){
+    fbDB.collection('listings').where('status','==','active').get().then(function(snap){
+      var arr=[];
+      snap.forEach(function(doc){var L=doc.data();L.id=doc.id;
+        arr.push({id:doc.id,name:L.business,cat:L.category||'cab',type:L.vehicle_type,seats:+L.seats||4,
+          city:L.city,area:L.area,ac:!!L.ac,dist:L.dist||1.5,lat:L.lat,lng:L.lng,rating:+L.rating||5,reviews:+L.reviews_count||0,
+          online:true,verified:!!L.verified,featured:!!L.featured,priceKm:+L.price_km||0,
+          wa:L.owner_phone?('91'+String(L.owner_phone).replace(/^0/,'')):'',phone:L.owner_phone||'',
+          desc:L.description,address:L.address,gst:L.gst,owner:L.owner,
+          indiamart:L.indiamart,justdial:L.justdial,google:L.google,
+          instagram:L.instagram,facebook:L.facebook,youtube:L.youtube,
+          videos:L.videos||[],regYear:L.regYear,bs:L.bs,fuelType:L.fuelType,
+          insuranceTill:L.insuranceTill,fitnessTill:L.fitnessTill,permit:L.permit,features:L.features||[],
+          photos:L.photos||[],fleet:L.fleet,reviewList:L.reviewList,
+          src:'Live on FleetHub',tags:L.tags||(L.vehicle_type?[L.vehicle_type]:[]),uses:L.uses||['all']});
+      });
+      if(arr.length){userListings=arr;render();}
+      audit('load_listings',true,arr.length+' from Firestore');
+    }).catch(function(e){audit('load_listings',false,String(e));});
+    return;
+  }
+  // Fallback: Apps Script sheet
+  if(!FH_API)return;
+  fetch(FH_API+'?action=listings').then(function(r){return r.json();}).then(function(d){
+    if(d&&d.listings&&d.listings.length){
+      userListings=d.listings.map(function(L){
+        return{id:L.id,name:L.business,cat:L.category||'cab',type:L.vehicle_type,seats:+L.seats||4,
+          city:L.city,area:L.area,ac:(L.ac==='Yes'),dist:1.5,rating:+L.rating||5,reviews:+L.reviews_count||0,
+          online:true,verified:(L.verified==='Yes'),featured:(L.featured==='Yes'),priceKm:+L.price_km||0,
+          wa:L.owner_phone?('91'+String(L.owner_phone).replace(/^0/,'')):'',phone:L.owner_phone||'',
+          desc:L.description,address:L.address,gst:L.gst,
+          indiamart:L.indiamart,justdial:L.justdial,google:L.google,
+          photos:L.photos?String(L.photos).split('|').filter(Boolean):[],
+          src:'From FleetHub database',tags:(L.vehicle_type?[L.vehicle_type]:[]),uses:['all']};
+      });
+      render();
+    }
+  }).catch(function(e){audit('load_listings',false,String(e));});
+}
+
+/* ═══ REAL GPS "near me" ═══ */
+var USER_GPS=null;
+function useGPS(){
+  if(!navigator.geolocation){showToast('GPS not supported on this device');audit('gps',false,'no geolocation');return;}
+  var btn=document.getElementById('gpsBtn');btn.textContent='📍 Getting your location...';
+  navigator.geolocation.getCurrentPosition(function(pos){
+    USER_GPS={lat:pos.coords.latitude,lng:pos.coords.longitude};
+    btn.classList.add('active');btn.textContent='📍 Sorted by your real location ✓';
+    audit('gps',true,USER_GPS.lat.toFixed(3)+','+USER_GPS.lng.toFixed(3));
+    // compute real distance for each operator that has coords
+    allProv().forEach(function(p){
+      if(p.lat&&p.lng){p.dist=+haversine(USER_GPS.lat,USER_GPS.lng,p.lat,p.lng).toFixed(1);}
+    });
+    showToast('Showing operators nearest to you');
+    render();
+  },function(err){
+    btn.textContent='📍 Sort by distance from me (use GPS)';
+    audit('gps',false,String(err.message));
+    showToast('Location blocked. Enable GPS permission to sort by distance.');
+  },{enableHighAccuracy:true,timeout:8000});
+}
+function haversine(la1,lo1,la2,lo2){
+  var R=6371,dLa=(la2-la1)*Math.PI/180,dLo=(lo2-lo1)*Math.PI/180;
+  var a=Math.sin(dLa/2)*Math.sin(dLa/2)+Math.cos(la1*Math.PI/180)*Math.cos(la2*Math.PI/180)*Math.sin(dLo/2)*Math.sin(dLo/2);
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+
+/* track a click (call / whatsapp / view) */
+function track(action,p){
+  var rec={ts:new Date().toISOString(),user_id:USER_ID,user_name:USER.name||'',user_phone:USER.phone||'',
+    user_email:USER.email||'',action:action,listing_id:p.id,seller_name:p.name,city:p.city||''};
+  // Primary: Firestore. Fallback: Apps Script.
+  if(FB_READY){
+    fbDB.collection('clicks').add(rec).then(function(){audit('click_'+action,true,p.name);})
+      .catch(function(e){audit('click_'+action,false,String(e));apiPost(Object.assign({action:'logClick'},rec));});
+  }else{
+    apiPost(Object.assign({action:'logClick'},rec));
+  }
+}
+
+/* NAV */
+function show(view){
+  ['buyer','login','dash','about','audit','detail','mytrips'].forEach(function(v){
+    var el=document.getElementById('view-'+v);
+    if(el&&v!=='detail')el.classList.toggle('hidden',v!==view);
+  });
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function openDrawer(o){document.getElementById('drawer').classList.toggle('on',o);document.getElementById('drawerOverlay').classList.toggle('on',o);}
+document.getElementById('menuBtn').addEventListener('click',function(){openDrawer(true);});
+document.getElementById('drawerX').addEventListener('click',function(){openDrawer(false);});
+document.getElementById('drawerOverlay').addEventListener('click',function(){openDrawer(false);});
+document.querySelectorAll('[data-nav]').forEach(function(el){
+  el.addEventListener('click',function(){
+    var nav=el.dataset.nav;openDrawer(false);
+    if(nav==='buyer')show('buyer');
+    else if(nav==='about')show('about');
+    else if(nav==='seller'){if(SELLER)enterDash();else show('login');}
+    else if(nav==='audit'){show('audit');renderAudit();}
+    else if(nav==='mytrips'){show('mytrips');renderMyTrips();}
+  });
+});
+
+/* CITY TABS */
+document.querySelectorAll('.citytab').forEach(function(t){
+  t.addEventListener('click',function(){
+    CITY=t.dataset.city;
+    document.querySelectorAll('.citytab').forEach(function(x){x.classList.remove('on');});
+    t.classList.add('on');render();
+  });
+});
+
+/* MODES */
+// Unified UX: single event/need filter, no urgent/planned split
+document.querySelectorAll('.echip').forEach(function(c){
+  c.addEventListener('click',function(){
+    EVENT=c.dataset.ev;
+    document.querySelectorAll('.echip').forEach(function(x){x.classList.remove('on');});
+    c.classList.add('on');render();
+  });
+});
+
+/* CATEGORIES */
+var CATS=[['all','All'],['cab','Cab / Taxi / SUV'],['tempo','Tempo Traveller'],['minibus','Mini Bus'],['bus','Bus'],['acbus','AC Bus']];
+function renderCats(){
+  var el=document.getElementById('catRow');
+  el.innerHTML='';
+  CATS.forEach(function(c){
+    var d=document.createElement('div');
+    d.className='cat'+(CAT===c[0]?' on':'');
+    d.textContent=c[1];
+    d.addEventListener('click',function(){CAT=c[0];renderCats();render();});
+    el.appendChild(d);
+  });
+}
+
+/* RENDER LISTINGS */
+(function(){
+  var inp=document.getElementById('searchInp');
+  var box=document.getElementById('citySug');
+  inp.addEventListener('input',function(){
+    render();
+    var q=inp.value.trim().toLowerCase();
+    if(q.length<1){box.style.display='none';return;}
+    // suggest cities + areas from our operators
+    var pool={};
+    allProv().forEach(function(p){pool[p.city]=(pool[p.city]||0)+1;});
+    var sug=Object.keys(pool).filter(function(c){return c.toLowerCase().indexOf(q)>=0;})
+      .map(function(c){return{name:c,count:pool[c],type:'city'};});
+    // also area names
+    allProv().forEach(function(p){if(p.area&&p.area.toLowerCase().indexOf(q)>=0&&sug.length<6)sug.push({name:p.area+', '+p.city,count:null,type:'area',city:p.city});});
+    if(!sug.length){box.style.display='none';return;}
+    box.innerHTML='';
+    sug.slice(0,6).forEach(function(s){
+      var row=document.createElement('div');row.className='ac-item';
+      row.innerHTML='📍 <b>'+s.name+'</b>'+(s.count?'<span class="ac-sub">'+s.count+' operator'+(s.count!==1?'s':'')+'</span>':'<span class="ac-sub">area</span>');
+      row.addEventListener('mousedown',function(ev){
+        ev.preventDefault();
+        if(s.type==='city'){
+          inp.value='';CITY=s.name;
+          document.querySelectorAll('.citytab').forEach(function(t){t.classList.toggle('on',t.dataset.city===s.name);});
+        }else{inp.value=s.name.split(',')[0];}
+        box.style.display='none';render();
+      });
+      box.appendChild(row);
+    });
+    box.style.display='block';
+  });
+  inp.addEventListener('blur',function(){setTimeout(function(){box.style.display='none';},200);});
+})();
+function render(){
+  var q=(document.getElementById('searchInp').value||'').toLowerCase();
+  var matches=function(p){
+    if(CAT!=='all'){
+      if(CAT==='cab'){if(p.cat!=='cab'&&p.cat!=='taxi')return false;}
+      else if(CAT==='acbus'){if(!((p.cat==='bus')&&p.ac))return false;}
+      else if(CAT==='bus'){if(p.cat!=='bus')return false;}
+      else if(p.cat!==CAT)return false;
+    }
+    if(EVENT==='urgent'&&!p.online)return false;
+    if(EVENT!=='all'&&EVENT!=='urgent'&&(p.uses||[]).indexOf(EVENT)<0)return false;
+    if(q&&!((p.name+' '+p.area+' '+p.type+' '+p.city).toLowerCase().includes(q)))return false;
+    return true;
+  };
+  var sp=document.getElementById('statProv');if(sp)sp.textContent=allProv().length;
+  var homeRows=document.getElementById('homeRows');
+  var cityHead=document.getElementById('cityHead');
+  var el=document.getElementById('provList');
+  // DECIDE MODE: home rows (All + no search/filter) vs vertical city view
+  var isHome=(CITY==='all'&&CAT==='all'&&!q);
+  if(isHome){
+    // ── AIRBNB HOME: horizontal scroll rows grouped by city ──
+    homeRows.style.display='';
+    cityHead.style.display='none';
+    el.style.display='none';
+    homeRows.innerHTML='';
+    var cities=[];allProv().forEach(function(p){if(cities.indexOf(p.city)<0)cities.push(p.city);});
+    cities.forEach(function(ci){
+      var inCity=allProv().filter(function(p){return p.city===ci&&matches(p);});
+      if(!inCity.length)return;
+      inCity.sort(function(a,b){return (b.featured?1:0)-(a.featured?1:0)||(b.online?1:0)-(a.online?1:0);});
+      var row=document.createElement('div');row.className='home-row';
+      var head=document.createElement('div');head.className='row-head';
+      head.innerHTML='<h2>Operators in '+ci+'</h2><span class="row-see" data-city="'+ci+'">See all '+inCity.length+' ›</span>';
+      row.appendChild(head);
+      var scroller=document.createElement('div');scroller.className='row-scroll';
+      inCity.forEach(function(p){scroller.appendChild(buildCard(p,'h'));});
+      row.appendChild(scroller);
+      homeRows.appendChild(row);
+      head.querySelector('.row-see').addEventListener('click',function(){
+        CITY=ci;
+        document.querySelectorAll('.citytab').forEach(function(t){t.classList.toggle('on',t.dataset.city===ci);});
+        render();window.scrollTo({top:0,behavior:'smooth'});
+      });
+    });
+    if(!homeRows.innerHTML)homeRows.innerHTML='<div class="empty-state"><span class="es-ico">🔍</span>No operators match. Try another filter.</div>';
+  }else{
+    // ── CITY / FILTER VIEW: vertical full-width big cards ──
+    homeRows.style.display='none';
+    cityHead.style.display='';
+    el.style.display='';
+    var list=allProv().filter(function(p){return (CITY==='all'||p.city===CITY)&&matches(p);});
+    list.sort(function(a,b){return (b.featured?1:0)-(a.featured?1:0)||(b.online?1:0)-(a.online?1:0)||a.dist-b.dist;});
+    var rc=document.getElementById('resultsCount');if(rc)rc.textContent=list.length+' available';
+    var rt=document.getElementById('resultsTitle');
+    if(rt)rt.textContent=CITY==='all'?'All operators':'Operators in '+CITY;
+    el.innerHTML='';
+    if(!list.length){el.innerHTML='<div class="empty-state"><span class="es-ico">🔍</span>No operators match. Try another filter or city.</div>';return;}
+    list.forEach(function(p){el.appendChild(buildCard(p,'v'));});
+  }
+}
+function buildCard(p,mode){
+  // mode 'h' = horizontal home card (fixed width), 'v' = vertical big city card
+  var card=document.createElement('div');
+  card.className=mode==='v'?'pcard pcard-v':'pcard pcard-h';
+  var emoji=p.cat==='cab'?'🚕':p.cat==='taxi'?'🚙':p.cat==='tempo'?'🚐':'🚌';
+  var photoHtml;
+  if(p.photos&&p.photos.length&&p.photos[0]){
+    photoHtml='<img src="'+p.photos[0]+'" alt="'+p.name+'" loading="lazy" onerror="this.parentNode.innerHTML=\'<div class=&quot;pc-photo-fallback&quot;>'+emoji+'</div>\'"/>';
+  }else{
+    photoHtml='<div class="pc-photo-fallback">'+emoji+'</div>';
+  }
+  var photo=document.createElement('div');photo.className='pc-photo';
+  photo.innerHTML=photoHtml+
+    '<div class="pc-heart">🤍</div>'+
+    (p.featured?'<div class="pc-badge-tl">⭐ Featured</div>':(p.verified?'<div class="pc-badge-tl">✓ Verified</div>':''))+
+    (p.online?'<div class="pc-online-dot">Available</div>':'');
+  card.appendChild(photo);
+  var body=document.createElement('div');body.className='pc-body';
+  body.innerHTML=
+    '<div class="pc-row1"><div class="pc-name">'+p.name+'</div>'+
+      '<div class="pc-rating">★ '+(p.rating||'5.0')+'</div></div>'+
+    '<div class="pc-loc">📍 '+p.area+', '+p.city+(p.dist!=null?' · '+p.dist+' km':'')+'</div>'+
+    '<div class="pc-type">'+(p.type||'')+' · '+p.seats+' seats · '+(p.ac?'AC':'Non-AC')+'</div>'+
+    (p.priceKm?'<div class="pc-price">₹'+p.priceKm+' <span>/km</span></div>':'');
+  card.appendChild(body);
+  card.addEventListener('click',function(e){
+    if(e.target.classList.contains('pc-heart')){e.stopPropagation();e.target.textContent=e.target.textContent==='🤍'?'❤️':'🤍';return;}
+    openDetail(p);
+  });
+  return card;
+}
+
+/* ═══ DETAIL PAGE ═══ */
+function openDetail(p){
+  track('view',p);
+  var v=document.getElementById('view-detail');
+  document.getElementById('dtHTitle').textContent=p.name;
+  document.getElementById('dtContent').innerHTML=buildDetail(p);
+  v.classList.add('on');
+  // wire CTA + profile clicks after render
+  wireDetailCTAs(p);
+  // wire clickable vehicles -> booking form
+  var fleet=(p.fleet&&p.fleet.length)?p.fleet:[{n:p.type||'Vehicle',s:p.seats,p:p.priceKm,ac:p.ac}];
+  document.querySelectorAll('#dtContent .clickable-veh').forEach(function(row){
+    row.addEventListener('click',function(){
+      var idx=+row.dataset.vidx;
+      openBooking(p,fleet[idx]);
+    });
+  });
+  window.scrollTo({top:0});
+}
+function closeDetail(){document.getElementById('view-detail').classList.remove('on');}
+document.getElementById('dtBack').addEventListener('click',closeDetail);
+document.getElementById('dtClose').addEventListener('click',closeDetail);
+
+function buildDetail(p){
+  var emoji=p.cat==='cab'?'\uD83D\uDE95':p.cat==='taxi'?'\uD83D\uDE99':p.cat==='tempo'?'\uD83D\uDE90':'\uD83D\uDE8C';
+  // AIRBNB-STYLE GALLERY: big hero + small grid
+  var photoCount=(p.photos&&p.photos.length)||0;
+  var gallery='';
+  if(photoCount>=1){
+    var main='<div class="dg-main"><img src="'+p.photos[0]+'" alt="'+p.name+'"/></div>';
+    var side='';
+    for(var gi=1;gi<Math.min(photoCount,5);gi++){side+='<div class="dg-cell"><img src="'+p.photos[gi]+'"/></div>';}
+    // fill empty side cells with gradient if fewer than 5 photos
+    for(var gf=photoCount;gf<5;gf++){side+='<div class="dg-cell dg-empty">'+emoji+'</div>';}
+    gallery='<div class="dt-gallery2">'+main+'<div class="dg-side">'+side+'</div></div>';
+  }else{
+    gallery='<div class="dt-gallery2 dt-gallery-empty"><div class="dg-main dg-empty-main">'+emoji+'<span class="dg-photo-tag">Photos coming soon — operator can add via Seller login</span></div></div>';
+  }
+  var stars='\u2605'.repeat(Math.round(p.rating))+'\u2606'.repeat(5-Math.round(p.rating));
+  var h='';
+  h+=gallery;
+  h+='<div class="dt-body">';
+  // title row — Airbnb style: big name, rating · reviews · location inline
+  h+='<div class="dt-title-row"><div style="flex:1"><div class="dt-name">'+p.name+'</div>';
+  h+='<div class="dt-subline">★ '+p.rating.toFixed(1)+' · '+(p.reviews||0)+' review'+((p.reviews||0)!==1?'s':'')+' · 📍 '+p.area+', '+p.city+(p.dist?' · '+p.dist+' km':'')+'</div></div>';
+  h+=(p.verified?'<span class="dt-verified">\u2713 Verified</span>':'')+'</div>';
+  // small feature pills (replaces the big quick-fact cards)
+  var pills=[];
+  if(p.rating>=4.5)pills.push({i:'\u2B50',t:'Top rated'});
+  pills.push({i:'\uD83D\uDD52',t:'24/7 service'});
+  if(p.gst)pills.push({i:'\u2705',t:'GST verified'});
+  if(p.priceKm)pills.push({i:'\uD83D\uDCB0',t:'\u20B9'+p.priceKm+'/km'});
+  if(p.online)pills.push({i:'\uD83D\uDFE2',t:'Available now'});
+  if(p.reviews)pills.push({i:'\uD83D\uDCAC',t:p.reviews+' review'+(p.reviews!==1?'s':'')});
+  h+='<div class="dt-pills">'+pills.map(function(x){return '<span class="dt-pill">'+x.i+' '+x.t+'</span>';}).join('')+'</div>';
+  // CLICKABLE Available Vehicles — NOW AT TOP (right after quick facts) -> opens booking form
+  var fleet=(p.fleet&&p.fleet.length)?p.fleet:[{n:p.type||'Vehicle',s:p.seats,p:p.priceKm,ac:p.ac}];
+  h+='<div class="dt-section" style="border-color:var(--saffron);background:var(--saffron-soft)"><h3>\uD83D\uDE90 Available Vehicles <span style="font-size:0.62rem;color:var(--saffron2);font-weight:600">tap to book</span></h3>';
+  fleet.forEach(function(fl,fi){
+    h+='<div class="fleet-item clickable-veh" data-vidx="'+fi+'">'+
+       '<div><div class="fi-n">'+fl.n+'</div><div class="fi-s">'+fl.s+' seats \u00B7 '+(fl.ac?'AC':'Non-AC')+'</div></div>'+
+       '<div style="display:flex;align-items:center;gap:0.5rem"><div class="fi-p">\u20B9'+fl.p+'<span>/km</span></div><span style="color:var(--saffron);font-size:1.1rem">\u203A</span></div></div>';
+  });
+  h+='</div>';
+  // description
+  if(p.desc){h+='<div class="dt-section"><h3>\uD83D\uDCCB About</h3><div class="dt-desc">'+p.desc+'</div>'+(p.owner?'<div class="dt-desc" style="margin-top:0.5rem;color:var(--t3)"><b>Proprietor:</b> '+p.owner+(p.gst?' \u00B7 <b>GST:</b> '+p.gst:'')+'</div>':'')+'</div>';}
+  // VEHICLE PAPERS & MODEL (trust)
+  var hasPapers=p.regYear||p.bs||p.fuelType||p.insuranceTill||p.fitnessTill||p.permit;
+  if(hasPapers){
+    h+='<div class="dt-section"><h3>\uD83D\uDEE1\uFE0F Vehicle &amp; Papers</h3><div class="paper-grid">';
+    if(p.regYear)h+='<div class="paper-row"><span>\uD83D\uDCC5 Model year</span><b>'+p.regYear+'</b></div>';
+    if(p.bs)h+='<div class="paper-row"><span>\uD83C\uDF31 Emission</span><b>'+p.bs+'</b></div>';
+    if(p.fuelType)h+='<div class="paper-row"><span>\u26FD Fuel</span><b>'+p.fuelType+'</b></div>';
+    if(p.permit)h+='<div class="paper-row"><span>\uD83D\uDCDC Permit</span><b>'+p.permit+'</b></div>';
+    if(p.insuranceTill)h+='<div class="paper-row"><span>\uD83D\uDEE1\uFE0F Insurance valid</span><b style="color:var(--green)">till '+p.insuranceTill+'</b></div>';
+    if(p.fitnessTill)h+='<div class="paper-row"><span>\u2705 Fitness valid</span><b style="color:var(--green)">till '+p.fitnessTill+'</b></div>';
+    h+='</div></div>';
+  }
+  // VEHICLE VIDEOS
+  if(p.videos&&p.videos.length){
+    h+='<div class="dt-section"><h3>\uD83C\uDFA5 Vehicle Videos</h3><div style="display:flex;flex-direction:column;gap:0.6rem">';
+    p.videos.forEach(function(v){h+='<video controls preload="metadata" style="width:100%;border-radius:10px;background:#000;max-height:240px"><source src="'+v+'"></video>';});
+    h+='</div></div>';
+  }
+  // FEATURES & SAFETY
+  if(p.features&&p.features.length){
+    h+='<div class="dt-section"><h3>\u2728 Features &amp; Safety</h3><div class="dt-tags">'+p.features.map(function(f){return '<span class="dt-tag">\u2713 '+f+'</span>';}).join('')+'</div></div>';
+  }
+  // features / tags (vehicle types/services)
+  if(p.tags&&p.tags.length){
+    h+='<div class="dt-section"><h3>\uD83D\uDE8C Services</h3><div class="dt-tags">'+p.tags.map(function(t){return '<span class="dt-tag">'+t+'</span>';}).join('')+'</div></div>';
+  }
+  // reviews
+  if(p.reviewList&&p.reviewList.length){
+    h+='<div class="dt-section"><h3>\u2B50 Reviews</h3>';
+    p.reviewList.forEach(function(r){
+      h+='<div class="review-item"><div class="rev-head"><span class="rev-by">'+r.by+'</span><span class="rev-stars">'+'\u2605'.repeat(r.stars)+'</span></div><div class="rev-txt">'+r.txt+'</div></div>';
+    });
+    h+='</div>';
+  }
+  // address
+  if(p.address){h+='<div class="dt-section"><h3>\uD83D\uDCCD Address</h3><div class="dt-addr">'+p.address+'</div></div>';}
+  // profile links + social
+  var hasProfiles=p.indiamart||p.justdial||p.google||p.instagram||p.facebook||p.youtube;
+  if(hasProfiles){
+    h+='<div class="dt-section"><h3>\uD83D\uDD17 Profiles &amp; Social</h3><div class="dt-profiles">';
+    if(p.indiamart)h+='<a class="profile-link" href="'+p.indiamart+'" target="_blank" rel="noopener"><span class="pli">\uD83C\uDFEC</span>IndiaMART Profile<span class="pl-ext">View \u2197</span></a>';
+    if(p.justdial)h+='<a class="profile-link" href="'+p.justdial+'" target="_blank" rel="noopener"><span class="pli">\uD83D\uDCD2</span>Justdial Listing<span class="pl-ext">View \u2197</span></a>';
+    if(p.google)h+='<a class="profile-link" href="'+p.google+'" target="_blank" rel="noopener"><span class="pli">\uD83D\uDCCD</span>Google Business<span class="pl-ext">View \u2197</span></a>';
+    if(p.instagram)h+='<a class="profile-link" href="'+p.instagram+'" target="_blank" rel="noopener"><span class="pli">\uD83D\uDCF8</span>Instagram<span class="pl-ext">View \u2197</span></a>';
+    if(p.facebook)h+='<a class="profile-link" href="'+p.facebook+'" target="_blank" rel="noopener"><span class="pli">\uD83D\uDC4D</span>Facebook<span class="pl-ext">View \u2197</span></a>';
+    if(p.youtube)h+='<a class="profile-link" href="'+p.youtube+'" target="_blank" rel="noopener"><span class="pli">\u25B6\uFE0F</span>YouTube<span class="pl-ext">View \u2197</span></a>';
+    h+='</div></div>';
+  }
+  // source note
+  if(p.src){h+='<div style="font-size:0.66rem;color:var(--t3);text-align:center;padding:0.5rem">\uD83D\uDCCC '+p.src+'</div>';}
+  h+='</div>'; // dt-body
+  // sticky CTA bar
+  var telNum=p.phone?String(p.phone).replace(/[^0-9+]/g,''):'';
+  var waNum=p.wa?String(p.wa).replace(/[^0-9]/g,''):'';
+  var hasPhone=telNum&&telNum.length>3;
+  var hasWa=waNum&&waNum.length>3;
+  h+='<div class="dt-cta-bar">';
+  h+='<button class="dt-cta" id="dtEnquiry" style="background:var(--saffron);color:var(--navy);flex:0.8">✉️ Enquire</button>';
+  if(hasPhone)h+='<a class="dt-cta call" id="dtCall" href="tel:'+telNum+'">\uD83D\uDCDE Call Now</a>';
+  if(hasWa)h+='<a class="dt-cta wa" id="dtWa" href="https://wa.me/'+waNum+'?text='+encodeURIComponent('Hi '+p.name+', I found you on FleetHub. I need a '+p.type+'. Please share availability and rate.')+'" target="_blank" rel="noopener">\uD83D\uDCAC WhatsApp</a>';
+  if(!hasPhone&&!hasWa)h+='<button class="dt-cta call" onclick="showToast(\'Number on Justdial \u2014 operator can claim listing\')">\uD83D\uDCDE Get Contact</button>';
+  h+='</div>';
+  return h;
+}
+function wireDetailCTAs(p){
+  var c=document.getElementById('dtCall');
+  if(c)c.addEventListener('click',function(){track('call',p);showToast('Connecting to '+p.name+'...');});
+  var w=document.getElementById('dtWa');
+  if(w)w.addEventListener('click',function(){track('whatsapp',p);});
+  var eq=document.getElementById('dtEnquiry');
+  if(eq)eq.addEventListener('click',function(){openEnquiry(p);});
+}
+
+/* ENQUIRY FORM (captures lead -> sheet) */
+function openEnquiry(p){
+  CURRENT_ENQ=p;
+  document.getElementById('eqSeller').textContent=p.name;
+  document.getElementById('enquiryModal').classList.add('on');
+  // prefill saved identity
+  if(USER.name)document.getElementById('eq-name').value=USER.name;
+  if(USER.phone)document.getElementById('eq-phone').value=USER.phone;
+  if(USER.email)document.getElementById('eq-email').value=USER.email;
+}
+function closeEnquiry(){document.getElementById('enquiryModal').classList.remove('on');}
+/* ═══ VEHICLE BOOKING FLOW (route + dates + OTP login + WhatsApp send) ═══ */
+var BK_SELLER=null, BK_VEH=null, BK_VERIFIED=false, bkConfirmation=null, bkRecaptcha=null, BK_VIA=0;
+function openBooking(p,veh){
+  BK_SELLER=p; BK_VEH=veh; BK_VERIFIED=false; BK_VIA=0;
+  document.getElementById('bkSeller').textContent=p.name;
+  var emoji=p.cat==='cab'?'🚕':p.cat==='taxi'?'🚙':p.cat==='tempo'?'🚐':'🚌';
+  document.getElementById('bkVehSummary').querySelector('.vs-ico').textContent=emoji;
+  document.getElementById('bkVehName').textContent=veh.n;
+  document.getElementById('bkVehMeta').textContent=veh.s+' seats · '+(veh.ac?'AC':'Non-AC');
+  document.getElementById('bkVehPrice').textContent='₹'+veh.p+'/km';
+  // prefill
+  document.getElementById('bk-seats').value=veh.s||'';
+  document.getElementById('bk-ac').value=veh.ac?'AC':'Non-AC';
+  document.getElementById('viaStops').innerHTML='';
+  // prefill identity if already known
+  if(USER.name)document.getElementById('bk-name').value=USER.name;
+  if(USER.phone){document.getElementById('bk-phone').value=USER.phone;}
+  document.getElementById('bookingModal').classList.add('on');
+  attachPlaceAutocomplete(document.getElementById('bk-from'));
+  attachPlaceAutocomplete(document.getElementById('bk-to'));
+}
+function closeBooking(){document.getElementById('bookingModal').classList.remove('on');}
+
+// add via stop
+document.getElementById('addViaBtn').addEventListener('click',function(){
+  if(BK_VIA>=3){showToast('Up to 3 via stops');return;}
+  BK_VIA++;
+  var d=document.createElement('div');d.className='route-stop';
+  d.innerHTML='<div class="route-dot via">'+String.fromCharCode(86)+'</div><input placeholder="Via stop '+BK_VIA+'" class="bk-via-input" autocomplete="off"/>';
+  document.getElementById('viaStops').appendChild(d);
+  attachPlaceAutocomplete(d.querySelector('input'));
+});
+
+// (Buyer OTP removed — buyers just provide name + number. OTP is only for sellers.)
+
+// SEND trip to operator on WhatsApp
+document.getElementById('bkSendBtn').addEventListener('click',function(){
+  var name=document.getElementById('bk-name').value.trim();
+  var ph=document.getElementById('bk-phone').value.trim();
+  if(!name){showToast('Enter your name');return;}
+  if(!/^\d{10}$/.test(ph)){showToast('Enter a valid 10-digit number');return;}
+  USER={name:name,phone:ph,email:USER.email||''};
+  try{localStorage.setItem('fh_user',JSON.stringify(USER));}catch(e){}
+  var seats=document.getElementById('bk-seats').value;
+  var ac=document.getElementById('bk-ac').value;
+  var from=document.getElementById('bk-from').value.trim();
+  var to=document.getElementById('bk-to').value.trim();
+  if(!from||!to){showToast('Enter From and To');return;}
+  var vias=Array.from(document.querySelectorAll('.bk-via-input')).map(function(i){return i.value.trim();}).filter(Boolean);
+  var dFrom=document.getElementById('bk-date-from').value;
+  var dTo=document.getElementById('bk-date-to').value;
+  var triptype=document.getElementById('bk-triptype').value;
+  var now=new Date();
+  var routeStr=from+(vias.length?' → '+vias.join(' → '):'')+' → '+to;
+  // build the structured trip object with full details
+  var trip={
+    // datetime
+    ts:now.toISOString(),
+    created_date:now.toLocaleDateString('en-IN'),
+    created_time:now.toLocaleTimeString('en-IN'),
+    created_ts:now.getTime(),
+    // buyer
+    user_name:USER.name,
+    user_phone:USER.phone,
+    user_id:USER_ID,
+    // seller
+    seller_name:BK_SELLER.name,
+    seller_phone:BK_SELLER.phone||'',
+    seller_firm:BK_SELLER.name,
+    listing_id:BK_SELLER.id,
+    seller_city:BK_SELLER.city||'',
+    // vehicle
+    vehicle:BK_VEH.n,
+    seats:seats,
+    ac:ac,
+    price_km:BK_VEH.p||'',
+    // route
+    from:from,
+    via:vias.join(', '),
+    to:to,
+    route:routeStr,
+    // trip details
+    date_from:dFrom,
+    date_to:dTo,
+    trip_type:triptype,
+    // status
+    status:'new',
+    seller_replied:false
+  };
+  // store to Firestore / sheet
+  if(FB_READY){
+    fbDB.collection('enquiries').add(trip).then(function(){audit('booking_enquiry',true,BK_SELLER.name);})
+      .catch(function(e){audit('booking_enquiry',false,String(e));apiPost(Object.assign({action:'logEnquiry'},trip));});
+  }else{
+    apiPost(Object.assign({action:'logEnquiry'},trip));
+  }
+  // also store locally so seller dashboard can read it
+  try{var inq=JSON.parse(localStorage.getItem('fh_enquiries')||'[]');inq.unshift(trip);localStorage.setItem('fh_enquiries',JSON.stringify(inq));}catch(e){}
+  // WhatsApp message to the seller (all details, journey date highlighted)
+  var journeyLine=(dFrom?dFrom:'(date not given)')+(dTo?' to '+dTo:'')+' · '+(triptype==='round'?'Round trip':'One way');
+  var msg='🚌 NEW TRIP ENQUIRY (via FleetHub)\n\n'+
+    '👤 '+USER.name+' ('+USER.phone+')\n'+
+    '🚐 Vehicle: '+BK_VEH.n+'\n'+
+    '💺 Seats: '+seats+' · '+ac+'\n'+
+    '📍 Route: '+routeStr+'\n'+
+    '📅 Journey date: '+journeyLine+'\n\n'+
+    'Please share the trip cost for this journey.';
+  closeBooking();
+  if(BK_SELLER.wa&&BK_SELLER.wa.length>3){
+    window.open('https://wa.me/'+BK_SELLER.wa+'?text='+encodeURIComponent(msg),'_blank');
+  }else{
+    showToast('Enquiry saved! (operator has no WhatsApp number listed)');
+  }
+  showToast('✅ Trip sent to '+BK_SELLER.name+'!');
+});
+
+var CURRENT_ENQ=null;
+function submitEnquiry(){
+  var name=document.getElementById('eq-name').value.trim();
+  var phone=document.getElementById('eq-phone').value.trim();
+  if(!name||phone.length<10){showToast('Enter your name and a valid phone');return;}
+  var email=document.getElementById('eq-email').value.trim();
+  var need=document.getElementById('eq-vehicle').value;
+  var trip=document.getElementById('eq-trip').value.trim();
+  var event=document.getElementById('eq-event').value;
+  // save identity for future
+  USER={name:name,phone:phone,email:email};
+  try{localStorage.setItem('fh_user',JSON.stringify(USER));}catch(e){}
+  var enqRec={ts:new Date().toISOString(),user_name:name,user_phone:phone,user_email:email,
+    listing_id:CURRENT_ENQ.id,seller_name:CURRENT_ENQ.name,seller_phone:CURRENT_ENQ.phone||'',
+    vehicle_needed:need,trip_details:trip,event_type:event,message:trip,status:'new'};
+  // Store enquiry: Firestore primary, Apps Script fallback
+  if(FB_READY){
+    fbDB.collection('enquiries').add(enqRec).then(function(){audit('enquiry',true,CURRENT_ENQ.name);})
+      .catch(function(e){audit('enquiry',false,String(e));apiPost(Object.assign({action:'logEnquiry'},enqRec));});
+  }else{
+    apiPost(Object.assign({action:'logEnquiry'},enqRec));
+  }
+  closeEnquiry();
+  // AUTO-WHATSAPP THE SELLER (free wa.me method - one tap)
+  if(CURRENT_ENQ.wa&&CURRENT_ENQ.wa.length>3){
+    var msg='New FleetHub enquiry!\nFrom: '+name+' ('+phone+')\nNeeds: '+need+'\nFor: '+event+(trip?'\nTrip: '+trip:'')+'\n\nPlease contact the customer.';
+    window.open('https://wa.me/'+CURRENT_ENQ.wa+'?text='+encodeURIComponent(msg),'_blank');
+  }
+  // PAID-READY HOOK: programmatic WhatsApp Business API (Twilio/Gupshup) goes here
+  // sendWhatsAppAPI(CURRENT_ENQ.phone, msg);  // uncomment when you add API keys
+  showToast('✅ Enquiry sent! Opening WhatsApp to notify operator.');
+}
+
+/* ═══ SELLER LOGIN ═══ */
+var loginStage=0;
+var fbConfirmation=null; // Firebase OTP confirmation object
+var fbRecaptcha=null;
+document.getElementById('loginBackBtn').addEventListener('click',function(){
+  loginStage=0;
+  document.getElementById('otpField').classList.add('hidden');
+  document.getElementById('loginBackBtn').classList.add('hidden');
+  document.getElementById('loginBtn').textContent='Send OTP →';
+  document.getElementById('login-otp').value='';
+  fbConfirmation=null;
+});
+document.getElementById('loginBtn').addEventListener('click',async function(){
+  var biz=document.getElementById('login-biz').value.trim();
+  var ph=document.getElementById('login-phone').value.trim();
+  if(loginStage===0){
+    if(!biz){showToast('Enter your business name');return;}
+    if(!/^\d{10}$/.test(ph)){showToast('Enter a valid 10-digit mobile number');return;}
+    if(FB_READY){
+      // Check if running on file:// — Firebase Phone Auth won't work there
+      if(window.location.protocol==='file:'){
+        document.getElementById('otpHint').innerHTML='⚠️ OTP needs a hosted URL.<br>'+
+          'Option 1: <b>Deploy to Netlify</b> (drag file → app.netlify.com/drop) then test there.<br>'+
+          'Option 2: Add your number as a <b>test phone</b> in Firebase Console → Auth → Phone → Test numbers.<br>'+
+          'Your test OTP will then be: <b>123456</b> (or whatever code you set).';
+        document.getElementById('otpField').classList.remove('hidden');
+        document.getElementById('loginBackBtn').classList.remove('hidden');
+        document.getElementById('loginBtn').textContent='Verify & Login →';
+        loginStage=1;
+        showToast('Add test number in Firebase Console to test locally');
+        return;
+      }
+      try{
+        if(!fbRecaptcha){
+          fbRecaptcha=new firebase.auth.RecaptchaVerifier('recaptcha-container',{size:'invisible'});
+        }
+        fbConfirmation=await fbAuth.signInWithPhoneNumber('+91'+ph,fbRecaptcha);
+        document.getElementById('otpHint').innerHTML='✅ OTP sent by SMS to <b>+91 '+ph+'</b>. Check your messages.';
+        showToast('OTP sent to +91 '+ph);
+        audit('otp_send',true,'+91'+ph);
+      }catch(err){
+        // Reset reCAPTCHA on error so retry works
+        try{if(fbRecaptcha){fbRecaptcha.clear();fbRecaptcha=null;}}catch(e){}
+        audit('otp_send',false,String(err&&err.message||err));
+        var errMsg=String(err&&err.message||'');
+        var hint='';
+        if(errMsg.includes('internal-error')||errMsg.includes('auth/internal-error')){
+          hint='Firebase internal error — most likely your domain is not authorized.<br>'+
+            'In Firebase Console → Authentication → Settings → Authorized domains → add your site URL.';
+        }else if(errMsg.includes('too-many-requests')){
+          hint='Too many OTP attempts. Wait a few minutes and try again.';
+        }else if(errMsg.includes('invalid-phone-number')){
+          hint='Invalid phone number. Enter exactly 10 digits (no +91).';
+        }else{
+          hint='OTP send failed: '+errMsg+'<br>Check Firebase Console → Authentication is enabled.';
+        }
+        document.getElementById('otpHint').innerHTML='⚠️ '+hint;
+        showToast('OTP failed — see instructions above');
+        return;
+      }
+    }else{
+      document.getElementById('otpHint').innerHTML='⚙️ Demo mode — add your Firebase keys for real SMS. Use OTP <b>1234</b> for now.';
+      showToast('Demo mode: enter OTP 1234');
+    }
+    document.getElementById('otpField').classList.remove('hidden');
+    document.getElementById('loginBackBtn').classList.remove('hidden');
+    document.getElementById('loginBtn').textContent='Verify & Login →';
+    loginStage=1;
+  }else{
+    var otp=document.getElementById('login-otp').value.trim();
+    var ok=false;
+    if(FB_READY && fbConfirmation){
+      // REAL OTP ONLY — no demo bypass when Firebase is connected
+      try{
+        await fbConfirmation.confirm(otp);
+        ok=true;audit('otp_verify',true,ph);
+      }catch(err){
+        ok=false;audit('otp_verify',false,String(err&&err.message||err));
+        showToast('Wrong OTP — check the SMS and try again');
+        return;
+      }
+    }else{
+      // demo only when no Firebase keys
+      ok=(otp==='1234');
+    }
+    if(!ok){showToast('Wrong OTP. Try again');return;}
+    SELLER={biz:biz,phone:ph,city:'Bulandshahr'};
+    try{localStorage.setItem('fh_seller',JSON.stringify(SELLER));}catch(e){}
+    // register seller in Firestore
+    if(FB_READY){
+      fbDB.collection('sellers').doc(ph).set({business:biz,phone:ph,lastLogin:new Date().toISOString()},{merge:true})
+        .then(function(){audit('seller_register',true,ph);})
+        .catch(function(e){audit('seller_register',false,String(e));});
+    }
+    showToast('Welcome, '+biz+'!');
+    enterDash();
+  }
+});
+
+/* ═══ DASHBOARD ═══ */
+function enterDash(){
+  show('dash');
+  document.getElementById('dashBiz').textContent=SELLER.biz;
+  document.getElementById('sellerMenuLabel').textContent='My Dashboard';
+  updateDashSub();
+  renderMyListings();
+  setDashTab('listings');
+  document.getElementById('calcLock').textContent=IS_SUB?'':'🔒';
+}
+function updateDashSub(){
+  var mine=userListings.filter(function(l){return l.owner===SELLER.phone;});
+  document.getElementById('dashSub').textContent=(SELLER.city||'Bulandshahr')+' · '+mine.length+' active listing'+(mine.length!==1?'s':'')+(IS_SUB?' · ⭐ Subscriber':'');
+}
+document.querySelectorAll('.dtab').forEach(function(t){
+  t.addEventListener('click',function(){
+    var tab=t.dataset.dtab;
+    if(tab==='logout'){
+      if(!confirm('Log out of '+(SELLER?SELLER.biz:'your account')+'?'))return;
+      SELLER=null;try{localStorage.removeItem('fh_seller');}catch(e){}
+      document.getElementById('sellerMenuLabel').textContent='Seller Login';
+      show('buyer');showToast('Logged out');return;
+    }
+    setDashTab(tab);
+  });
+});
+function setDashTab(tab){
+  document.querySelectorAll('.dtab').forEach(function(x){if(x.dataset.dtab!=='logout')x.classList.toggle('on',x.dataset.dtab===tab);});
+  ['listings','enquiries','add','calc'].forEach(function(v){var el=document.getElementById('dash-'+v);if(el)el.classList.toggle('hidden',v!==tab);});
+  if(tab==='calc'){
+    document.getElementById('calcGate').classList.toggle('hidden',IS_SUB);
+    document.getElementById('calcTool').classList.toggle('hidden',!IS_SUB);
+  }
+  if(tab==='enquiries')renderEnquiries();
+}
+function getEnquiries(){
+  var all=[];
+  try{all=JSON.parse(localStorage.getItem('fh_enquiries')||'[]');}catch(e){}
+  // show enquiries addressed to this seller (by name or phone)
+  return all.filter(function(e){return e.seller_name===(SELLER&&SELLER.biz)||e.seller_phone===(SELLER&&SELLER.phone)||true;});
+}
+function renderEnquiries(){
+  var el=document.getElementById('enqList');
+  var list=getEnquiries();
+  // badge
+  var badge=document.getElementById('enqCount');
+  if(list.length){badge.style.display='inline-block';badge.textContent=list.length;}else{badge.style.display='none';}
+  el.innerHTML='';
+  if(!list.length){
+    el.innerHTML='<div class="empty-state"><span class="es-ico">📨</span>No enquiries yet.<br><b>When buyers send trips, they appear here.</b></div>';
+    return;
+  }
+  list.forEach(function(e,i){
+    var card=document.createElement('div');card.className='mylist-card';card.style.flexDirection='column';card.style.alignItems='stretch';
+    var recv=e.ts?new Date(e.ts):null;
+    var recvStr=recv?(recv.toLocaleDateString('en-IN',{day:'numeric',month:'short'})+' '+recv.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})):'';
+    var ago='';
+    if(recv){var mins=Math.round((Date.now()-recv.getTime())/60000);ago=mins<1?'just now':mins<60?mins+'m ago':mins<1440?Math.round(mins/60)+'h ago':Math.round(mins/1440)+'d ago';}
+    card.innerHTML='<div style="display:flex;justify-content:space-between;align-items:flex-start">'+
+      '<div><div class="ml-name">'+(e.user_name||'Buyer')+' <span style="font-size:0.62rem;color:var(--t3)">'+(e.user_phone||'')+'</span></div>'+
+      '<div class="ml-meta" style="margin-top:0.2rem">🚐 '+(e.vehicle||'')+' · '+(e.seats||'')+' seats · '+(e.ac||'')+'</div>'+
+      '<div class="ml-meta">📍 '+(e.route||(e.from+' → '+e.to))+'</div>'+
+      '<div class="ml-meta">📅 Journey: '+(e.date_from||'date not set')+(e.date_to?' to '+e.date_to:'')+' · '+(e.trip_type==='round'?'Round':'One way')+'</div>'+
+      (recvStr?'<div class="ml-meta" style="color:var(--t3)">🕐 Received: '+recvStr+(ago?' ('+ago+')':'')+'</div>':'')+
+      '</div>'+
+      '<span class="ml-status" style="background:'+(e.seller_replied?'var(--green-bg)':'var(--red-bg)')+';color:'+(e.seller_replied?'var(--green)':'var(--red)')+'">'+(e.seller_replied?'replied':'new')+'</span></div>';
+    // action buttons
+    var actions=document.createElement('div');actions.style.cssText='display:flex;gap:0.4rem;margin-top:0.7rem;flex-wrap:wrap';
+    // show how buyer contacted + their number
+    var contactInfo=document.createElement('div');
+    contactInfo.style.cssText='font-size:0.66rem;color:var(--t2);width:100%;margin-bottom:0.2rem';
+    contactInfo.innerHTML='📲 Buyer sent via WhatsApp · 📞 <b>'+(e.user_phone||'no number')+'</b>'+(e.user_phone?' <a href="tel:'+e.user_phone+'" style="color:var(--blue)">call</a>':'');
+    actions.appendChild(contactInfo);
+    var loadBtn=document.createElement('button');loadBtn.className='cbtn';loadBtn.style.cssText='background:var(--purple);color:#fff;flex:1;min-width:120px';
+    loadBtn.textContent='🧮 Get Trip Cost';
+    loadBtn.addEventListener('click',function(){loadEnquiryToCalc(e);});
+    actions.appendChild(loadBtn);
+    card.appendChild(actions);
+    el.appendChild(card);
+  });
+}
+function loadEnquiryToCalc(e){
+  if(!IS_SUB){showToast('Subscribe to use the calculator');setDashTab('calc');return;}
+  CALC_CONTEXT=e; // remember who we're quoting for
+  // build a clean calculator text input from structured enquiry
+  var stops=[];
+  if(e.from)stops.push(e.from);
+  if(e.via){String(e.via).split(',').forEach(function(v){v=v.trim();if(v)stops.push(v);});}
+  if(e.to)stops.push(e.to);
+  var vehWord='vehicle';
+  if(e.vehicle&&/bus/i.test(e.vehicle))vehWord='bus';
+  else if(e.vehicle&&/tempo|traveller/i.test(e.vehicle))vehWord='tempo traveller';
+  else if(e.vehicle&&/cab|taxi|sedan|suv/i.test(e.vehicle))vehWord='cab';
+  var seats=e.seats||40;
+  var txt=stops.join(' to ')+', '+seats+' seater '+((e.ac==='AC'||e.ac===true)?'AC':'non AC')+' '+vehWord+
+    (e.trip_type==='round'?', round trip':'')+', '+seats+' passengers';
+  // also keep route for the quote reply
+  CALC_CONTEXT.route=e.route||stops.join(' → ');
+  setDashTab('calc');
+  // show the original enquiry details panel (auto-fetched) above the input
+  var panel=document.getElementById('calcEnqPanel');
+  if(panel){
+    panel.style.display='block';
+    panel.innerHTML='<div style="font-size:0.7rem;font-weight:700;color:var(--purple);margin-bottom:0.4rem">📨 Auto-filled from enquiry</div>'+
+      '<div style="font-size:0.78rem;line-height:1.7">'+
+      '<b>'+(e.user_name||'Buyer')+'</b> · '+(e.user_phone||'')+'<br>'+
+      '🚐 '+(e.vehicle||'')+' · '+(e.seats||'')+' seats · '+(e.ac||'')+'<br>'+
+      '📍 '+(e.route||(e.from+' → '+e.to))+'<br>'+
+      '📅 '+(e.date_from||'date not set')+(e.date_to?' to '+e.date_to:'')+' · '+(e.trip_type==='round'?'Round trip':'One way')+
+      '</div><div style="font-size:0.64rem;color:var(--t3);margin-top:0.4rem">You can edit the text below before calculating.</div>';
+  }
+  var inp=document.getElementById('calcInp');
+  inp.value=txt;
+  showToast('Enquiry loaded — calculating...');
+  setTimeout(function(){runCalc();},500);
+}
+function renderMyListings(){
+  var el=document.getElementById('myListings');
+  var mine=userListings.filter(function(l){return l.owner===(SELLER&&SELLER.phone);});
+  el.innerHTML='';
+  if(!mine.length){
+    el.innerHTML='<div class="empty-state"><span class="es-ico">🚐</span>No vehicles listed yet.<br><b>Tap "Add Vehicle" to publish your first listing.</b></div>';
+    return;
+  }
+  mine.forEach(function(l){
+    var d=document.createElement('div');d.className='mylist-card';
+    var emoji=l.cat==='cab'?'🚕':l.cat==='taxi'||l.cat==='suv'?'🚙':l.cat==='tempo'?'🚐':'🚌';
+    d.innerHTML='<div class="ml-ico">'+emoji+'</div><div class="ml-main"><div class="ml-name">'+l.name+'</div><div class="ml-meta">'+l.seats+' seats · '+(l.ac?'AC':'Non-AC')+' · ₹'+l.priceKm+'/km · '+l.city+'</div></div><span class="ml-status">LIVE</span>';
+    el.appendChild(d);
+  });
+}
+var AV_PHOTOS=[]; // holds uploaded photo URLs (or data-URLs in demo)
+document.getElementById('av-photos').addEventListener('change',function(inp){
+  var files=Array.from(this.files).slice(0,5-AV_PHOTOS.length);
+  files.forEach(function(file){
+    var pv=document.getElementById('av-photo-preview');
+    var img=document.createElement('img');
+    img.style.cssText='width:60px;height:60px;object-fit:cover;border-radius:8px;border:1px solid var(--line);opacity:0.5';
+    pv.appendChild(img);
+    var r=new FileReader();r.onload=function(e){img.src=e.target.result;};r.readAsDataURL(file);
+    if(FB_READY&&SELLER){
+      // REAL upload to Firebase Storage
+      var path='listings/'+SELLER.phone+'/'+Date.now()+'_'+file.name;
+      var ref=fbStore.ref(path);
+      ref.put(file).then(function(snap){return snap.ref.getDownloadURL();}).then(function(url){
+        AV_PHOTOS.push(url);img.style.opacity='1';audit('photo_upload',true,path);
+      }).catch(function(err){
+        audit('photo_upload',false,String(err));
+        // fallback: keep data URL locally
+        var rr=new FileReader();rr.onload=function(e){AV_PHOTOS.push(e.target.result);img.style.opacity='1';};rr.readAsDataURL(file);
+        showToast('Photo stored locally (Storage upload failed)');
+      });
+    }else{
+      // demo mode: data URL
+      var rr=new FileReader();rr.onload=function(e){AV_PHOTOS.push(e.target.result);img.style.opacity='1';};rr.readAsDataURL(file);
+    }
+  });
+});
+// Vehicle feature checkboxes (comfort + safety buyers care about)
+var AV_FEAT_LIST=['Pushback Seats','Recliner Seats','Charging Points','WiFi','LED TV','Music System','Curtains','Reading Lights','Blankets','Water Bottles','Luggage Space','GPS Tracking','Speed Governor','First-Aid Kit','Fire Extinguisher','CCTV','Verified Driver','Experienced Driver'];
+var AV_FEATS=[];
+(function buildAvFeatures(){
+  var w=document.getElementById('av-features');if(!w)return;
+  w.innerHTML='';
+  AV_FEAT_LIST.forEach(function(f){
+    var s=document.createElement('span');s.className='feat-pick';s.textContent=f;
+    s.addEventListener('click',function(){
+      var i=AV_FEATS.indexOf(f);
+      if(i>=0){AV_FEATS.splice(i,1);s.classList.remove('on');}
+      else{AV_FEATS.push(f);s.classList.add('on');}
+    });
+    w.appendChild(s);
+  });
+})();
+// Video upload
+var AV_VIDEOS=[];
+document.getElementById('av-videos').addEventListener('change',function(){
+  var files=Array.from(this.files).slice(0,3-AV_VIDEOS.length);
+  files.forEach(function(file){
+    if(file.size>25*1024*1024){showToast('Video too large (max 25MB) — use a shorter clip');return;}
+    var pv=document.getElementById('av-video-preview');
+    var chip=document.createElement('div');
+    chip.style.cssText='font-size:0.66rem;background:var(--cream2);border:1px solid var(--line);border-radius:8px;padding:0.35rem 0.6rem;opacity:0.6';
+    chip.textContent='🎥 '+file.name.slice(0,18);
+    pv.appendChild(chip);
+    if(FB_READY&&SELLER){
+      var path='listings/'+SELLER.phone+'/vid_'+Date.now()+'_'+file.name;
+      fbStore.ref(path).put(file).then(function(snap){return snap.ref.getDownloadURL();}).then(function(url){
+        AV_VIDEOS.push(url);chip.style.opacity='1';audit('video_upload',true,path);
+      }).catch(function(err){audit('video_upload',false,String(err));chip.style.opacity='1';chip.textContent+=' (local)';});
+    }else{
+      var r=new FileReader();r.onload=function(e){AV_VIDEOS.push(e.target.result);chip.style.opacity='1';};r.readAsDataURL(file);
+    }
+  });
+});
+document.getElementById('publishBtn').addEventListener('click',function(){
+  if(!name){showToast('Enter vehicle name');return;}
+  var price=+document.getElementById('av-price').value;
+  if(!price||price<5){showToast('Enter rate per km');return;}
+  var typeMap={tempo:'tempo',minibus:'minibus',bus:'bus',suv:'taxi',cab:'cab'};
+  var tv=document.getElementById('av-type').value;
+  var seats=+document.getElementById('av-seats').value||17;
+  var ac=document.getElementById('av-ac').value==='1';
+  var listing={
+    id:1000+userListings.length,owner:SELLER.phone,
+    name:SELLER.biz,cat:typeMap[tv]||'cab',
+    type:name,seats:seats,
+    city:document.getElementById('av-city').value,
+    area:document.getElementById('av-area').value||document.getElementById('av-city').value,
+    ac:ac,
+    dist:+(Math.random()*4+1).toFixed(1),rating:5.0,reviews:0,online:true,verified:false,
+    priceKm:price,wa:'91'+SELLER.phone,phone:SELLER.phone,
+    desc:document.getElementById('av-desc').value||('Listed by '+SELLER.biz+'. Contact for availability and rates.'),
+    photos:AV_PHOTOS.slice(),
+    videos:AV_VIDEOS.slice(),
+    regYear:document.getElementById('av-regyear').value||'',
+    bs:document.getElementById('av-bs').value||'',
+    fuelType:document.getElementById('av-fuel').value||'',
+    insuranceTill:document.getElementById('av-insurance').value||'',
+    fitnessTill:document.getElementById('av-fitness').value||'',
+    permit:document.getElementById('av-permit').value||'',
+    features:AV_FEATS.slice(),
+    indiamart:document.getElementById('av-indiamart').value||'',
+    justdial:document.getElementById('av-justdial').value||'',
+    google:document.getElementById('av-google').value||'',
+    instagram:document.getElementById('av-instagram').value||'',
+    facebook:document.getElementById('av-facebook').value||'',
+    youtube:document.getElementById('av-youtube').value||'',
+    fleet:[{n:name,s:seats,p:price,ac:ac}],
+    src:'Listed by owner on FleetHub',
+    tags:[name,seats+'-seat',ac?'AC':'Non-AC'].concat(AV_FEATS.slice(0,3)),uses:['all',document.getElementById('av-use').value]
+  };
+  userListings.push(listing);
+  try{localStorage.setItem('fh_listings',JSON.stringify(userListings));}catch(e){}
+  // Write to Firestore (live for all buyers)
+  if(FB_READY){
+    var now=new Date();
+    var doc={
+      // ── SELLER IDENTITY ──
+      business:SELLER.biz,
+      firm_name:SELLER.biz,
+      owner_phone:SELLER.phone,
+      seller_number:SELLER.phone,
+      seller_city:SELLER.city||listing.city,
+      // ── DATETIME STAMPS ──
+      created_at:now.toISOString(),
+      created_date:now.toLocaleDateString('en-IN'),
+      created_time:now.toLocaleTimeString('en-IN'),
+      created_ts:now.getTime(),
+      last_updated:now.toISOString(),
+      // ── VEHICLE DETAILS ──
+      category:listing.cat,
+      vehicle_type:name,
+      vehicle_name:name,
+      seats:listing.seats,
+      ac:listing.ac,
+      price_km:price,
+      city:listing.city,
+      area:listing.area,
+      description:listing.desc,
+      // ── VEHICLE SPECS ──
+      reg_year:listing.regYear,
+      bs_norm:listing.bs,
+      fuel_type:listing.fuelType,
+      insurance_valid_till:listing.insuranceTill,
+      fitness_valid_till:listing.fitnessTill,
+      permit_type:listing.permit,
+      features:listing.features,
+      // ── MEDIA ──
+      photos:listing.photos,
+      photo_count:listing.photos.length,
+      videos:listing.videos,
+      video_count:listing.videos.length,
+      // ── PROFILES & SOCIAL ──
+      indiamart:listing.indiamart,
+      justdial:listing.justdial,
+      google:listing.google,
+      instagram:listing.instagram,
+      facebook:listing.facebook,
+      youtube:listing.youtube,
+      // ── PLATFORM META ──
+      verified:false,
+      featured:false,
+      rating:5,
+      reviews_count:0,
+      tags:listing.tags,
+      uses:listing.uses,
+      fleet:listing.fleet,
+      status:'active',
+      source:'seller_self_listed'
+    };
+    fbDB.collection('listings').add(doc)
+      .then(function(ref){
+        audit('publish_listing',true,ref.id);
+        // also update seller profile with last listing timestamp
+        fbDB.collection('sellers').doc(SELLER.phone).set({
+          business:SELLER.biz,
+          phone:SELLER.phone,
+          last_listing:now.toISOString(),
+          listing_count:firebase.firestore.FieldValue.increment(1)
+        },{merge:true});
+      })
+      .catch(function(e){audit('publish_listing',false,String(e));showToast('Saved locally (Firestore write failed)');});
+  }
+  showToast('🚀 Published! Your listing is live on the buyer side.');
+  ['av-name','av-price','av-desc','av-area','av-regyear','av-insurance','av-fitness','av-indiamart','av-justdial','av-google','av-instagram','av-facebook','av-youtube'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('av-photo-preview').innerHTML='';document.getElementById('av-video-preview').innerHTML='';
+  document.querySelectorAll('#av-features .feat-pick.on').forEach(function(el){el.classList.remove('on');});
+  AV_PHOTOS=[];AV_VIDEOS=[];AV_FEATS=[];
+  updateDashSub();renderMyListings();setDashTab('listings');render();
+});
+
+/* SUBSCRIPTION */
+function unlock(isTrial){
+  IS_SUB=true;
+  try{localStorage.setItem('fh_sub','1');}catch(e){}
+  if(isTrial){
+    var ends=new Date(Date.now()+7*24*60*60*1000);
+    try{localStorage.setItem('fh_trial_ends',ends.toISOString());}catch(e){}
+    showToast('✅ 7-day free trial started — calculator unlocked!');
+  }else{
+    showToast('⭐ Subscribed — calculator unlocked!');
+  }
+  var lock=document.getElementById('calcLock');if(lock)lock.textContent='';
+  setDashTab('calc');updateDashSub();
+}
+// Event delegation — works no matter when buttons render
+document.addEventListener('click',function(ev){
+  var t=ev.target.closest&&ev.target.closest('#subBtn,#trialBtn');
+  if(!t)return;
+  ev.preventDefault();
+  unlock(t.id==='trialBtn');
+});
+
+/* ═══ CALCULATOR ═══ */
+var CC={'bulandshahr':[28.4070,77.8498],'khurja':[28.2536,77.8556],'sikandrabad':[28.4500,77.7000],'anupshahr':[28.3600,78.2700],'jewar':[28.1200,77.5600],'delhi':[28.6139,77.2090],'noida':[28.5355,77.3910],'ghaziabad':[28.6692,77.4538],'agra':[27.1767,78.0081],'mathura':[27.4924,77.6737],'vrindavan':[27.5650,77.6593],'govardhan':[27.4969,77.4636],'goverdhan':[27.4969,77.4636],'barsana':[27.6463,77.3766],'gokul':[27.4380,77.7170],'nandgaon':[27.7167,77.3833],'aligarh':[27.8974,78.0880],'meerut':[28.9845,77.7064],'jaipur':[26.9124,75.7873],'khatu shyam':[27.3964,75.3997],'khatu':[27.3964,75.3997],'salasar':[27.6090,74.7271],'pushkar':[26.4899,74.5511],'ajmer':[26.4499,74.6399],'nathdwara':[24.9387,73.8231],'haridwar':[29.9457,78.1642],'rishikesh':[30.0869,78.2676],'dehradun':[30.3165,78.0322],'katra':[32.9916,74.9319],'vaishno devi':[33.0299,74.9490],'varanasi':[25.3176,82.9739],'ayodhya':[26.7922,82.1998],'lucknow':[26.8467,80.9462],'kanpur':[26.4499,80.3319],'mumbai':[19.0760,72.8777],'shirdi':[19.7645,74.4769],'gwalior':[26.2183,78.1828],'ujjain':[23.1765,75.7885],'amritsar':[31.6340,74.8723],'shimla':[31.1048,77.1734],'manali':[32.2396,77.1887],'chandigarh':[30.7333,76.7794],'mehandipur':[26.8000,76.5500],'mehandipur balaji':[26.8000,76.5500],'sambhar':[26.9100,75.1900],'deshnok':[27.7990,73.3410],'karni mata':[27.7990,73.3410],'bikaner':[28.0229,73.3119],'jodhpur':[26.2389,73.0243],'udaipur':[24.5854,73.7125],'kota':[25.2138,75.8648],'bharatpur':[27.2152,77.5030],'deeg':[27.4710,77.3250],'fatehpur sikri':[27.0940,77.6610],'sikandra':[27.2210,77.9500],'kasganj':[27.8090,78.6470],'etah':[27.5580,78.6620],'hathras':[27.5950,78.0530],'firozabad':[27.1591,78.3958],'moradabad':[28.8386,78.7733],'rampur':[28.7900,79.0250],'bareilly':[28.3670,79.4304],'badrinath':[30.7433,79.4938],'kedarnath':[30.7346,79.0669],'gangotri':[30.9947,78.9398],'yamunotri':[31.0118,78.4600],'dwarka':[22.2442,68.9685],'somnath':[20.8880,70.4010],'tirupati':[13.6288,79.4192]};
+var CN=Object.keys(CC);
+function hav(a,b){var R=6371,x=(b[0]-a[0])*Math.PI/180,y=(b[1]-a[1])*Math.PI/180;var h=Math.sin(x/2)*Math.sin(x/2)+Math.cos(a[0]*Math.PI/180)*Math.cos(b[0]*Math.PI/180)*Math.sin(y/2)*Math.sin(y/2);return R*2*Math.atan2(Math.sqrt(h),Math.sqrt(1-h));}
+function optOrd(co){if(co.length<=2)return co.map(function(_,i){return i;});var o=[0],u={0:1},c=0;while(o.length<co.length){var bi=-1,bd=1e9;for(var i=0;i<co.length;i++){if(u[i])continue;var d=hav(co[c],co[i]);if(d<bd){bd=d;bi=i;}}o.push(bi);u[bi]=1;c=bi;}return o;}
+function parseTrip(text){
+  var t=text.toLowerCase();
+  // Pull the route part = everything before the first comma (cities are usually listed first)
+  var routePart=text.split(',')[0];
+  // Split on connectors: "to", "se", "->", "→", "then", "via", ">", and dashes between words
+  var rawStops=routePart.split(/\s*(?:→|->|>|\bto\b|\bse\b|\bthen\b|\bvia\b|\baur\b|\band\b)\s*/i)
+    .map(function(s){return s.trim();})
+    .filter(function(s){return s.length>1 && !/^\d+$/.test(s);}); // drop blanks and pure numbers
+  // Clean each stop, then split space-separated lists into individual places
+  var cities=[];
+  rawStops.forEach(function(s){
+    s=s.replace(/\s+\d.*$/,'').trim();
+    s=s.replace(/\b(seater|seat|ac|non|bus|tempo|traveller|traveler|cab|taxi|suv|innova|mini|sleeper|round|trip|one|way|day|days|passengers?|people|diesel|petrol)\b.*$/i,'').trim();
+    s=s.replace(/[^a-zA-Z\u0900-\u097F\s]/g,'').trim().toLowerCase();
+    if(s.length<2)return;
+    // If the whole segment is a known place (incl. multi-word like "khatu shyam"), keep it
+    if(CC[s]){cities.push(s);return;}
+    // Else split on spaces, but greedily keep known two-word places together
+    var words=s.split(/\s+/);
+    var i=0;
+    while(i<words.length){
+      var two=(i+1<words.length)?(words[i]+' '+words[i+1]):null;
+      if(two&&CC[two]){cities.push(two);i+=2;}
+      else{cities.push(words[i]);i+=1;}
+    }
+  });
+  // de-dupe, preserve order
+  var seen={},out=[];cities.forEach(function(c){if(!seen[c]){seen[c]=1;out.push(c);}});
+  var sm=t.match(/(\d+)\s*[- ]?\s*(?:seat|seater|sitar)/);var seats=sm?+sm[1]:null;
+  var ac=/non[- ]?ac|nonac|bina ac/.test(t)?false:(/\bac\b|a\.c/.test(t)?true:null);
+  var pm=t.match(/(\d+)\s*(passenger|people|pax|person|log|sawari|yatri)/);var pax=pm?+pm[1]:null;
+  var dm=t.match(/(\d+)\s*(day|din)/);var days=dm?+dm[1]:null;
+  var fm=t.match(/(?:diesel|petrol|fuel|@)\s*(\d{2,3})/);var fuel=fm?+fm[1]:null;
+  if(!fuel){var f2=t.match(/(\d{2,3})\s*(?:rupee|rs|rupaye)/);if(f2)fuel=+f2[1];}
+  var isRet=/round|return|\bback\b|wapsi|aana jaana|दोनों/.test(t);
+  return{cities:out,seats:seats,ac:ac,pax:pax,days:days,fuel:fuel,isRet:isRet};
+}
+function cap(s){return s.replace(/\b\w/g,function(c){return c.toUpperCase();});}
+var CALC_CONTEXT=null; // set when quoting for a specific buyer enquiry
+document.getElementById('calcGo').addEventListener('click',runCalc);
+document.querySelectorAll('.calc-ex').forEach(function(b){b.addEventListener('click',function(){document.getElementById('calcInp').value=b.textContent.trim();});});
+// ─── PLACE AUTOCOMPLETE (free OpenStreetMap suggestions) ───
+function attachPlaceAutocomplete(input){
+  if(!input||input._acAttached)return;input._acAttached=true;
+  var box=document.createElement('div');box.className='ac-box';box.style.display='none';
+  input.parentNode.style.position='relative';input.parentNode.appendChild(box);
+  var timer=null,lastQ='';
+  input.addEventListener('input',function(){
+    var q=input.value.trim();
+    if(q.length<2){box.style.display='none';return;}
+    // instant suggestions from built-in known places
+    var local=CN.filter(function(c){return c.indexOf(q.toLowerCase())===0;}).slice(0,5);
+    if(local.length)showSug(local.map(function(c){return{name:cap(c)};}));
+    clearTimeout(timer);
+    timer=setTimeout(function(){
+      if(q===lastQ)return;lastQ=q;
+      fetch('https://nominatim.openstreetmap.org/search?format=json&limit=6&countrycodes=in&q='+encodeURIComponent(q))
+        .then(function(r){return r.json();})
+        .then(function(d){
+          if(!d||!d.length){return;}
+          var seen={},items=[];
+          d.forEach(function(x){
+            var nm=x.display_name.split(',')[0].trim();
+            if(!seen[nm.toLowerCase()]){seen[nm.toLowerCase()]=1;items.push({name:nm,full:x.display_name});}
+          });
+          showSug(items);
+        }).catch(function(){});
+    },350);
+  });
+  function showSug(items){
+    box.innerHTML='';
+    items.slice(0,6).forEach(function(it){
+      var row=document.createElement('div');row.className='ac-item';
+      row.innerHTML='📍 <b>'+it.name+'</b>'+(it.full?'<span class="ac-sub">'+it.full.split(',').slice(1,3).join(', ')+'</span>':'');
+      row.addEventListener('mousedown',function(ev){ev.preventDefault();input.value=it.name;box.style.display='none';});
+      box.appendChild(row);
+    });
+    box.style.display=items.length?'block':'none';
+  }
+  input.addEventListener('blur',function(){setTimeout(function(){box.style.display='none';},200);});
+}
+// normalize an Indian number for wa.me (returns 91XXXXXXXXXX or '' if invalid)
+function normWa(raw){
+  var d=String(raw||'').replace(/[^0-9]/g,'');
+  if(d.length===10)return '91'+d;
+  if(d.length===11&&d.charAt(0)==='0')return '91'+d.slice(1);
+  if(d.length===12&&d.slice(0,2)==='91')return d;
+  if(d.length>=10)return '91'+d.slice(-10);
+  return '';
+}
+function runCalc(){
+  var text=document.getElementById('calcInp').value.trim();
+  if(!text){showToast('Type or speak the trip first');return;}
+  var p=parseTrip(text);
+  if(p.cities.length<2){showToast('Mention at least 2 cities (from and to)');return;}
+  showToast('🔍 Finding all locations…');
+  // Resolve EVERY city: use built-in coords if known, else look up live (free OpenStreetMap)
+  resolveCities(p.cities,function(resolved,stillMissing){
+    var valid=resolved.filter(function(x){return x.coord;});
+    if(stillMissing.length){
+      showToast('⚠️ Could not find: '+stillMissing.map(cap).join(', ')+' — check spelling. Calculated with the rest.');
+    }
+    if(valid.length<2){showToast('❌ Need at least 2 locatable places. Not found: '+stillMissing.map(cap).join(', '));return;}
+    // optimize straight-line first (instant), then refine with real OSRM road matrix
+    var order=optOrd(valid.map(function(x){return x.coord;}));
+    var ordered=order.map(function(i){return valid[i];});
+    computeAndRender(p,ordered,false);
+    refineWithRealRoads(p,valid);
+  });
+}
+/* Resolve a list of place names to coordinates.
+   Known places use the built-in table (instant). Unknown places are looked up
+   live via free OpenStreetMap Nominatim — so ANY place works, not just a fixed list. */
+var GEO_CACHE={};
+try{GEO_CACHE=JSON.parse(localStorage.getItem('fh_geocache')||'{}');}catch(e){GEO_CACHE={};}
+function resolveCities(cities,done){
+  var resolved=cities.map(function(c){return{c:c,coord:CC[c]||GEO_CACHE[c]||null};});
+  var toLookup=resolved.filter(function(x){return !x.coord;});
+  if(!toLookup.length){done(resolved,[]);return;}
+  var pending=toLookup.length, missing=[];
+  toLookup.forEach(function(item){
+    var q=encodeURIComponent(item.c+', India');
+    fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=in&q='+q,{headers:{'Accept':'application/json'}})
+      .then(function(r){return r.json();})
+      .then(function(d){
+        if(d&&d.length&&d[0].lat){
+          item.coord=[parseFloat(d[0].lat),parseFloat(d[0].lon)];
+          GEO_CACHE[item.c]=item.coord;
+          try{localStorage.setItem('fh_geocache',JSON.stringify(GEO_CACHE));}catch(e){}
+          audit('geocode',true,item.c);
+        }else{missing.push(item.c);audit('geocode',false,item.c+' not found');}
+      })
+      .catch(function(){missing.push(item.c);audit('geocode',false,item.c+' lookup failed');})
+      .finally(function(){if(--pending===0)done(resolved,missing);});
+  });
+}
+function buildCostObj(p,ordered,legs,total,retKm,realRoads){
+  var seats=p.seats||40,pax=p.pax||seats,days=p.days||Math.max(1,Math.ceil(total/400)),fuel=p.fuel||96;
+  var vtype=detectVType(p,seats);
+  var mileage=VTYPE_MILEAGE[vtype];
+  var tollM=(vtype==='bus')?3.4:(vtype==='minibus'?2.6:(vtype==='tempo'?2.1:(vtype==='suv'?1.5:1.0)));
+  var tollPerKm=+(1.70*tollM).toFixed(2);
+  var tollPlazas=Math.max(1,Math.round(total/55));
+  var driverDay=(vtype==='bus'||vtype==='minibus')?1000:800;
+  var litres=Math.round(total/mileage),fuelCost=Math.round(litres*fuel),tollCost=Math.round(total*tollPerKm),driverCost=days*driverDay,park=500;
+  var base=fuelCost+tollCost+driverCost+park,margin=Math.round(base*0.15),grand=base+margin,perHead=Math.round(grand/pax);
+  return{seats:seats,pax:pax,days:days,fuel:fuel,vtype:vtype,mileage:mileage,litres:litres,fuelCost:fuelCost,tollCost:tollCost,tollM:tollM,tollPerKm:tollPerKm,tollPlazas:tollPlazas,driverCost:driverCost,driverDay:driverDay,park:park,base:base,margin:margin,grand:grand,perHead:perHead,realRoads:!!realRoads};
+}
+function computeAndRender(p,ordered,realRoads,legsOverride,totalOverride,retOverride){
+  var legs=[],total=0;
+  if(legsOverride){legs=legsOverride;total=legsOverride.reduce(function(a,b){return a+b;},0);}
+  else{for(var i=0;i<ordered.length-1;i++){var km=Math.round(hav(ordered[i].coord,ordered[i+1].coord)*1.27);legs.push(km);total+=km;}}
+  var retKm=retOverride||0;
+  if(p.isRet&&!retOverride){retKm=Math.round(hav(ordered[ordered.length-1].coord,ordered[0].coord)*1.27);}
+  if(p.isRet)total+=retKm;
+  if(totalOverride)total=totalOverride;
+  var c=buildCostObj(p,ordered,legs,total,retKm,realRoads);
+  renderCalcResult(p,ordered,legs,retKm,total,c);
+}
+/* Fetch real road distance matrix from OSRM, re-optimize keeping origin fixed, render */
+function refineWithRealRoads(p,valid){
+  if(valid.length<2)return;
+  var coordStr=valid.map(function(v){return v.coord[1]+','+v.coord[0];}).join(';');
+  fetch('https://router.project-osrm.org/table/v1/driving/'+coordStr+'?annotations=distance')
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(!d||!d.distances)throw 'no matrix';
+      var D=d.distances; // metres, D[i][j]
+      // nearest-neighbour on REAL distances, origin = index 0 (first city user said)
+      var n=valid.length,used={0:1},seq=[0],cur=0;
+      while(seq.length<n){
+        var bi=-1,bd=1e15;
+        for(var j=0;j<n;j++){if(used[j])continue;if(D[cur][j]<bd){bd=D[cur][j];bi=j;}}
+        seq.push(bi);used[bi]=1;cur=bi;
+      }
+      var ordered=seq.map(function(i){return valid[i];});
+      var legs=[];
+      for(var k=0;k<seq.length-1;k++){legs.push(Math.round(D[seq[k]][seq[k+1]]/1000));}
+      var retKm=p.isRet?Math.round(D[seq[seq.length-1]][seq[0]]/1000):0;
+      var total=legs.reduce(function(a,b){return a+b;},0)+(p.isRet?retKm:0);
+      computeAndRender(p,ordered,true,legs,total,retKm);
+      audit('real_route',true,total+' km, '+n+' stops via OSRM');
+    })
+    .catch(function(e){audit('real_route',false,'OSRM matrix unavailable — straight-line estimate shown');});
+}
+// realistic mileage table (km per litre, diesel, loaded, Indian highway+city mix)
+var VTYPE_MILEAGE={cab:14,suv:11,tempo:8.5,minibus:6,bus:4.5};
+var VTYPE_LABEL={cab:'Cab / Sedan',suv:'SUV / Innova',tempo:'Tempo Traveller',minibus:'Mini Bus',bus:'Bus / AC Bus'};
+// Known major toll plazas on common routes from Bulandshahr/Khurja region (approx bus/truck one-way rates ₹).
+// These are indicative NHAI commercial rates — seller can edit total. Not exhaustive.
+var TOLL_PLAZAS={
+  'khurja-mathura':[{n:'Jewar/Yamuna Expwy plazas',c:430}],
+  'delhi-agra':[{n:'Yamuna Expressway (full)',c:1140}],
+  'mathura-agra':[{n:'Mahuvan plaza',c:120}],
+  'khurja-jaipur':[{n:'Yamuna Expwy',c:430},{n:'NH-21 Bharatpur side',c:185},{n:'Mahapura, Jaipur',c:160}],
+  'delhi-jaipur':[{n:'Kherki Daula',c:130},{n:'Shahjahanpur',c:230},{n:'Manoharpur',c:215},{n:'Daulatpura',c:175}],
+  'jaipur-khatu':[{n:'Reengus side plaza',c:120}],
+  'khatu-salasar':[{n:'Sikar bypass',c:95}],
+  'salasar-pushkar':[{n:'Kishangarh plaza',c:175},{n:'Nasirabad',c:130}],
+  'delhi-haridwar':[{n:'Bagpat/Khatauli plazas',c:340},{n:'Roorkee plaza',c:165}],
+  'mathura-vrindavan':[],
+  'khurja-vrindavan':[{n:'Yamuna Expwy plaza',c:340}]
+};
+function tollHint(ordered){
+  // build a list of named plazas for the legs we recognize
+  var out=[];
+  for(var i=0;i<ordered.length-1;i++){
+    var a=ordered[i].c, b=ordered[i+1].c;
+    var key=a+'-'+b, rev=b+'-'+a;
+    var list=TOLL_PLAZAS[key]||TOLL_PLAZAS[rev];
+    if(list&&list.length)out=out.concat(list);
+  }
+  return out;
+}
+function detectVType(p,seats){
+  var t=(document.getElementById('calcInp').value||'').toLowerCase();
+  if(/tempo|traveller|traveler/.test(t))return 'tempo';
+  if(/mini\s*bus|minibus/.test(t))return 'minibus';
+  if(/\bbus\b|coach|sleeper/.test(t))return 'bus';
+  if(/innova|ertiga|suv|crysta/.test(t))return 'suv';
+  if(/cab|sedan|dzire|etios|taxi/.test(t))return 'cab';
+  // fall back to seats
+  if(seats<=4)return 'cab';
+  if(seats<=8)return 'suv';
+  if(seats<=20)return 'tempo';
+  if(seats<=32)return 'minibus';
+  return 'bus';
+}
+/* Draw optimized route on a free OpenStreetMap (Leaflet). Uses OSRM for real road path. */
+var _routeMap=null;
+function drawRouteMap(ordered,isRet){
+  var el=document.getElementById('routeMap');if(!el)return;
+  if(typeof L==='undefined'){
+    // Leaflet didn't load (no internet / blocked) — show a clear fallback
+    el.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100%;flex-direction:column;color:var(--t3);font-size:0.74rem;text-align:center;padding:1rem">🗺️ Map needs internet to load.<br>Route order &amp; distances are shown below.</div>';
+    audit('route_map',false,'Leaflet not loaded');
+    return;
+  }
+  try{
+    if(_routeMap){_routeMap.remove();_routeMap=null;}
+    el.innerHTML=''; // clear any fallback
+    var pts=ordered.filter(function(s){return s.coord;}).map(function(s){return [s.coord[0],s.coord[1]];});
+    if(isRet&&pts.length)pts.push(pts[0]);
+    if(pts.length<2)return;
+    _routeMap=L.map(el,{zoomControl:true,attributionControl:false});
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18}).addTo(_routeMap);
+    // markers A,B,C...
+    ordered.forEach(function(s,i){
+      if(!s.coord)return;
+      var col=i===0?'#16A34A':(i===ordered.length-1?'#0F172A':'#2563EB');
+      var icon=L.divIcon({className:'',html:'<div style="background:'+col+';color:#fff;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4)">'+String.fromCharCode(65+i)+'</div>',iconSize:[24,24],iconAnchor:[12,12]});
+      L.marker([s.coord[0],s.coord[1]],{icon:icon}).addTo(_routeMap).bindPopup(cap(s.c));
+    });
+    var line=L.polyline(pts,{color:'#FF9F1C',weight:4,opacity:0.85}).addTo(_routeMap);
+    _routeMap.fitBounds(line.getBounds(),{padding:[30,30]});
+    // CRITICAL: container was hidden/just-rendered — force Leaflet to recompute size
+    setTimeout(function(){if(_routeMap){_routeMap.invalidateSize();_routeMap.fitBounds(line.getBounds(),{padding:[30,30]});}},200);
+    // OSRM free routing for actual road path
+    var coordStr=pts.map(function(pt){return pt[1]+','+pt[0];}).join(';');
+    fetch('https://router.project-osrm.org/route/v1/driving/'+coordStr+'?overview=full&geometries=geojson')
+      .then(function(r){return r.json();})
+      .then(function(d){
+        if(d&&d.routes&&d.routes[0]){
+          var rc=d.routes[0].geometry.coordinates.map(function(x){return [x[1],x[0]];});
+          line.setLatLngs(rc);
+          if(_routeMap){_routeMap.invalidateSize();_routeMap.fitBounds(line.getBounds(),{padding:[30,30]});}
+          audit('route_map',true,'OSRM road path');
+        }
+      }).catch(function(e){audit('route_map',false,'OSRM unavailable, straight line shown');});
+  }catch(err){audit('route_map',false,String(err));el.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--t3);font-size:0.74rem">Map could not load — route shown below.</div>';}
+}
+function renderCalcResult(p,ordered,legs,retKm,total,c){
+  var el=document.getElementById('calcResult');
+  el.innerHTML='';
+  // extracted card
+  var ex=document.createElement('div');ex.className='rescard';
+  var chips=[];
+  if(p.seats)chips.push(p.seats+'-seat');if(p.ac!==null)chips.push(p.ac?'AC':'Non-AC');if(p.pax)chips.push(p.pax+' pax');if(p.days)chips.push(p.days+' days');if(p.fuel)chips.push('Rs'+p.fuel+'/L');if(p.isRet)chips.push('round trip');
+  ex.innerHTML='<div class="rc-h">🤖 Read from your trip<span class="rc-tag">EXTRACTED</span></div><div class="rc-b"><div class="pgrid">'+
+    '<div class="pf"><div class="pl">Cities</div><div class="pv">'+p.cities.length+' stops</div></div>'+
+    '<div class="pf"><div class="pl">Vehicle</div><div class="pv">'+c.seats+'-seat '+(p.ac===false?'Non-AC':'AC')+'</div></div>'+
+    '<div class="pf"><div class="pl">Days</div><div class="pv">'+c.days+'</div></div></div>'+
+    '<div style="display:flex;flex-wrap:wrap;gap:0.35rem;margin-top:0.6rem">'+chips.map(function(x){return '<span class="xtag">✓ '+x+'</span>';}).join('')+'</div></div>';
+  el.appendChild(ex);
+  // hero
+  var rh=document.createElement('div');rh.className='reshero';
+  rh.innerHTML='<div class="resgrid"><div><span class="rv" style="color:#7DD3FC">'+total.toLocaleString()+'</span><div class="rl">TOTAL KM</div></div><div><span class="rv">'+c.days+'d</span><div class="rl">DAYS</div></div><div><span class="rv" id="heroGrand" style="color:#34D399">₹'+c.grand.toLocaleString()+'</span><div class="rl">QUOTE</div></div><div><span class="rv" id="perHeadVal" style="color:#FFB020">₹'+c.perHead+'</span><div class="rl">PER HEAD</div></div></div>';
+  el.appendChild(rh);
+  // ROUTE MAP (free OpenStreetMap via Leaflet) + route order
+  var mapCard=document.createElement('div');mapCard.className='rescard';
+  mapCard.innerHTML='<div class="rc-h">🗺️ Optimized Route Map</div><div class="rc-b" style="padding:0"><div id="routeMap" style="width:100%;height:240px;border-radius:0 0 var(--r2) var(--r2)"></div></div>';
+  el.appendChild(mapCard);
+  // render the map after it is in the DOM
+  setTimeout(function(){drawRouteMap(ordered,p.isRet);},350);
+  // TOUR PLAN — numbered stops in optimized order with per-leg km
+  var ro=document.createElement('div');ro.className='rescard';
+  var lh='';var cum=0;
+  ordered.forEach(function(s,i){
+    var col=i===0?'#16A34A':(i===ordered.length-1?'#0F172A':'#2563EB');
+    var role=i===0?'START / PICKUP':(i===ordered.length-1&&!p.isRet?'LAST STOP':'Stop '+i);
+    lh+='<div class="legi"><div class="legd" style="background:'+col+'">'+(i+1)+'</div><div><div style="font-weight:700;font-size:0.88rem">'+cap(s.c)+'</div><div style="font-size:0.62rem;color:var(--t3)">'+role+'</div></div></div>';
+    if(i<ordered.length-1){cum+=legs[i];lh+='<div class="legl">↓ <b>'+legs[i]+' km</b> to next · running '+cum+' km</div>';}
+  });
+  if(p.isRet&&retKm){cum+=retKm;lh+='<div class="legl" style="color:#E8880A">↩ <b>'+retKm+' km</b> return to '+cap(ordered[0].c)+' · total '+cum+' km</div>';}
+  var srcBadge=c.realRoads?'<span style="font-size:0.6rem;background:var(--green-bg);color:var(--green);padding:1px 7px;border-radius:10px;font-weight:700">✓ real road km</span>':'<span style="font-size:0.6rem;background:var(--cream2);color:var(--t3);padding:1px 7px;border-radius:10px">estimating…</span>';
+  ro.innerHTML='<div class="rc-h">🗺️ Tour Plan — Optimized Order '+srcBadge+'</div><div class="rc-b"><div style="font-size:0.66rem;color:var(--t3);margin-bottom:0.5rem">Visit in this sequence for least distance</div>'+lh+'</div>';
+  el.appendChild(ro);
+  // cost — TRANSPARENT & EDITABLE. Every input recalculates live.
+  var co=document.createElement('div');co.className='rescard';
+  co.innerHTML='<div class="rc-h">🧾 Cost Breakdown <span style="font-size:0.6rem;color:var(--t3);font-weight:400;margin-left:auto">tap any value to edit</span></div>'+
+   '<div class="rc-b" id="costBody">'+
+    // distance basis + VEHICLE TYPE selector (sets mileage)
+    '<div class="cost-basis">📏 <b id="distLabel">'+total+' km</b>'+(p.isRet?' (incl. return)':'')+' · '+c.days+' day(s) · '+c.pax+' pax <span id="distSrc" style="color:var(--t3)">· road est.</span></div>'+
+    '<div class="cost-line" style="border-bottom:2px solid var(--line)"><div class="cl-label">🚐 Vehicle type</div>'+
+      '<div class="cl-formula">sets realistic mileage →</div>'+
+      '<div class="cl-amt"><select class="ci" id="ed-vtype" style="width:auto;min-width:120px">'+
+        Object.keys(VTYPE_LABEL).map(function(k){return '<option value="'+k+'"'+(k===c.vtype?' selected':'')+'>'+VTYPE_LABEL[k]+'</option>';}).join('')+
+      '</select></div></div>'+
+    // FUEL
+    '<div class="cost-line"><div class="cl-label">⛽ Fuel</div>'+
+      '<div class="cl-formula">'+total+' km ÷ <input class="ci" id="ed-mileage" value="'+c.mileage+'"> km/L × ₹<input class="ci" id="ed-fuel" value="'+c.fuel+'">/L = <b>'+c.litres+' L</b></div>'+
+      '<div class="cl-amt" id="amt-fuel">₹'+c.fuelCost.toLocaleString()+'</div></div>'+
+    // TOLL
+    '<div class="cost-line"><div class="cl-label">🪙 Toll tax</div>'+
+      '<div class="cl-formula">'+total+' km × ₹<input class="ci" id="ed-tollrate" value="'+c.tollPerKm+'">/km ('+VTYPE_LABEL[c.vtype]+' rate)'+
+        (function(){var ph=tollHint(ordered);if(!ph.length)return ' · ~'+c.tollPlazas+' plazas (est.)';
+          var named=ph.map(function(x){return x.n+' ≈₹'+x.c;}).join(', ');
+          return '<br><span style="color:var(--t2)">Likely plazas: '+named+'</span>';})()+
+      '</div>'+
+      '<div class="cl-amt" id="amt-toll">₹'+c.tollCost.toLocaleString()+'</div></div>'+
+    // DRIVER
+    '<div class="cost-line"><div class="cl-label">👨‍✈️ Driver</div>'+
+      '<div class="cl-formula"><input class="ci" id="ed-days" value="'+c.days+'"> days × ₹<input class="ci" id="ed-driverday" value="'+c.driverDay+'">/day (food+stay)</div>'+
+      '<div class="cl-amt" id="amt-driver">₹'+c.driverCost.toLocaleString()+'</div></div>'+
+    // PARKING / STATE TAX / MISC
+    '<div class="cost-line"><div class="cl-label">🅿️ Parking + state permit + misc</div>'+
+      '<div class="cl-formula">flat estimate, edit as needed →</div>'+
+      '<div class="cl-amt"><span>₹</span><input class="ci ci-amt" id="ed-misc" value="'+c.park+'"></div></div>'+
+    // OPERATING TOTAL
+    '<div class="crow" style="border-top:2px solid var(--line);margin-top:0.3rem;padding-top:0.5rem"><span><b>Operating cost</b></span><span class="cv" id="amt-base"><b>₹'+c.base.toLocaleString()+'</b></span></div>'+
+    // PROFIT
+    '<div class="crow mrow"><span>📈 Your profit <input class="ci" id="profitPct" value="15">%</span><span class="cv" id="marginVal">₹'+c.margin.toLocaleString()+'</span></div>'+
+    // GRAND
+    '<div class="crow tot"><span>💰 Customer Quote</span><span class="cv" id="grandVal">₹'+c.grand.toLocaleString()+'</span></div>'+
+    '<div style="font-size:0.62rem;color:var(--t3);margin-top:0.4rem;text-align:center">Per head: <b id="perHeadInline">₹'+c.perHead+'</b> · all values editable above</div>'+
+   '</div>';
+  el.appendChild(co);
+  // LIVE RECALC — any edited input recomputes the whole chain
+  var liveTotal=total; // updated when OSRM returns real km
+  function recalc(vtypeChanged){
+    // if vehicle type changed, refresh mileage to that type's realistic value
+    if(vtypeChanged){
+      var vt=document.getElementById('ed-vtype').value;
+      document.getElementById('ed-mileage').value=VTYPE_MILEAGE[vt];
+    }
+    var mileage=Math.max(1,+document.getElementById('ed-mileage').value||c.mileage);
+    var fuel=+document.getElementById('ed-fuel').value||c.fuel;
+    var tollPerKm=+document.getElementById('ed-tollrate').value||c.tollPerKm;
+    var days=Math.max(1,+document.getElementById('ed-days').value||c.days);
+    var driverDay=+document.getElementById('ed-driverday').value||c.driverDay;
+    var misc=+document.getElementById('ed-misc').value||0;
+    var pct=+document.getElementById('profitPct').value||0;
+    var litres=Math.round(liveTotal/mileage);
+    var fuelCost=Math.round(litres*fuel);
+    var tollCost=Math.round(liveTotal*tollPerKm);
+    var driverCost=days*driverDay;
+    var base=fuelCost+tollCost+driverCost+misc;
+    var margin=Math.round(base*pct/100);
+    var grand=base+margin;
+    var perHead=Math.round(grand/(c.pax||1));
+    // update display
+    document.getElementById('amt-fuel').textContent='₹'+fuelCost.toLocaleString();
+    document.getElementById('amt-toll').textContent='₹'+tollCost.toLocaleString();
+    document.getElementById('amt-driver').textContent='₹'+driverCost.toLocaleString();
+    document.getElementById('amt-base').innerHTML='<b>₹'+base.toLocaleString()+'</b>';
+    document.getElementById('marginVal').textContent='₹'+margin.toLocaleString();
+    document.getElementById('grandVal').textContent='₹'+grand.toLocaleString();
+    document.getElementById('perHeadInline').textContent='₹'+perHead;
+    var hg=document.getElementById('heroGrand');if(hg)hg.textContent='₹'+grand.toLocaleString();
+    var ph=document.getElementById('perHeadVal');if(ph)ph.textContent='₹'+perHead;
+    // update the live cost object so shares use latest
+    c.mileage=mileage;c.fuel=fuel;c.tollPerKm=tollPerKm;c.days=days;c.driverDay=driverDay;
+    c.litres=litres;c.fuelCost=fuelCost;c.tollCost=tollCost;c.driverCost=driverCost;c.park=misc;
+    c.base=base;c.margin=margin;c.grand=grand;c.perHead=perHead;
+  }
+  setTimeout(function(){
+    ['ed-mileage','ed-fuel','ed-tollrate','ed-days','ed-driverday','ed-misc','profitPct'].forEach(function(id){
+      var el2=document.getElementById(id);if(el2){el2.addEventListener('input',recalc);el2.setAttribute('type','number');}
+    });
+    var vt=document.getElementById('ed-vtype');
+    if(vt)vt.addEventListener('change',function(){recalc(true);});
+    // Fetch REAL road distance from OSRM and update the cost with it
+    var pts=ordered.filter(function(s){return s.coord;}).map(function(s){return s.coord;});
+    if(p.isRet&&pts.length)pts.push(pts[0]);
+    if(pts.length>=2){
+      var coordStr=pts.map(function(pt){return pt[1]+','+pt[0];}).join(';');
+      fetch('https://router.project-osrm.org/route/v1/driving/'+coordStr+'?overview=false')
+        .then(function(r){return r.json();})
+        .then(function(d){
+          if(d&&d.routes&&d.routes[0]&&d.routes[0].distance){
+            var realKm=Math.round(d.routes[0].distance/1000);
+            if(realKm>0){
+              liveTotal=realKm;
+              var dl=document.getElementById('distLabel');if(dl)dl.textContent=realKm+' km';
+              var ds=document.getElementById('distSrc');if(ds){ds.textContent='· real road distance ✓';ds.style.color='var(--green)';}
+              recalc(); // recompute cost with real km
+              audit('real_km',true,realKm+' km via OSRM');
+            }
+          }
+        }).catch(function(e){audit('real_km',false,'OSRM unavailable — using road estimate');});
+    }
+  },120);
+  function buildShareText(){
+    return 'FleetHub Trip Quote\n'+ordered.map(function(o,i){return String.fromCharCode(65+i)+'. '+cap(o.c);}).join('\n')+(p.isRet?'\nReturn included':'')+'\nTotal: '+total+' km | Rs'+c.grand.toLocaleString()+' | Rs'+c.perHead+'/person';
+  }
+  function buildQuoteMsg(){
+    var jdate=(CALC_CONTEXT&&CALC_CONTEXT.date_from)?('Journey: '+CALC_CONTEXT.date_from+(CALC_CONTEXT.date_to?' to '+CALC_CONTEXT.date_to:'')+'\n'):'';
+    return 'Namaste '+((CALC_CONTEXT&&CALC_CONTEXT.user_name)||'')+'! Your trip quote from '+(SELLER?SELLER.biz:'us')+':\n'+
+      'Route: '+((CALC_CONTEXT&&CALC_CONTEXT.route)||ordered.map(function(o){return cap(o.c);}).join(' → '))+'\n'+
+      jdate+
+      'Distance: '+total+' km · '+c.days+' day(s)\n'+
+      'Fuel: Rs'+c.fuelCost.toLocaleString()+' · Toll: Rs'+c.tollCost.toLocaleString()+'\n'+
+      'Total trip cost: Rs '+c.grand.toLocaleString()+'\n'+
+      'Per head: Rs '+c.perHead+'\n\nShall we confirm your booking?';
+  }
+  // share row — text is REBUILT at click time so it always uses the latest total
+  var sr=document.createElement('div');sr.className='share-row';
+  var wb=document.createElement('button');wb.className='cbtn wa';wb.textContent='💬 Share on WhatsApp';
+  wb.addEventListener('click',function(){window.open('https://wa.me/?text='+encodeURIComponent(buildShareText()),'_blank');});
+  var cb=document.createElement('button');cb.className='cbtn getnum';cb.textContent='📋 Copy Quote';
+  cb.addEventListener('click',function(){copyToClipboard(buildShareText());});
+  sr.appendChild(wb);sr.appendChild(cb);
+  el.appendChild(sr);
+
+  // If quoting for a specific buyer enquiry — show DIRECT REPLY-TO-BUYER CTAs
+  if(CALC_CONTEXT && CALC_CONTEXT.user_phone){
+    var rb=document.createElement('div');
+    rb.style.cssText='background:var(--purple-bg);border-radius:12px;padding:0.85rem;margin-top:0.7rem';
+    rb.innerHTML='<div style="font-size:0.74rem;font-weight:700;color:var(--purple);margin-bottom:0.5rem">📤 Send this quote to '+(CALC_CONTEXT.user_name||'buyer')+' ('+CALC_CONTEXT.user_phone+')</div>';
+    var rr=document.createElement('div');rr.style.cssText='display:flex;gap:0.4rem';
+    var rwa=document.createElement('button');rwa.className='cbtn wa';rwa.style.flex='1';rwa.textContent='💬 Reply on WhatsApp';
+    rwa.addEventListener('click',function(){
+      var num=normWa(CALC_CONTEXT.user_phone);
+      if(!num){showToast('Buyer number missing');return;}
+      window.open('https://wa.me/'+num+'?text='+encodeURIComponent(buildQuoteMsg()),'_blank');
+      audit('quote_reply_wa',true,num);
+      logSellerReply('WhatsApp');
+    });
+    var rsms=document.createElement('button');rsms.className='cbtn';rsms.style.cssText='background:var(--navy);color:#fff;flex:1';
+    rsms.textContent='✉️ Reply by SMS';
+    rsms.addEventListener('click',function(){
+      var num=String(CALC_CONTEXT.user_phone||'').replace(/[^0-9+]/g,'');
+      if(num.length<10){showToast('Buyer number missing');return;}
+      window.location.href='sms:'+num+'?body='+encodeURIComponent(buildQuoteMsg());
+      audit('quote_reply_sms',true,num);
+      logSellerReply('SMS');
+    });
+    function logSellerReply(channel){
+      var rec={action:'logReply',seller_name:SELLER?SELLER.biz:'',seller_phone:SELLER?SELLER.phone:'',
+        buyer_name:CALC_CONTEXT.user_name||'',buyer_phone:CALC_CONTEXT.user_phone||'',
+        route:(CALC_CONTEXT.route||ordered.map(function(o){return cap(o.c);}).join(' → ')),
+        total_km:total,total_cost:c.grand,per_head:c.perHead,channel:channel};
+      // Firestore primary, Apps Script fallback
+      if(FB_READY){fbDB.collection('replies').add(Object.assign({ts:new Date().toISOString()},rec)).catch(function(){apiPost(rec);});}
+      else{apiPost(rec);}
+      // mark the enquiry replied in local store
+      try{var all=JSON.parse(localStorage.getItem('fh_enquiries')||'[]');all.forEach(function(en){if(en.user_phone===CALC_CONTEXT.user_phone){en.seller_replied=true;en.replied_at=new Date().toISOString();}});localStorage.setItem('fh_enquiries',JSON.stringify(all));}catch(e){}
+    }
+    rr.appendChild(rwa);rr.appendChild(rsms);rb.appendChild(rr);
+    el.appendChild(rb);
+  }
+  el.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+// Robust clipboard copy (works even when navigator.clipboard is blocked)
+function copyToClipboard(text){
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(function(){showToast('✅ Quote copied!');})
+      .catch(function(){fallbackCopy(text);});
+  }else{fallbackCopy(text);}
+}
+function fallbackCopy(text){
+  try{
+    var ta=document.createElement('textarea');ta.value=text;
+    ta.style.cssText='position:fixed;top:0;left:0;opacity:0';
+    document.body.appendChild(ta);ta.focus();ta.select();
+    var ok=document.execCommand('copy');document.body.removeChild(ta);
+    showToast(ok?'✅ Quote copied!':'Long-press the quote to copy');
+  }catch(e){showToast('Long-press the quote text to copy');}
+}
+/* mic — voice input, understands Hindi + English (Indian accent) */
+var rec=null,listening=false;
+document.getElementById('calcMic').addEventListener('click',function(){
+  var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){showToast('🎤 Voice needs Chrome. Please type the trip instead.');return;}
+  var mb=document.getElementById('calcMic');
+  if(listening){try{rec.stop();}catch(e){}return;}
+  rec=new SR();
+  rec.lang='hi-IN';        // Hindi-India recognizes Hindi AND Indian-English words/place names
+  rec.interimResults=true;
+  rec.continuous=false;
+  rec.maxAlternatives=1;
+  var inp=document.getElementById('calcInp');
+  rec.onstart=function(){
+    listening=true;mb.classList.add('rec');mb.textContent='🔴 Listening… speak now';
+    showToast('🎤 Listening — say the trip (e.g. "Bulandshahr se Khatu Shyam, 40 seater AC bus, round trip")');
+  };
+  rec.onresult=function(e){
+    var t='';for(var i=0;i<e.results.length;i++)t+=e.results[i][0].transcript;
+    inp.value=t; // show what was heard live, in the box
+  };
+  rec.onerror=function(ev){
+    listening=false;mb.classList.remove('rec');mb.textContent='🎤 Speak';
+    if(ev.error==='not-allowed'||ev.error==='service-not-allowed')showToast('🎤 Allow microphone permission, then tap Speak again.');
+    else if(ev.error==='no-speech')showToast('🎤 Did not catch that — tap Speak and try again.');
+    else showToast('🎤 Voice issue — please type the trip.');
+    audit('voice_input',false,ev.error||'unknown');
+  };
+  rec.onend=function(){
+    listening=false;mb.classList.remove('rec');mb.textContent='🎤 Speak';
+    var said=inp.value.trim();
+    if(said){
+      audit('voice_input',true,said.slice(0,40));
+      showToast('Heard: "'+said.slice(0,40)+(said.length>40?'…':'')+'" — calculating');
+      setTimeout(function(){runCalc();},300); // auto-calculate what was heard
+    }
+  };
+  try{rec.start();}catch(e){showToast('🎤 Tap Speak again');}
+});
+
+function saveApi(){
+  var u=document.getElementById('apiInput').value.trim();
+  FH_API=u;try{localStorage.setItem('fh_api',u);}catch(e){}
+  updateApiStatus();
+  if(u){showToast('Backend connected!');loadListingsFromSheet();}
+  else showToast('Backend cleared — using local data');
+}
+function updateApiStatus(){
+  var el=document.getElementById('apiStatus');if(!el)return;
+  el.innerHTML=FH_API?'<span style="color:#34D399">● Connected to Google Sheet</span>':'<span style="color:#F59E0B">● Not connected (local demo data)</span>';
+  var inp=document.getElementById('apiInput');if(inp&&FH_API)inp.value=FH_API;
+}
+/* ═══ MY TRIPS (buyer view) ═══ */
+function renderMyTrips(){
+  var all=[];
+  try{all=JSON.parse(localStorage.getItem('fh_enquiries')||'[]');}catch(e){}
+  // only this user's enquiries (by their verified phone)
+  var mine=all.filter(function(e){return !USER.phone || e.user_phone===USER.phone;});
+  document.getElementById('mytripsSub').textContent=mine.length+' trip'+(mine.length!==1?'s':'')+' sent'+(USER.name?' · '+USER.name:'');
+  var el=document.getElementById('myTripsList');
+  el.innerHTML='';
+  if(!mine.length){
+    el.innerHTML='<div class="empty-state"><span class="es-ico">🧳</span>No trips yet.<br><b>When you send a trip to an operator, it shows here with the reply status.</b></div>';
+    return;
+  }
+  mine.forEach(function(e,i){
+    var card=document.createElement('div');card.className='mylist-card';card.style.flexDirection='column';card.style.alignItems='stretch';
+    var dt=e.ts?new Date(e.ts):null;
+    card.innerHTML='<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:0.5rem">'+
+      '<div style="flex:1"><div class="ml-name">🚌 '+(e.seller_name||'Operator')+'</div>'+
+      '<div class="ml-meta" style="margin-top:0.25rem">🚐 '+(e.vehicle||'')+' · '+(e.seats||'')+' seats · '+(e.ac||'')+'</div>'+
+      '<div class="ml-meta">📍 '+(e.route||((e.from||'')+' → '+(e.to||'')))+'</div>'+
+      '<div class="ml-meta">📅 '+(e.date_from||'date?')+(e.date_to?' to '+e.date_to:'')+' · '+(e.trip_type==='round'?'Round trip':'One way')+'</div>'+
+      (dt?'<div class="ml-meta" style="color:var(--t3)">🕐 Sent '+dt.toLocaleDateString()+' '+dt.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})+'</div>':'')+
+      '</div></div>';
+    // contact row: WhatsApp + Call to the seller
+    var actions=document.createElement('div');actions.style.cssText='display:flex;gap:0.5rem;margin-top:0.7rem;flex-wrap:wrap';
+    var sTel=e.seller_phone?String(e.seller_phone).replace(/[^0-9+]/g,''):'';
+    var sWa=e.seller_phone?String(e.seller_phone).replace(/[^0-9]/g,'').replace(/^0/,''):'';
+    if(sWa){
+      var wa=document.createElement('a');wa.className='cbtn wa';wa.style.flex='1';
+      wa.href='https://wa.me/91'+sWa+'?text='+encodeURIComponent('Hi, following up on my FleetHub trip enquiry: '+(e.route||''));
+      wa.target='_blank';wa.rel='noopener';wa.textContent='💬 WhatsApp';
+      wa.addEventListener('click',function(){audit('mytrip_wa',true,sWa);});
+      actions.appendChild(wa);
+    }
+    if(sTel){
+      var cl=document.createElement('a');cl.className='cbtn call';cl.style.flex='1';
+      cl.href='tel:'+sTel;cl.textContent='📞 Call';
+      cl.addEventListener('click',function(){audit('mytrip_call',true,sTel);});
+      actions.appendChild(cl);
+    }
+    if(!sWa&&!sTel){
+      var nn=document.createElement('div');nn.style.cssText='font-size:0.7rem;color:var(--t3)';nn.textContent='Operator contact not listed';
+      actions.appendChild(nn);
+    }
+    card.appendChild(actions);
+    el.appendChild(card);
+  });
+}
+function markTripReplied(ts){
+  try{
+    var all=JSON.parse(localStorage.getItem('fh_enquiries')||'[]');
+    all.forEach(function(e){if(e.ts===ts){e.seller_replied=true;e.replied_at=new Date().toISOString();}});
+    localStorage.setItem('fh_enquiries',JSON.stringify(all));
+  }catch(e){}
+  // also update Firestore if available
+  if(FB_READY){
+    fbDB.collection('enquiries').where('ts','==',ts).get().then(function(snap){
+      snap.forEach(function(doc){doc.ref.update({seller_replied:true,replied_at:new Date().toISOString()});});
+    }).catch(function(){});
+  }
+  showToast('Marked as replied');
+  renderMyTrips();
+}
+
+/* ═══ AUDIT PANEL ═══ */
+function renderAudit(){
+  // health summary
+  var checks=[
+    {k:'Firebase (OTP + DB + Storage)',ok:FB_READY,fix:'Add your firebaseConfig keys at the top of the file. console.firebase.google.com -> Project settings -> Web app config.'},
+    {k:'Google Sheet fallback backend',ok:!!FH_API,fix:'Optional. Paste your Apps Script /exec URL in the menu to enable the sheet fallback.'},
+    {k:'GPS location',ok:!!USER_GPS,fix:'Tap "Sort by distance from me" and allow location permission in the browser.'},
+    {k:'Listings loaded',ok:allProv().length>0,fix:'Seed operators or have sellers publish. Check Firestore "listings" collection.'},
+  ];
+  var sumHtml='<div class="dt-section"><h3>🔌 Integration Health</h3>';
+  checks.forEach(function(c){
+    sumHtml+='<div style="display:flex;align-items:center;gap:0.6rem;padding:0.5rem 0;border-bottom:1px solid var(--line2)">'+
+      '<span style="font-size:1rem">'+(c.ok?'✅':'⚠️')+'</span>'+
+      '<div style="flex:1"><div style="font-weight:600;font-size:0.84rem">'+c.k+'</div>'+
+      (c.ok?'<div style="font-size:0.7rem;color:var(--green)">Working</div>':'<div style="font-size:0.7rem;color:var(--t2)">'+c.fix+'</div>')+'</div></div>';
+  });
+  sumHtml+='</div>';
+  document.getElementById('auditStatus').innerHTML=sumHtml;
+
+  // failure log
+  var fails=AUDIT_LOG.filter(function(e){return !e.ok;});
+  var oks=AUDIT_LOG.filter(function(e){return e.ok;});
+  var logHtml='<div class="dt-section"><h3>📋 Event Log <span style="font-size:0.66rem;color:var(--t3);font-weight:400">('+fails.length+' failed · '+oks.length+' ok)</span></h3>';
+  if(!AUDIT_LOG.length){
+    logHtml+='<div style="font-size:0.8rem;color:var(--t3);padding:0.5rem 0">No events logged yet. Use the app — every call, enquiry, OTP, upload and load is tracked here.</div>';
+  }else{
+    if(fails.length){
+      logHtml+='<div style="font-size:0.72rem;font-weight:700;color:var(--red);margin:0.5rem 0 0.3rem">⚠️ FAILED CASES</div>';
+      fails.slice(0,20).forEach(function(e){
+        logHtml+='<div style="background:var(--red-bg);border-radius:8px;padding:0.5rem 0.65rem;margin-bottom:0.4rem">'+
+          '<div style="font-size:0.76rem;font-weight:600">'+e.what+'</div>'+
+          '<div style="font-size:0.66rem;color:var(--t2);margin-top:0.15rem">'+(e.detail||'')+'</div>'+
+          '<div style="font-size:0.6rem;color:var(--t3);margin-top:0.1rem">'+e.t.replace('T',' ').slice(0,19)+' · '+suggest(e.what)+'</div></div>';
+      });
+    }
+    logHtml+='<div style="font-size:0.72rem;font-weight:700;color:var(--green);margin:0.6rem 0 0.3rem">✓ RECENT OK</div>';
+    oks.slice(0,10).forEach(function(e){
+      logHtml+='<div style="display:flex;justify-content:space-between;font-size:0.7rem;padding:0.3rem 0;border-bottom:1px solid var(--line2)"><span>'+e.what+'</span><span style="color:var(--t3)">'+e.t.slice(11,19)+'</span></div>';
+    });
+  }
+  logHtml+='</div>';
+  document.getElementById('auditLog').innerHTML=logHtml;
+}
+function suggest(what){
+  var s={
+    'otp_send':'Check Phone Auth is enabled + domain authorized in Firebase Console.',
+    'otp_verify':'OTP expired or wrong. Re-send. Check SMS quota.',
+    'photo_upload':'Check Storage rules allow writes; check file size < 5MB.',
+    'enquiry':'Check Firestore rules allow create on "enquiries".',
+    'publish_listing':'Check Firestore rules allow create on "listings".',
+    'load_listings':'Check Firestore rules allow read; check network.',
+    'firebase_init':'Verify config keys are correct and complete.',
+    'gps':'User denied location or timed out. Ask them to allow it.',
+    'seller_register':'Check Firestore rules allow write on "sellers".'
+  };
+  for(var k in s){if(what.indexOf(k)===0)return s[k];}
+  return 'Review browser console for details.';
+}
+function clearAudit(){AUDIT_LOG=[];try{localStorage.setItem('fh_audit','[]');}catch(e){}renderAudit();showToast('Audit log cleared');}
+
+function showToast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},3400);}
+
+/* INIT */
+renderCats();render();
+loadListingsFromSheet();
+updateApiStatus();
+if(SELLER)document.getElementById('sellerMenuLabel').textContent='My Dashboard';
+</script>
+</body>
+</html>
