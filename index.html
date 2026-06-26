@@ -654,7 +654,6 @@ body{font-family:var(--body);background:var(--cream);color:var(--ink);font-size:
       <button class="share-opt" id="shCopy"><span class="sho-ic" style="background:var(--navy)">🔗</span>Copy link</button>
       <button class="share-opt" id="shMore"><span class="sho-ic" style="background:var(--saffron)">⋯</span>More apps</button>
     </div>
-    <button class="share-copy-text" id="shCopyText">📋 Copy full catalog text</button>
   </div>
 </div>
 
@@ -1154,6 +1153,8 @@ function buildCard(p,mode){
 function openDetail(p){
   track('view',p);
   window.SHARE_DETAIL_P=p;
+  // set a clean shareable URL hash with the firm name
+  try{if(location.hash.replace(/^#/,'')!==slugify(p.name)+'-'+p.id){history.replaceState(null,'',location.pathname+'#'+slugify(p.name)+'-'+p.id);}}catch(e){}
   var v=document.getElementById('view-detail');
   document.getElementById('dtHTitle').textContent=p.name;
   document.getElementById('dtContent').innerHTML=buildDetail(p);
@@ -1170,43 +1171,34 @@ function openDetail(p){
   });
   window.scrollTo({top:0});
 }
-function closeDetail(){document.getElementById('view-detail').classList.remove('on');}
+function closeDetail(){document.getElementById('view-detail').classList.remove('on');try{history.replaceState(null,'',location.pathname);}catch(e){}}
 document.getElementById('dtBack').addEventListener('click',closeDetail);
 document.getElementById('dtClose').addEventListener('click',closeDetail);
 
 // ─── SHARE SYSTEM ───
 var SHARE_P=null;
+function slugify(name){
+  return String(name||'operator').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,40);
+}
 function buildShareText(p){
   var base=location.origin+location.pathname;
-  var url=base+'#op='+encodeURIComponent(p.id);
-  var lines=[];
-  lines.push('🚌 '+p.name+(p.verified?' ✓':''));
-  lines.push('📍 '+p.area+', '+p.city);
-  if(p.type)lines.push('🚐 '+p.type+' · '+p.seats+' seats · '+(p.ac?'AC':'Non-AC'));
-  if(p.priceKm)lines.push('💰 ₹'+p.priceKm+'/km approx');
-  // fleet
-  if(p.fleet&&p.fleet.length){
-    lines.push('');lines.push('Vehicles available:');
-    p.fleet.forEach(function(f){lines.push('• '+f.n+' ('+f.s+' seats'+(f.ac?', AC':'')+(f.p?', ₹'+f.p+'/km':'')+')');});
-  }
-  if(p.phone)lines.push('');
-  if(p.phone)lines.push('📞 Call: '+p.phone);
-  if(p.wa)lines.push('💬 WhatsApp: '+(String(p.wa).replace(/[^0-9]/g,'')));
-  lines.push('');
-  lines.push('Book on FleetHub 👇');
-  lines.push(url);
-  return {text:lines.join('\n'),url:url};
+  // clean link carrying the firm name + operator id, e.g. .../#jai-shri-balaji-travels-1
+  var url=base+'#'+slugify(p.name)+'-'+p.id;
+  // short caption + the clickable link (link opens their full digital card page)
+  var caption=p.name+(p.verified?' ✓':'')+' · '+p.city+' — book on FleetHub 👇';
+  return {text:caption+'\n'+url, url:url, caption:caption};
 }
 function openShare(p){
   SHARE_P=p;
   var s=buildShareText(p);
-  document.getElementById('sharePreview').textContent=s.text;
+  // preview shows the clean link (mini-site / digital card)
+  document.getElementById('sharePreview').innerHTML='<div style="font-weight:700;color:var(--ink);margin-bottom:3px">'+p.name+'</div><div style="color:var(--saffron2);word-break:break-all;font-size:0.68rem">'+s.url+'</div><div style="color:var(--t3);margin-top:4px">Opens '+p.name+'\u2019s page with photos, vehicles, papers &amp; contact.</div>';
   var encT=encodeURIComponent(s.text), encU=encodeURIComponent(s.url);
   document.getElementById('shWhatsapp').href='https://wa.me/?text='+encT;
   document.getElementById('shWhatsapp').target='_blank';
   document.getElementById('shFacebook').href='https://www.facebook.com/sharer/sharer.php?u='+encU;
   document.getElementById('shFacebook').target='_blank';
-  document.getElementById('shTelegram').href='https://t.me/share/url?url='+encU+'&text='+encodeURIComponent(p.name+' on FleetHub');
+  document.getElementById('shTelegram').href='https://t.me/share/url?url='+encU+'&text='+encodeURIComponent(s.caption);
   document.getElementById('shTelegram').target='_blank';
   document.getElementById('shTwitter').href='https://twitter.com/intent/tweet?text='+encT;
   document.getElementById('shTwitter').target='_blank';
@@ -1237,7 +1229,6 @@ function fallbackCopy(txt,msg){
   document.body.removeChild(ta);
 }
 document.getElementById('shCopy').addEventListener('click',function(){var s=buildShareText(SHARE_P);copyToClip(s.url,'🔗 Link copied!');audit('share_copylink',true,SHARE_P.name);});
-document.getElementById('shCopyText').addEventListener('click',function(){var s=buildShareText(SHARE_P);copyToClip(s.text,'📋 Catalog copied!');audit('share_copytext',true,SHARE_P.name);});
 
 function buildDetail(p){
   var emoji=p.cat==='cab'?'\uD83D\uDE95':p.cat==='taxi'?'\uD83D\uDE99':p.cat==='tempo'?'\uD83D\uDE90':'\uD83D\uDE8C';
@@ -2648,6 +2639,25 @@ renderCats();render();
 loadListingsFromSheet();
 updateApiStatus();
 if(SELLER)document.getElementById('sellerMenuLabel').textContent='My Dashboard';
+
+/* DEEP LINK — if URL has #firm-name-<id>, open that operator's page directly.
+   This is what makes a shared link open the operator's digital card / mini-site. */
+function openFromHash(){
+  var h=(location.hash||'').replace(/^#/,'');
+  if(!h)return;
+  // the id is the trailing number after the last dash
+  var m=h.match(/-(\d+)$/);
+  var id=m?+m[1]:null;
+  var p=null;
+  if(id!=null)p=allProv().find(function(x){return String(x.id)===String(id);});
+  // fallback: match by slug of name
+  if(!p)p=allProv().find(function(x){return slugify(x.name)===h||h.indexOf(slugify(x.name))===0;});
+  if(p){setTimeout(function(){openDetail(p);},250);}
+}
+window.addEventListener('hashchange',openFromHash);
+// run once at load (after listings load too)
+openFromHash();
+setTimeout(openFromHash,1200); // retry after Firestore/sheet listings load
 </script>
 </body>
 </html>
