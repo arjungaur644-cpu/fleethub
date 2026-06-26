@@ -1439,29 +1439,39 @@ document.getElementById('loginBtn').addEventListener('click',async function(){
       try{
         if(!fbRecaptcha){
           fbRecaptcha=new firebase.auth.RecaptchaVerifier('recaptcha-container',{size:'invisible'});
+          await fbRecaptcha.render();
         }
         fbConfirmation=await fbAuth.signInWithPhoneNumber('+91'+ph,fbRecaptcha);
-        document.getElementById('otpHint').innerHTML='✅ OTP sent by SMS to <b>+91 '+ph+'</b>. Check your messages.';
+        document.getElementById('otpHint').innerHTML='✅ OTP sent by SMS to <b>+91 '+ph+'</b>. Check your messages (can take up to 30 sec).';
         showToast('OTP sent to +91 '+ph);
         audit('otp_send',true,'+91'+ph);
       }catch(err){
-        // Reset reCAPTCHA on error so retry works
+        // Reset reCAPTCHA on error so retry works cleanly
         try{if(fbRecaptcha){fbRecaptcha.clear();fbRecaptcha=null;}}catch(e){}
-        audit('otp_send',false,String(err&&err.message||err));
-        var errMsg=String(err&&err.message||'');
+        var code=String(err&&err.code||'');
+        var errMsg=String(err&&err.message||err);
+        audit('otp_send',false,code+' | '+errMsg);
         var hint='';
-        if(errMsg.includes('internal-error')||errMsg.includes('auth/internal-error')){
-          hint='Firebase internal error — most likely your domain is not authorized.<br>'+
-            'In Firebase Console → Authentication → Settings → Authorized domains → add your site URL.';
-        }else if(errMsg.includes('too-many-requests')){
-          hint='Too many OTP attempts. Wait a few minutes and try again.';
-        }else if(errMsg.includes('invalid-phone-number')){
-          hint='Invalid phone number. Enter exactly 10 digits (no +91).';
+        if(code.includes('billing-not-enabled')){
+          hint='Firebase billing (Blaze) not active for SMS. Enable Blaze plan in Firebase Console.';
+        }else if(code.includes('operation-not-allowed')){
+          hint='Phone sign-in is OFF. Firebase Console → Authentication → Sign-in method → enable Phone.';
+        }else if(code.includes('captcha-check-failed')||code.includes('invalid-app-credential')){
+          hint='Domain not authorized for OTP. Firebase Console → Authentication → Settings → Authorized domains → add fleethub-travel.netlify.app';
+        }else if(code.includes('internal-error')){
+          hint='Internal error — usually SMS region policy is blocking India. Firebase Console → Authentication → Settings → SMS region policy → Allow India.';
+        }else if(code.includes('too-many-requests')){
+          hint='Too many attempts from this number/device. Wait 10–15 min, or add this number under Test phone numbers.';
+        }else if(code.includes('invalid-phone-number')){
+          hint='Invalid number. Enter exactly 10 digits, no +91, no spaces.';
+        }else if(code.includes('quota-exceeded')){
+          hint='Daily SMS quota reached. Try tomorrow or use a Test phone number.';
         }else{
-          hint='OTP send failed: '+errMsg+'<br>Check Firebase Console → Authentication is enabled.';
+          hint='Send failed.';
         }
-        document.getElementById('otpHint').innerHTML='⚠️ '+hint;
-        showToast('OTP failed — see instructions above');
+        // show the exact code on screen so we can diagnose without desktop
+        document.getElementById('otpHint').innerHTML='⚠️ '+hint+'<br><span style="font-size:0.6rem;color:#94A3B8">error code: '+(code||'unknown')+'</span>';
+        showToast('OTP failed: '+(code||'see message'));
         return;
       }
     }else{
