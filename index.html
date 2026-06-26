@@ -387,7 +387,7 @@ body{font-family:var(--body);background:var(--cream);color:var(--ink);font-size:
 <!-- TOPBAR -->
 <div class="topbar">
   <div class="tb-inner">
-    <div class="brand">
+    <div class="brand" id="brandHome" style="cursor:pointer" title="Go to home">
       <div class="brand-mark">🚌</div>
       <div><div class="brand-t">Fleet<em>Hub</em></div><div class="brand-s">Bulandshahr · Khurja</div></div>
     </div>
@@ -974,18 +974,64 @@ function show(view){
   });
   window.scrollTo({top:0,behavior:'smooth'});
 }
-function openDrawer(o){document.getElementById('drawer').classList.toggle('on',o);document.getElementById('drawerOverlay').classList.toggle('on',o);}
+
+/* ─── NAVIGATION HISTORY (so phone back button goes to previous page, not closes app) ─── */
+var NAV_STACK=['home']; // tracks where we are
+function navPush(state){
+  NAV_STACK.push(state);
+  try{history.pushState({fh:state,i:NAV_STACK.length},'',location.pathname+location.hash);}catch(e){}
+}
+// seed one entry so the first back press has somewhere to go
+try{history.replaceState({fh:'home',i:1},'',location.pathname);}catch(e){}
+
+function goHome(){
+  // close any open overlays/modals and return to buyer home
+  closeAllOverlays();
+  show('buyer');
+  NAV_STACK=['home'];
+}
+function closeAllOverlays(){
+  var dt=document.getElementById('view-detail');if(dt)dt.classList.remove('on');
+  var ss=document.getElementById('shareSheet');if(ss)ss.classList.remove('on');
+  var em=document.getElementById('enquiryModal');if(em)em.classList.remove('on');
+  var bm=document.getElementById('bookingModal');if(bm)bm.classList.remove('on');
+  openDrawer(false);
+}
+// Handle phone/browser BACK button
+window.addEventListener('popstate',function(ev){
+  // priority: close whatever overlay is open, one layer at a time
+  var ss=document.getElementById('shareSheet');
+  var bm=document.getElementById('bookingModal');
+  var em=document.getElementById('enquiryModal');
+  var dt=document.getElementById('view-detail');
+  var dr=document.getElementById('drawer');
+  if(dr&&dr.classList.contains('on')){openDrawer(false);keepHistory();return;}
+  if(ss&&ss.classList.contains('on')){ss.classList.remove('on');keepHistory();return;}
+  if(bm&&bm.classList.contains('on')){bm.classList.remove('on');keepHistory();return;}
+  if(em&&em.classList.contains('on')){em.classList.remove('on');keepHistory();return;}
+  if(dt&&dt.classList.contains('on')){dt.classList.remove('on');try{history.replaceState(null,'',location.pathname);}catch(e){}keepHistory();return;}
+  // if we're not on buyer home, go there instead of exiting
+  var onHome=!document.getElementById('view-buyer').classList.contains('hidden');
+  if(!onHome){show('buyer');keepHistory();return;}
+  // already home — let the browser do its thing (may exit), but re-seed once
+  keepHistory();
+});
+// re-seed a history entry so the NEXT back press is also caught (prevents accidental app exit)
+function keepHistory(){try{history.pushState({fh:'home'},'',location.pathname+location.hash);}catch(e){}}
+
+document.getElementById('brandHome').addEventListener('click',goHome);
+function openDrawer(o){document.getElementById('drawer').classList.toggle('on',o);document.getElementById('drawerOverlay').classList.toggle('on',o);if(o){try{history.pushState({fh:'drawer'},'',location.pathname+location.hash);}catch(e){}}}
 document.getElementById('menuBtn').addEventListener('click',function(){openDrawer(true);});
 document.getElementById('drawerX').addEventListener('click',function(){openDrawer(false);});
 document.getElementById('drawerOverlay').addEventListener('click',function(){openDrawer(false);});
 document.querySelectorAll('[data-nav]').forEach(function(el){
   el.addEventListener('click',function(){
     var nav=el.dataset.nav;openDrawer(false);
-    if(nav==='buyer')show('buyer');
-    else if(nav==='about')show('about');
-    else if(nav==='seller'){if(SELLER)enterDash();else show('login');}
-    else if(nav==='audit'){show('audit');renderAudit();}
-    else if(nav==='mytrips'){show('mytrips');renderMyTrips();}
+    if(nav==='buyer'){show('buyer');}
+    else if(nav==='about'){show('about');navPush('about');}
+    else if(nav==='seller'){if(SELLER)enterDash();else show('login');navPush('seller');}
+    else if(nav==='audit'){show('audit');renderAudit();navPush('audit');}
+    else if(nav==='mytrips'){show('mytrips');renderMyTrips();navPush('mytrips');}
   });
 });
 
@@ -1158,7 +1204,7 @@ function openDetail(p){
   var v=document.getElementById('view-detail');
   document.getElementById('dtHTitle').textContent=p.name;
   document.getElementById('dtContent').innerHTML=buildDetail(p);
-  v.classList.add('on');
+  v.classList.add('on');navPush('detail');
   // wire CTA + profile clicks after render
   wireDetailCTAs(p);
   // wire clickable vehicles -> booking form
@@ -1211,7 +1257,7 @@ function openShare(p){
   document.getElementById('shTwitter').target='_blank';
   document.getElementById('shSms').href='sms:?body='+encT;
   document.getElementById('shEmail').href='mailto:?subject='+encodeURIComponent(p.name+' — FleetHub')+'&body='+encT;
-  document.getElementById('shareSheet').classList.add('on');
+  document.getElementById('shareSheet').classList.add('on');navPush('share');
   audit('share_open',true,p.name);
 }
 function closeShare(){document.getElementById('shareSheet').classList.remove('on');}
@@ -1357,7 +1403,7 @@ function wireDetailCTAs(p){
 function openEnquiry(p){
   CURRENT_ENQ=p;
   document.getElementById('eqSeller').textContent=p.name;
-  document.getElementById('enquiryModal').classList.add('on');
+  document.getElementById('enquiryModal').classList.add('on');navPush('enquiry');
   // prefill saved identity
   if(USER.name)document.getElementById('eq-name').value=USER.name;
   if(USER.phone)document.getElementById('eq-phone').value=USER.phone;
@@ -1381,7 +1427,7 @@ function openBooking(p,veh){
   // prefill identity if already known
   if(USER.name)document.getElementById('bk-name').value=USER.name;
   if(USER.phone){document.getElementById('bk-phone').value=USER.phone;}
-  document.getElementById('bookingModal').classList.add('on');
+  document.getElementById('bookingModal').classList.add('on');navPush('booking');
   attachPlaceAutocomplete(document.getElementById('bk-from'));
   attachPlaceAutocomplete(document.getElementById('bk-to'));
 }
