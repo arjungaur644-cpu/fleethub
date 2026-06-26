@@ -250,6 +250,27 @@ body{font-family:var(--body);background:var(--cream);color:var(--ink);font-size:
 
 /* ── DETAIL PAGE ── */
 #view-detail{position:fixed;inset:0;background:var(--cream);z-index:1500;overflow-y:auto;display:none;}
+/* SHARE SHEET */
+.share-sheet{position:fixed;inset:0;z-index:4000;display:none;}
+.share-sheet.on{display:block;}
+.share-backdrop{position:absolute;inset:0;background:rgba(0,0,0,0.45);}
+.share-panel{position:absolute;left:0;right:0;bottom:0;background:#fff;border-radius:22px 22px 0 0;padding:1.1rem 1.1rem 1.6rem;max-width:560px;margin:0 auto;animation:slideUp .22s ease;}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.share-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:0.4rem;}
+.share-title{font-family:var(--disp);font-weight:800;font-size:1.05rem;}
+.share-x{background:var(--cream2);border:none;width:30px;height:30px;border-radius:50%;font-size:0.9rem;cursor:pointer;color:var(--t2);}
+.share-preview{font-size:0.72rem;color:var(--t2);background:var(--cream2);border-radius:12px;padding:0.6rem 0.75rem;margin-bottom:0.9rem;line-height:1.5;max-height:90px;overflow:hidden;}
+.share-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:0.7rem 0.4rem;margin-bottom:0.9rem;}
+.share-opt{display:flex;flex-direction:column;align-items:center;gap:0.35rem;font-size:0.66rem;color:var(--t2);cursor:pointer;text-decoration:none;border:none;background:none;font-family:var(--body);}
+.sho-ic{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.3rem;color:#fff;font-weight:700;}
+.share-opt:active .sho-ic{transform:scale(0.92);}
+.share-copy-text{width:100%;padding:0.8rem;border-radius:12px;border:1.5px solid var(--line);background:#fff;font-weight:700;font-size:0.84rem;color:var(--ink);cursor:pointer;font-family:var(--body);}
+.share-copy-text:active{background:var(--cream2);}
+.ml-share-btn{flex-basis:100%;margin-top:0.6rem;padding:0.55rem;border-radius:10px;border:1.5px solid var(--wa);background:#fff;color:var(--wa);font-weight:700;font-size:0.78rem;cursor:pointer;font-family:var(--body);}
+.ml-share-btn:active{background:#F0FDF4;}
+.ml-share-all{width:100%;margin-top:0.8rem;padding:0.85rem;border-radius:12px;border:none;background:var(--wa);color:#fff;font-weight:800;font-size:0.86rem;cursor:pointer;font-family:var(--body);}
+.ml-share-all:active{transform:scale(0.98);}
+#dtShare{font-size:1.1rem;}
 #view-detail.on{display:block;}
 .dt-header{position:sticky;top:0;z-index:10;background:var(--navy);padding:0.7rem 1rem;display:flex;align-items:center;gap:0.75rem;}
 .dt-back{width:38px;height:38px;border-radius:10px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.15);color:#fff;font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
@@ -608,9 +629,33 @@ body{font-family:var(--body);background:var(--cream);color:var(--ink);font-size:
   <div class="dt-header">
     <button class="dt-back" id="dtBack">←</button>
     <div class="dt-htitle" id="dtHTitle">Operator Details</div>
+    <button class="dt-back" id="dtShare" title="Share">⤴</button>
     <button class="dt-back" id="dtClose">✕</button>
   </div>
   <div id="dtContent"></div>
+</div>
+
+<!-- SHARE SHEET -->
+<div id="shareSheet" class="share-sheet">
+  <div class="share-backdrop" id="shareBackdrop"></div>
+  <div class="share-panel">
+    <div class="share-head">
+      <div class="share-title">Share this operator</div>
+      <button class="share-x" id="shareClose">✕</button>
+    </div>
+    <div class="share-preview" id="sharePreview"></div>
+    <div class="share-grid">
+      <a class="share-opt" id="shWhatsapp"><span class="sho-ic" style="background:#25D366">💬</span>WhatsApp</a>
+      <a class="share-opt" id="shFacebook"><span class="sho-ic" style="background:#1877F2">f</span>Facebook</a>
+      <a class="share-opt" id="shTelegram"><span class="sho-ic" style="background:#0088CC">✈</span>Telegram</a>
+      <a class="share-opt" id="shSms"><span class="sho-ic" style="background:#34B7F1">✉</span>SMS</a>
+      <a class="share-opt" id="shEmail"><span class="sho-ic" style="background:#EA4335">@</span>Email</a>
+      <a class="share-opt" id="shTwitter"><span class="sho-ic" style="background:#000">𝕏</span>X / Twitter</a>
+      <button class="share-opt" id="shCopy"><span class="sho-ic" style="background:var(--navy)">🔗</span>Copy link</button>
+      <button class="share-opt" id="shMore"><span class="sho-ic" style="background:var(--saffron)">⋯</span>More apps</button>
+    </div>
+    <button class="share-copy-text" id="shCopyText">📋 Copy full catalog text</button>
+  </div>
 </div>
 
 
@@ -1108,6 +1153,7 @@ function buildCard(p,mode){
 /* ═══ DETAIL PAGE ═══ */
 function openDetail(p){
   track('view',p);
+  window.SHARE_DETAIL_P=p;
   var v=document.getElementById('view-detail');
   document.getElementById('dtHTitle').textContent=p.name;
   document.getElementById('dtContent').innerHTML=buildDetail(p);
@@ -1127,6 +1173,71 @@ function openDetail(p){
 function closeDetail(){document.getElementById('view-detail').classList.remove('on');}
 document.getElementById('dtBack').addEventListener('click',closeDetail);
 document.getElementById('dtClose').addEventListener('click',closeDetail);
+
+// ─── SHARE SYSTEM ───
+var SHARE_P=null;
+function buildShareText(p){
+  var base=location.origin+location.pathname;
+  var url=base+'#op='+encodeURIComponent(p.id);
+  var lines=[];
+  lines.push('🚌 '+p.name+(p.verified?' ✓':''));
+  lines.push('📍 '+p.area+', '+p.city);
+  if(p.type)lines.push('🚐 '+p.type+' · '+p.seats+' seats · '+(p.ac?'AC':'Non-AC'));
+  if(p.priceKm)lines.push('💰 ₹'+p.priceKm+'/km approx');
+  // fleet
+  if(p.fleet&&p.fleet.length){
+    lines.push('');lines.push('Vehicles available:');
+    p.fleet.forEach(function(f){lines.push('• '+f.n+' ('+f.s+' seats'+(f.ac?', AC':'')+(f.p?', ₹'+f.p+'/km':'')+')');});
+  }
+  if(p.phone)lines.push('');
+  if(p.phone)lines.push('📞 Call: '+p.phone);
+  if(p.wa)lines.push('💬 WhatsApp: '+(String(p.wa).replace(/[^0-9]/g,'')));
+  lines.push('');
+  lines.push('Book on FleetHub 👇');
+  lines.push(url);
+  return {text:lines.join('\n'),url:url};
+}
+function openShare(p){
+  SHARE_P=p;
+  var s=buildShareText(p);
+  document.getElementById('sharePreview').textContent=s.text;
+  var encT=encodeURIComponent(s.text), encU=encodeURIComponent(s.url);
+  document.getElementById('shWhatsapp').href='https://wa.me/?text='+encT;
+  document.getElementById('shWhatsapp').target='_blank';
+  document.getElementById('shFacebook').href='https://www.facebook.com/sharer/sharer.php?u='+encU;
+  document.getElementById('shFacebook').target='_blank';
+  document.getElementById('shTelegram').href='https://t.me/share/url?url='+encU+'&text='+encodeURIComponent(p.name+' on FleetHub');
+  document.getElementById('shTelegram').target='_blank';
+  document.getElementById('shTwitter').href='https://twitter.com/intent/tweet?text='+encT;
+  document.getElementById('shTwitter').target='_blank';
+  document.getElementById('shSms').href='sms:?body='+encT;
+  document.getElementById('shEmail').href='mailto:?subject='+encodeURIComponent(p.name+' — FleetHub')+'&body='+encT;
+  document.getElementById('shareSheet').classList.add('on');
+  audit('share_open',true,p.name);
+}
+function closeShare(){document.getElementById('shareSheet').classList.remove('on');}
+document.getElementById('dtShare').addEventListener('click',function(){if(SHARE_DETAIL_P)openShare(SHARE_DETAIL_P);});
+document.getElementById('shareClose').addEventListener('click',closeShare);
+document.getElementById('shareBackdrop').addEventListener('click',closeShare);
+// native share (More apps) — uses phone's built-in share sheet if available
+document.getElementById('shMore').addEventListener('click',function(){
+  var s=buildShareText(SHARE_P);
+  if(navigator.share){navigator.share({title:SHARE_P.name,text:s.text,url:s.url}).then(function(){audit('share_native',true,SHARE_P.name);}).catch(function(){});}
+  else{showToast('Use the buttons above to share');}
+});
+// copy link + copy full text
+function copyToClip(txt,msg){
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(function(){showToast(msg);}).catch(function(){fallbackCopy(txt,msg);});
+  }else{fallbackCopy(txt,msg);}
+}
+function fallbackCopy(txt,msg){
+  var ta=document.createElement('textarea');ta.value=txt;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();
+  try{document.execCommand('copy');showToast(msg);}catch(e){showToast('Could not copy');}
+  document.body.removeChild(ta);
+}
+document.getElementById('shCopy').addEventListener('click',function(){var s=buildShareText(SHARE_P);copyToClip(s.url,'🔗 Link copied!');audit('share_copylink',true,SHARE_P.name);});
+document.getElementById('shCopyText').addEventListener('click',function(){var s=buildShareText(SHARE_P);copyToClip(s.text,'📋 Catalog copied!');audit('share_copytext',true,SHARE_P.name);});
 
 function buildDetail(p){
   var emoji=p.cat==='cab'?'\uD83D\uDE95':p.cat==='taxi'?'\uD83D\uDE99':p.cat==='tempo'?'\uD83D\uDE90':'\uD83D\uDE8C';
@@ -1638,11 +1749,24 @@ function renderMyListings(){
     return;
   }
   mine.forEach(function(l){
-    var d=document.createElement('div');d.className='mylist-card';
+    var d=document.createElement('div');d.className='mylist-card';d.style.flexWrap='wrap';
     var emoji=l.cat==='cab'?'🚕':l.cat==='taxi'||l.cat==='suv'?'🚙':l.cat==='tempo'?'🚐':'🚌';
     d.innerHTML='<div class="ml-ico">'+emoji+'</div><div class="ml-main"><div class="ml-name">'+l.name+'</div><div class="ml-meta">'+l.seats+' seats · '+(l.ac?'AC':'Non-AC')+' · ₹'+l.priceKm+'/km · '+l.city+'</div></div><span class="ml-status">LIVE</span>';
+    var shareBtn=document.createElement('button');
+    shareBtn.className='ml-share-btn';
+    shareBtn.innerHTML='⤴ Share my catalog';
+    shareBtn.addEventListener('click',function(){openShare(l);});
+    d.appendChild(shareBtn);
     el.appendChild(d);
   });
+  // top-level "share whole catalog" if multiple
+  if(mine.length){
+    var bar=document.createElement('button');
+    bar.className='ml-share-all';
+    bar.innerHTML='⤴ Share my full catalog to customers';
+    bar.addEventListener('click',function(){openShare(mine[0]);});
+    el.appendChild(bar);
+  }
 }
 var AV_PHOTOS=[]; // holds uploaded photo URLs (or data-URLs in demo)
 document.getElementById('av-photos').addEventListener('change',function(inp){
