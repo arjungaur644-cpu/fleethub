@@ -1180,11 +1180,18 @@ var SHARE_P=null;
 function slugify(name){
   return String(name||'operator').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,40);
 }
+// Always build links from the real live domain (location.origin can be null in sandbox/srcdoc)
+var SITE_BASE=(function(){
+  var o=location.origin, pth=location.pathname;
+  if(o && o.indexOf('http')===0 && o.indexOf('null')<0){
+    return o + (pth && pth!=='/' && pth!=='srcdoc' ? pth : '/');
+  }
+  // fallback to the known production URL
+  return 'https://fleethub-travel.netlify.app/';
+})();
 function buildShareText(p){
-  var base=location.origin+location.pathname;
-  // clean link carrying the firm name + operator id, e.g. .../#jai-shri-balaji-travels-1
+  var base=SITE_BASE.replace(/\/+$/,'/');
   var url=base+'#'+slugify(p.name)+'-'+p.id;
-  // short caption + the clickable link (link opens their full digital card page)
   var caption=p.name+(p.verified?' ✓':'')+' · '+p.city+' — book on FleetHub 👇';
   return {text:caption+'\n'+url, url:url, caption:caption};
 }
