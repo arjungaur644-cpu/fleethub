@@ -271,6 +271,12 @@ body{font-family:var(--body);background:var(--cream);color:var(--ink);font-size:
 .ml-share-all{width:100%;margin-top:0.8rem;padding:0.85rem;border-radius:12px;border:none;background:var(--wa);color:#fff;font-weight:800;font-size:0.86rem;cursor:pointer;font-family:var(--body);}
 .ml-share-all:active{transform:scale(0.98);}
 #dtShare{font-size:1.1rem;}
+.dt-home{display:flex;align-items:center;gap:3px;background:var(--saffron);color:var(--navy);font-weight:800;font-size:0.72rem;padding:0.4rem 0.7rem;border-radius:20px;cursor:pointer;white-space:nowrap;}
+.dt-home span{font-size:0.72rem;}
+.modal-topbar{display:flex;align-items:center;justify-content:space-between;gap:0.5rem;margin:-0.3rem 0 0.7rem;}
+.mtb-btn{background:var(--cream2);border:none;padding:0.45rem 0.8rem;border-radius:20px;font-weight:700;font-size:0.76rem;color:var(--t2);cursor:pointer;font-family:var(--body);}
+.mtb-home{background:var(--saffron);border:none;padding:0.45rem 0.85rem;border-radius:20px;font-weight:800;font-size:0.76rem;color:var(--navy);cursor:pointer;font-family:var(--body);}
+.mtb-btn:active,.mtb-home:active{transform:scale(0.96);}
 #view-detail.on{display:block;}
 .dt-header{position:sticky;top:0;z-index:10;background:var(--navy);padding:0.7rem 1rem;display:flex;align-items:center;gap:0.75rem;}
 .dt-back{width:38px;height:38px;border-radius:10px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.15);color:#fff;font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
@@ -628,6 +634,7 @@ body{font-family:var(--body);background:var(--cream);color:var(--ink);font-size:
 <div id="view-detail">
   <div class="dt-header">
     <button class="dt-back" id="dtBack">←</button>
+    <div class="dt-home" id="dtHome" title="FleetHub Home">🚌 <span>Home</span></div>
     <div class="dt-htitle" id="dtHTitle">Operator Details</div>
     <button class="dt-back" id="dtShare" title="Share">⤴</button>
     <button class="dt-back" id="dtClose">✕</button>
@@ -663,6 +670,10 @@ body{font-family:var(--body);background:var(--cream);color:var(--ink);font-size:
 <!-- ═══ VEHICLE BOOKING MODAL (with route, dates, OTP login) ═══ -->
 <div class="modal-ov" id="bookingModal">
   <div class="modal-box">
+    <div class="modal-topbar">
+      <button class="mtb-btn" onclick="closeBooking()">← Back</button>
+      <button class="mtb-home" onclick="goHome()">🚌 FleetHub Home</button>
+    </div>
     <h3>Book this vehicle</h3>
     <div class="mb-sub">Fill your trip, login, and send to <b id="bkSeller">operator</b> on WhatsApp.</div>
 
@@ -975,51 +986,56 @@ function show(view){
   window.scrollTo({top:0,behavior:'smooth'});
 }
 
-/* ─── NAVIGATION HISTORY (so phone back button goes to previous page, not closes app) ─── */
-var NAV_STACK=['home']; // tracks where we are
+/* ─── NAVIGATION HISTORY (phone back button → previous page, never closes app abruptly) ─── */
 function navPush(state){
-  NAV_STACK.push(state);
-  try{history.pushState({fh:state,i:NAV_STACK.length},'',location.pathname+location.hash);}catch(e){}
+  try{history.pushState({fh:state},'',location.pathname+location.hash);}catch(e){}
 }
-// seed one entry so the first back press has somewhere to go
-try{history.replaceState({fh:'home',i:1},'',location.pathname);}catch(e){}
+// seed initial entry
+try{history.replaceState({fh:'home'},'',location.pathname);}catch(e){}
 
 function goHome(){
-  // close any open overlays/modals and return to buyer home
   closeAllOverlays();
   show('buyer');
-  NAV_STACK=['home'];
+  try{history.replaceState({fh:'home'},'',location.pathname);}catch(e){}
 }
 function closeAllOverlays(){
-  var dt=document.getElementById('view-detail');if(dt)dt.classList.remove('on');
-  var ss=document.getElementById('shareSheet');if(ss)ss.classList.remove('on');
-  var em=document.getElementById('enquiryModal');if(em)em.classList.remove('on');
-  var bm=document.getElementById('bookingModal');if(bm)bm.classList.remove('on');
+  var ids=['view-detail','shareSheet','enquiryModal','bookingModal'];
+  ids.forEach(function(id){var e=document.getElementById(id);if(e)e.classList.remove('on');});
   openDrawer(false);
 }
-// Handle phone/browser BACK button
-window.addEventListener('popstate',function(ev){
-  // priority: close whatever overlay is open, one layer at a time
-  var ss=document.getElementById('shareSheet');
-  var bm=document.getElementById('bookingModal');
-  var em=document.getElementById('enquiryModal');
-  var dt=document.getElementById('view-detail');
+function anyOverlayOpen(){
   var dr=document.getElementById('drawer');
-  if(dr&&dr.classList.contains('on')){openDrawer(false);keepHistory();return;}
-  if(ss&&ss.classList.contains('on')){ss.classList.remove('on');keepHistory();return;}
-  if(bm&&bm.classList.contains('on')){bm.classList.remove('on');keepHistory();return;}
-  if(em&&em.classList.contains('on')){em.classList.remove('on');keepHistory();return;}
-  if(dt&&dt.classList.contains('on')){dt.classList.remove('on');try{history.replaceState(null,'',location.pathname);}catch(e){}keepHistory();return;}
-  // if we're not on buyer home, go there instead of exiting
+  if(dr&&dr.classList.contains('on'))return 'drawer';
+  var ss=document.getElementById('shareSheet');
+  if(ss&&ss.classList.contains('on'))return 'share';
+  var bm=document.getElementById('bookingModal');
+  if(bm&&bm.classList.contains('on'))return 'booking';
+  var em=document.getElementById('enquiryModal');
+  if(em&&em.classList.contains('on'))return 'enquiry';
+  var dt=document.getElementById('view-detail');
+  if(dt&&dt.classList.contains('on'))return 'detail';
+  return null;
+}
+// Phone/browser BACK button
+window.addEventListener('popstate',function(ev){
+  var open=anyOverlayOpen();
+  if(open==='drawer'){openDrawer(false);reseed();return;}
+  if(open==='share'){document.getElementById('shareSheet').classList.remove('on');reseed();return;}
+  if(open==='booking'){document.getElementById('bookingModal').classList.remove('on');reseed();return;}
+  if(open==='enquiry'){document.getElementById('enquiryModal').classList.remove('on');reseed();return;}
+  if(open==='detail'){document.getElementById('view-detail').classList.remove('on');try{history.replaceState(null,'',location.pathname);}catch(e){}reseed();return;}
+  // no overlay — are we on a non-home view?
   var onHome=!document.getElementById('view-buyer').classList.contains('hidden');
-  if(!onHome){show('buyer');keepHistory();return;}
-  // already home — let the browser do its thing (may exit), but re-seed once
-  keepHistory();
+  if(!onHome){show('buyer');reseed();return;}
+  // already home: re-seed so app doesn't exit on a single stray back press
+  reseed();
 });
-// re-seed a history entry so the NEXT back press is also caught (prevents accidental app exit)
-function keepHistory(){try{history.pushState({fh:'home'},'',location.pathname+location.hash);}catch(e){}}
+// keep one extra entry in history so back always has somewhere to land
+function reseed(){try{history.pushState({fh:'home'},'',location.pathname+location.hash);}catch(e){}}
+reseed();
 
 document.getElementById('brandHome').addEventListener('click',goHome);
+var dtHomeBtn=document.getElementById('dtHome');if(dtHomeBtn)dtHomeBtn.addEventListener('click',goHome);
 function openDrawer(o){document.getElementById('drawer').classList.toggle('on',o);document.getElementById('drawerOverlay').classList.toggle('on',o);if(o){try{history.pushState({fh:'drawer'},'',location.pathname+location.hash);}catch(e){}}}
 document.getElementById('menuBtn').addEventListener('click',function(){openDrawer(true);});
 document.getElementById('drawerX').addEventListener('click',function(){openDrawer(false);});
