@@ -259,7 +259,12 @@ body{font-family:var(--body);background:var(--cream);color:var(--ink);font-size:
 .share-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:0.4rem;}
 .share-title{font-family:var(--disp);font-weight:800;font-size:1.05rem;}
 .share-x{background:var(--cream2);border:none;width:30px;height:30px;border-radius:50%;font-size:0.9rem;cursor:pointer;color:var(--t2);}
-.share-preview{font-size:0.72rem;color:var(--t2);background:var(--cream2);border-radius:12px;padding:0.6rem 0.75rem;margin-bottom:0.9rem;line-height:1.5;max-height:90px;overflow:hidden;}
+.share-preview{margin-bottom:0.9rem;}
+.sp-card{display:flex;align-items:center;gap:0.7rem;background:var(--cream2);border:1px solid var(--line);border-radius:14px;padding:0.7rem 0.8rem;}
+.sp-card-ic{width:46px;height:46px;border-radius:11px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:1.5rem;flex-shrink:0;border:1px solid var(--line2);}
+.sp-card-txt{min-width:0;}
+.sp-card-name{font-weight:700;font-size:0.92rem;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sp-card-sub{font-size:0.72rem;color:var(--t3);margin-top:1px;}
 .share-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:0.7rem 0.4rem;margin-bottom:0.9rem;}
 .share-opt{display:flex;flex-direction:column;align-items:center;gap:0.35rem;font-size:0.66rem;color:var(--t2);cursor:pointer;text-decoration:none;border:none;background:none;font-family:var(--body);}
 .sho-ic{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.3rem;color:#fff;font-weight:700;}
@@ -278,9 +283,10 @@ body{font-family:var(--body);background:var(--cream);color:var(--ink);font-size:
 .mtb-home{background:var(--saffron);border:none;padding:0.45rem 0.85rem;border-radius:20px;font-weight:800;font-size:0.76rem;color:var(--navy);cursor:pointer;font-family:var(--body);}
 .mtb-btn:active,.mtb-home:active{transform:scale(0.96);}
 #view-detail.on{display:block;}
-.dt-header{position:sticky;top:0;z-index:10;background:var(--navy);padding:0.7rem 1rem;display:flex;align-items:center;gap:0.75rem;}
-.dt-back{width:38px;height:38px;border-radius:10px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.15);color:#fff;font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
-.dt-htitle{font-family:var(--disp);font-weight:700;color:#fff;font-size:0.95rem;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.dt-header{position:sticky;top:0;z-index:10;background:var(--navy);padding:0.6rem 0.6rem;display:flex;align-items:center;gap:0.3rem;}
+.dt-icon{width:38px;height:38px;border-radius:10px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.14);color:#fff;font-size:1.05rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .12s;}
+.dt-icon:active{background:rgba(255,255,255,0.25);}
+.dt-htitle{font-family:var(--disp);font-weight:700;color:#fff;font-size:1rem;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;padding:0 0.2rem;}
 /* Airbnb-style gallery grid: big hero + 2x2 side */
 .dt-gallery2{display:grid;grid-template-columns:2fr 1fr;gap:6px;height:300px;padding:0.6rem;max-width:760px;margin:0 auto;}
 .dt-gallery2 .dg-main{border-radius:14px 0 0 14px;overflow:hidden;background:var(--cream2);}
@@ -633,11 +639,11 @@ body{font-family:var(--body);background:var(--cream);color:var(--ink);font-size:
 <!-- ═══ DETAIL VIEW (full screen, one tap from listing) ═══ -->
 <div id="view-detail">
   <div class="dt-header">
-    <button class="dt-back" id="dtBack">←</button>
-    <div class="dt-home" id="dtHome" title="FleetHub Home">🚌 <span>Home</span></div>
+    <button class="dt-icon" id="dtBack" title="Back">←</button>
+    <button class="dt-icon" id="dtHome" title="Home">🏠</button>
     <div class="dt-htitle" id="dtHTitle">Operator Details</div>
-    <button class="dt-back" id="dtShare" title="Share">⤴</button>
-    <button class="dt-back" id="dtClose">✕</button>
+    <button class="dt-icon" id="dtShare" title="Share">⤴</button>
+    <button class="dt-icon" id="dtClose" title="Close">✕</button>
   </div>
   <div id="dtContent"></div>
 </div>
@@ -1260,8 +1266,16 @@ function buildShareText(p){
 function openShare(p){
   SHARE_P=p;
   var s=buildShareText(p);
-  // preview shows the clean link (mini-site / digital card)
-  document.getElementById('sharePreview').innerHTML='<div style="font-weight:700;color:var(--ink);margin-bottom:3px">'+p.name+'</div><div style="color:var(--saffron2);word-break:break-all;font-size:0.68rem">'+s.url+'</div><div style="color:var(--t3);margin-top:4px">Opens '+p.name+'\u2019s page with photos, vehicles, papers &amp; contact.</div>';
+  var emoji=p.cat==='cab'?'🚕':p.cat==='taxi'||p.cat==='suv'?'🚙':p.cat==='tempo'?'🚐':'🚌';
+  // clean preview card — operator identity, no raw URL (industry standard)
+  document.getElementById('sharePreview').innerHTML=
+    '<div class="sp-card">'+
+      '<div class="sp-card-ic">'+emoji+'</div>'+
+      '<div class="sp-card-txt">'+
+        '<div class="sp-card-name">'+p.name+(p.verified?' <span style="color:var(--green)">✓</span>':'')+'</div>'+
+        '<div class="sp-card-sub">'+p.city+(p.priceKm?' · ₹'+p.priceKm+'/km':'')+' · FleetHub</div>'+
+      '</div>'+
+    '</div>';
   var encT=encodeURIComponent(s.text), encU=encodeURIComponent(s.url);
   document.getElementById('shWhatsapp').href='https://wa.me/?text='+encT;
   document.getElementById('shWhatsapp').target='_blank';
