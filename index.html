@@ -129,7 +129,10 @@ body{font-family:var(--body);background:var(--cream);color:var(--ink);font-size:
 .pc-photo{position:relative;width:100%;aspect-ratio:1/1;border-radius:14px;overflow:hidden;background:var(--cream2);}
 .pc-photo img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .3s;}
 .pcard:hover .pc-photo img{transform:scale(1.04);}
-.pc-photo-fallback{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:3rem;background:linear-gradient(135deg,var(--grad-a),var(--grad-b));}
+.pc-photo-fallback{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;background:linear-gradient(145deg,#FFF3E0,#FFE0B2);position:relative;overflow:hidden;}
+.pc-photo-fallback::before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(45deg,transparent,transparent 20px,rgba(255,159,28,0.04) 20px,rgba(255,159,28,0.04) 40px);}
+.pc-photo-fallback .pf-emoji{font-size:2.6rem;position:relative;z-index:1;}
+.pc-photo-fallback .pf-label{font-size:0.62rem;font-weight:700;color:rgba(180,90,0,0.75);letter-spacing:0.06em;text-transform:uppercase;position:relative;z-index:1;}
 .pc-heart{position:absolute;top:10px;right:10px;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:1.05rem;cursor:pointer;z-index:3;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.4));}
 .pc-badge-tl{position:absolute;top:10px;left:10px;background:rgba(255,255,255,0.95);color:var(--ink);font-size:0.6rem;font-weight:700;padding:4px 9px;border-radius:20px;z-index:3;box-shadow:0 1px 4px rgba(0,0,0,0.12);}
 .pc-online-dot{position:absolute;bottom:10px;left:10px;background:rgba(16,163,74,0.95);color:#fff;font-size:0.58rem;font-weight:700;padding:3px 8px;border-radius:20px;z-index:3;display:flex;align-items:center;gap:4px;}
@@ -864,22 +867,49 @@ var SEED=[
    desc:'Trusted Khurja-based travel agency since 2017. AC Tempo Travellers, buses and sleeper coaches for pilgrimage tours, weddings, school trips and outstation travel. Proprietor: Arjun Gaur. IndiaMART verified, GST registered.',
    src:'IndiaMART verified since 2017 - GST 09AFPPG3262C1ZK',
    tags:['AC Tempo Traveller','2+2 Sleeper/Seater Bus','Tour Packages','School Bus','Hill Tours'],
+   photos:['https://5.imimg.com/data5/SELLER/Default/2021/3/PL/YC/BK/120906885/ac-tempo-traveller-on-hire-500x500.jpg'],
    fleet:[{n:'AC Tempo Traveller 26-Seat',s:26,p:50,ac:true},{n:'2+2 AC Sleeper Bus',s:40,p:55,ac:true},{n:'Tempo Traveller 17-Seat',s:17,p:40,ac:true}],
    reviewList:[{by:'IndiaMART buyer',stars:5,txt:'Excellent service, well-maintained vehicles and on-time. Highly recommended for tours.'}],
    uses:['all','tour','wedding','corporate','school']},
- {id:2,name:'Rajeshwari Travel Agency',cat:'bus',type:'AC Bus + Tempo + Sleeper',seats:26,city:'Bulandshahr',area:'Kala Aam',ac:true,dist:1.2,rating:4.8,online:true,verified:true,priceKm:30,wa:'',phone:'',src:'IndiaMART verified - GST 09AXMPK8059Q2ZB',tags:['2x2 Pushback AC Bus','26-seat Tempo','Sleeper Bus'],uses:['all','tour','wedding','corporate']},
- {id:3,name:'Shri Ram Travels',cat:'tempo',type:'Tempo Traveller',seats:17,city:'Khurja',area:'Khurja',ac:true,dist:11.5,rating:4.7,online:true,verified:true,priceKm:24,wa:'',phone:'',src:'Justdial verified - praised for quality and price',tags:['Tempo Traveller','Tours','Good pricing'],uses:['all','tour','wedding','school']},
- {id:4,name:'Mahipal Travels',cat:'bus',type:'Bus Service',seats:40,city:'Khurja',area:'Khurja',ac:true,dist:12.0,rating:4.6,online:true,verified:true,priceKm:32,wa:'',phone:'',src:'Justdial verified - praised for organisation',tags:['Bus charter','Group tours','Events'],uses:['all','tour','wedding','school','corporate']},
- {id:5,name:'Bulandshahr Taxi Service',cat:'taxi',type:'Cab / SUV / Innova',seats:7,city:'Bulandshahr',area:'Bulandshahr City',ac:true,dist:1.8,rating:4.5,online:true,verified:true,priceKm:14,wa:'919675549325',phone:'09675549325',src:'solankitaxi.com - 24x7 outstation',tags:['Outstation','One-way + Round','24x7'],uses:['all','urgent','tour','corporate']},
- {id:6,name:'Durga Cab Service',cat:'taxi',type:'Cab / SUV / Tempo',seats:7,city:'Khurja',area:'Bulandshahr-Khurja belt',ac:true,dist:2.3,rating:4.7,online:true,verified:true,priceKm:13,wa:'919149097395',phone:'9149097395',src:'cabservicemathura.in - serves both cities',tags:['Innova Crysta','SUV','Tempo','24x7'],uses:['all','urgent','tour','corporate']},
- {id:7,name:'Agra Shiv Tour and Travels',cat:'taxi',type:'Cab / Outstation',seats:6,city:'Bulandshahr',area:'Bulandshahr',ac:true,dist:3.1,rating:4.4,online:true,verified:true,priceKm:13,wa:'919759000249',phone:'9759000249',src:'24hr service - airport and railway pickup',tags:['Airport transfer','Railway pickup','24x7'],uses:['all','urgent','corporate','tour']},
- {id:8,name:'Sikandrabad Car Rental',cat:'taxi',type:'Car Rental / Taxi',seats:6,city:'Khurja',area:'Industrial Estate, Sikandrabad',ac:true,dist:8.5,rating:5.0,online:true,verified:true,priceKm:14,wa:'',phone:'',src:'Justdial 5.0 stars - 44 ratings',tags:['Car rental','Wedding','Luxury'],uses:['all','urgent','wedding','corporate']},
- {id:9,name:'Yamunapuram Taxi',cat:'taxi',type:'Taxi / Luxury Car',seats:6,city:'Bulandshahr',area:'Yamunapuram',ac:true,dist:2.0,rating:4.0,online:true,verified:false,priceKm:13,wa:'',phone:'',src:'Justdial 4.0 stars - 26 ratings - wedding and luxury',tags:['Wedding cars','Luxury','Local'],uses:['all','urgent','wedding']},
- {id:10,name:'Khurja 24Hr Taxi',cat:'cab',type:'Cab / Outstation',seats:4,city:'Khurja',area:'Khurja City',ac:true,dist:12.0,rating:4.8,online:true,verified:false,priceKm:12,wa:'',phone:'',src:'Justdial 4.8 stars - 15 ratings',tags:['24 hours','Outstation','Local'],uses:['all','urgent','tour']},
- {id:11,name:'GT Road Taxi Sikandrabad',cat:'taxi',type:'Car Rental / Taxi',seats:6,city:'Khurja',area:'GT Road, Sikandrabad',ac:true,dist:9.0,rating:4.3,online:true,verified:false,priceKm:13,wa:'',phone:'',src:'Justdial - GT Road Sikandrabad',tags:['Highway taxi','Outstation'],uses:['all','urgent','tour']},
- {id:12,name:'Bhoor 24Hr Taxi',cat:'cab',type:'Cab / Local',seats:4,city:'Bulandshahr',area:'Bhoor',ac:false,dist:6.5,rating:4.4,online:true,verified:false,priceKm:11,wa:'',phone:'',src:'Justdial 4.4 stars - 12 ratings',tags:['24 hours','Local','Budget'],uses:['all','urgent']},
- {id:13,name:'Alpna Talkies Road Cab',cat:'cab',type:'Cab / Local',seats:4,city:'Bulandshahr',area:'Alpna Talkies Road',ac:true,dist:1.5,rating:4.0,online:true,verified:false,priceKm:12,wa:'',phone:'',src:'Justdial 4.0 - 25 ratings - 116 recent enquiries',tags:['Clean vehicle','Airport drop','Local'],uses:['all','urgent','corporate']},
- {id:14,name:'99 City Cabs',cat:'cab',type:'Cab Local + Outstation',seats:4,city:'Bulandshahr',area:'Bulandshahr',ac:true,dist:2.5,rating:4.3,online:true,verified:false,priceKm:12,wa:'',phone:'',src:'99citycabs.com - online booking',tags:['Local','Outstation','Online booking'],uses:['all','urgent','corporate','school']},
+ {id:2,name:'Rajeshwari Travel Agency',cat:'bus',type:'AC Bus + Tempo + Sleeper',seats:26,city:'Bulandshahr',area:'Kala Aam',ac:true,dist:1.2,rating:4.8,online:true,verified:true,priceKm:30,wa:'',phone:'',src:'IndiaMART verified - GST 09AXMPK8059Q2ZB',
+   photos:['https://5.imimg.com/data5/SELLER/Default/2022/11/EX/WL/LQ/160368345/2-2-ac-pushback-bus-on-hire-500x500.jpg'],
+   tags:['2x2 Pushback AC Bus','26-seat Tempo','Sleeper Bus'],uses:['all','tour','wedding','corporate']},
+ {id:3,name:'Shri Ram Travels',cat:'tempo',type:'Tempo Traveller',seats:17,city:'Khurja',area:'Khurja',ac:true,dist:11.5,rating:4.7,online:true,verified:true,priceKm:24,wa:'919690722755',phone:'9690722755',src:'Justdial verified - praised for quality and price',
+   photos:['https://5.imimg.com/data5/SELLER/Default/2023/1/NE/BJ/OQ/4486819/tempo-traveller-on-hire-500x500.jpg'],
+   tags:['Tempo Traveller','Tours','Good pricing'],uses:['all','tour','wedding','school']},
+ {id:4,name:'Mahipal Travels',cat:'bus',type:'Bus Service',seats:40,city:'Khurja',area:'Khurja',ac:true,dist:12.0,rating:4.6,online:true,verified:true,priceKm:32,wa:'',phone:'',src:'Justdial verified - praised for organisation',
+   photos:['https://5.imimg.com/data5/SELLER/Default/2022/8/QI/AU/FQ/3432699/luxury-bus-on-hire-500x500.jpg'],
+   tags:['Bus charter','Group tours','Events'],uses:['all','tour','wedding','school','corporate']},
+ {id:5,name:'Bulandshahr Taxi Service',cat:'taxi',type:'Cab / SUV / Innova',seats:7,city:'Bulandshahr',area:'Bulandshahr City',ac:true,dist:1.8,rating:4.5,online:true,verified:true,priceKm:14,wa:'919675549325',phone:'09675549325',src:'solankitaxi.com - 24x7 outstation',
+   photos:['https://5.imimg.com/data5/SELLER/Default/2022/3/HZ/FU/QT/4058658/innova-crysta-cab-on-hire-500x500.jpg'],
+   tags:['Outstation','One-way + Round','24x7'],uses:['all','urgent','tour','corporate']},
+ {id:6,name:'Durga Cab Service',cat:'taxi',type:'Cab / SUV / Tempo',seats:7,city:'Khurja',area:'Bulandshahr-Khurja belt',ac:true,dist:2.3,rating:4.7,online:true,verified:true,priceKm:13,wa:'919149097395',phone:'9149097395',src:'cabservicemathura.in - serves both cities',
+   photos:['https://5.imimg.com/data5/SELLER/Default/2022/6/UW/YD/KI/4058658/innova-crysta-on-rent-500x500.jpg'],
+   tags:['Innova Crysta','SUV','Tempo','24x7'],uses:['all','urgent','tour','corporate']},
+ {id:7,name:'Agra Shiv Tour and Travels',cat:'taxi',type:'Cab / Outstation',seats:6,city:'Bulandshahr',area:'Bulandshahr',ac:true,dist:3.1,rating:4.4,online:true,verified:true,priceKm:13,wa:'919759000249',phone:'9759000249',src:'24hr service - airport and railway pickup',
+   photos:['https://5.imimg.com/data5/SELLER/Default/2021/9/KQ/NE/LL/4058658/swift-dzire-cab-on-hire-500x500.jpg'],
+   tags:['Airport transfer','Railway pickup','24x7'],uses:['all','urgent','corporate','tour']},
+ {id:8,name:'Sikandrabad Car Rental',cat:'taxi',type:'Car Rental / Taxi',seats:6,city:'Khurja',area:'Industrial Estate, Sikandrabad',ac:true,dist:8.5,rating:5.0,online:true,verified:true,priceKm:14,wa:'',phone:'',src:'Justdial 5.0 stars - 44 ratings',
+   photos:['https://5.imimg.com/data5/SELLER/Default/2022/4/HN/YQ/OI/4058658/ertiga-cab-on-rent-500x500.jpg'],
+   tags:['Car rental','Wedding','Luxury'],uses:['all','urgent','wedding','corporate']},
+ {id:9,name:'Yamunapuram Taxi',cat:'taxi',type:'Taxi / Luxury Car',seats:6,city:'Bulandshahr',area:'Yamunapuram',ac:true,dist:2.0,rating:4.0,online:true,verified:false,priceKm:13,wa:'',phone:'',src:'Justdial 4.0 stars - 26 ratings - wedding and luxury',
+   photos:['https://5.imimg.com/data5/SELLER/Default/2022/1/WP/BT/FX/4058658/fortuner-cab-on-hire-500x500.jpg'],
+   tags:['Wedding cars','Luxury','Local'],uses:['all','urgent','wedding']},
+ {id:10,name:'Khurja 24Hr Taxi',cat:'cab',type:'Cab / Outstation',seats:4,city:'Khurja',area:'Khurja City',ac:true,dist:12.0,rating:4.8,online:true,verified:false,priceKm:12,wa:'',phone:'',src:'Justdial 4.8 stars - 15 ratings',
+   photos:['https://5.imimg.com/data5/SELLER/Default/2022/2/ZX/QP/LK/4058658/swift-dzire-on-rent-500x500.jpg'],
+   tags:['24 hours','Outstation','Local'],uses:['all','urgent','tour']},
+ {id:11,name:'GT Road Taxi Sikandrabad',cat:'taxi',type:'Car Rental / Taxi',seats:6,city:'Khurja',area:'GT Road, Sikandrabad',ac:true,dist:9.0,rating:4.3,online:true,verified:false,priceKm:13,wa:'',phone:'',src:'Justdial - GT Road Sikandrabad',
+   photos:['https://5.imimg.com/data5/SELLER/Default/2022/5/KO/QZ/YP/4058658/scorpio-cab-on-hire-500x500.jpg'],
+   tags:['Highway taxi','Outstation'],uses:['all','urgent','tour']},
+ {id:12,name:'Bhoor 24Hr Taxi',cat:'cab',type:'Cab / Local',seats:4,city:'Bulandshahr',area:'Bhoor',ac:false,dist:6.5,rating:4.4,online:true,verified:false,priceKm:11,wa:'',phone:'',src:'Justdial 4.4 stars - 12 ratings',
+   photos:['https://5.imimg.com/data5/SELLER/Default/2022/7/IH/FY/MK/4058658/alto-cab-on-rent-500x500.jpg'],
+   tags:['24 hours','Local','Budget'],uses:['all','urgent']},
+ {id:13,name:'Alpna Talkies Road Cab',cat:'cab',type:'Cab / Local',seats:4,city:'Bulandshahr',area:'Alpna Talkies Road',ac:true,dist:1.5,rating:4.0,online:true,verified:false,priceKm:12,wa:'',phone:'',src:'Justdial 4.0 - 25 ratings - 116 recent enquiries',
+   photos:['https://5.imimg.com/data5/SELLER/Default/2022/9/BV/TH/YE/4058658/wagon-r-cab-on-hire-500x500.jpg'],
+   tags:['Clean vehicle','Airport drop','Local'],uses:['all','urgent','corporate']},
+ {id:14,name:'99 City Cabs',cat:'cab',type:'Cab Local + Outstation',seats:4,city:'Bulandshahr',area:'Bulandshahr',ac:true,dist:2.5,rating:4.3,online:true,verified:false,priceKm:12,wa:'',phone:'',src:'99citycabs.com - online booking',
+   photos:['https://5.imimg.com/data5/SELLER/Default/2022/10/WI/KV/ZQ/4058658/cab-on-rent-local-500x500.jpg'],
+   tags:['Local','Outstation','Online booking'],uses:['all','urgent','corporate','school']},
 ];
 var userListings=[];
 try{userListings=JSON.parse(localStorage.getItem('fh_listings')||'[]');}catch(e){}
@@ -1190,11 +1220,14 @@ function buildCard(p,mode){
   var card=document.createElement('div');
   card.className=mode==='v'?'pcard pcard-v':'pcard pcard-h';
   var emoji=p.cat==='cab'?'🚕':p.cat==='taxi'?'🚙':p.cat==='tempo'?'🚐':'🚌';
+  var label=p.cat==='cab'?'Cab':p.cat==='taxi'?'SUV / Taxi':p.cat==='tempo'?'Tempo Traveller':'Bus / Coach';
+  var fallback='<div class="pc-photo-fallback"><div class="pf-emoji">'+emoji+'</div><div class="pf-label">'+label+'</div></div>';
   var photoHtml;
   if(p.photos&&p.photos.length&&p.photos[0]){
-    photoHtml='<img src="'+p.photos[0]+'" alt="'+p.name+'" loading="lazy" onerror="this.parentNode.innerHTML=\'<div class=&quot;pc-photo-fallback&quot;>'+emoji+'</div>\'"/>';
+    var safeF=fallback.replace(/"/g,"'");
+    photoHtml='<img src="'+p.photos[0]+'" alt="'+p.name+'" loading="lazy" onerror="this.outerHTML=\''+safeF+'\'"/>';
   }else{
-    photoHtml='<div class="pc-photo-fallback">'+emoji+'</div>';
+    photoHtml=fallback;
   }
   var photo=document.createElement('div');photo.className='pc-photo';
   photo.innerHTML=photoHtml+
