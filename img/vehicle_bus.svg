@@ -1,0 +1,17 @@
+<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 280'>
+<rect width='400' height='280' fill='%23E8F4FD'/>
+<rect x='0' y='200' width='400' height='80' fill='%23D1E8F7'/>
+<rect x='40' y='80' width='320' height='130' rx='18' fill='%23FFFFFF' stroke='%232196F3' stroke-width='3'/>
+<rect x='50' y='90' width='300' height='110' rx='12' fill='%231565C0'/>
+<rect x='60' y='100' width='60' height='50' rx='6' fill='%2390CAF9'/>
+<rect x='130' y='100' width='60' height='50' rx='6' fill='%2390CAF9'/>
+<rect x='200' y='100' width='60' height='50' rx='6' fill='%2390CAF9'/>
+<rect x='270' y='100' width='60' height='50' rx='6' fill='%2390CAF9'/>
+<rect x='50' y='160' width='300' height='25' rx='4' fill='%231976D2'/>
+<rect x='20' y='200' width='360' height='20' rx='8' fill='%23263238'/>
+<circle cx='90' cy='225' r='22' fill='%23263238' stroke='%23607D8B' stroke-width='3'/>
+<circle cx='90' cy='225' r='10' fill='%23607D8B'/>
+<circle cx='310' cy='225' r='22' fill='%23263238' stroke='%23607D8B' stroke-width='3'/>
+<circle cx='310' cy='225' r='10' fill='%23607D8B'/>
+<text x='200' y='260' text-anchor='middle' font-family='Arial' font-size='13' fill='%23455A64' font-weight='600'>AC BUS</text>
+</svg>
