@@ -158,8 +158,18 @@ body{font-family:var(--body);background:var(--cream);color:var(--ink);font-size:
 .cbtn.wa{background:var(--wa);color:#fff;}
 .cbtn.getnum{background:#fff;color:var(--t2);border:1.5px solid var(--line);}
 
+/* ENQUIRY CONTEXT in calculator */
+.enq-ctx{background:linear-gradient(135deg,#F3E8FF,#FAF5FF);border:1px solid #D8B4FE;border-radius:13px;padding:0.8rem 0.85rem;margin-bottom:0.8rem;}
+.enq-ctx-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem;}
+.enq-ctx-tag{font-size:0.72rem;font-weight:800;color:#7C3AED;}
+.enq-ctx-clear{background:#fff;border:1px solid #D8B4FE;color:#7C3AED;font-size:0.64rem;font-weight:700;padding:3px 9px;border-radius:14px;cursor:pointer;font-family:var(--body);}
+.enq-ctx-body{font-size:0.76rem;line-height:1.65;color:var(--ink);}
+.enq-ctx-edit{margin-top:0.5rem;background:none;border:none;color:#7C3AED;font-size:0.68rem;font-weight:700;cursor:pointer;padding:0;font-family:var(--body);}
+.calc-inp-wrap{position:relative;}
+.calc-clear{position:absolute;top:8px;right:8px;width:24px;height:24px;border-radius:50%;background:var(--cream2);border:1px solid var(--line);color:var(--t2);font-size:0.7rem;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:2;}
 /* RESEND OTP */
 .btn-resend{background:none;border:none;color:var(--saffron2);font-weight:700;font-size:0.76rem;cursor:pointer;margin-top:0.5rem;padding:0.3rem 0;font-family:var(--body);}
+.btn-resend:disabled{color:var(--t3);cursor:not-allowed;}
 .btn-resend:disabled{color:var(--t3);cursor:not-allowed;}
 
 /* BOTTOM NAVIGATION BAR */
@@ -622,18 +632,15 @@ body{font-family:var(--body);background:var(--cream);color:var(--ink);font-size:
       <div id="calcTool" class="hidden">
         <div class="calc-card">
           <h3>🧮 Trip Cost Calculator</h3>
-          <div class="cc-sub">Type the trip here, or tap Speak. Add cities, seats, AC, days for an accurate quote.</div>
-          <div id="calcEnqPanel" style="display:none;background:var(--purple-bg);border:1px solid var(--purple);border-radius:11px;padding:0.75rem;margin-bottom:0.7rem"></div>
-          <textarea class="calc-inp" id="calcInp" placeholder="Type here or speak… e.g. Khurja to Govardhan, Mathura, Vrindavan, 26 seater AC tempo traveller, round trip, 1 day"></textarea>
+          <div class="cc-sub">Type the trip, or tap Speak. Add cities, seats, AC, days for an accurate quote.</div>
+          <div id="calcEnqPanel" style="display:none"></div>
+          <div class="calc-inp-wrap">
+            <textarea class="calc-inp" id="calcInp" placeholder="Type here or speak… e.g. Khurja to Govardhan, Mathura, Vrindavan, 26 seater AC tempo traveller, round trip, 1 day"></textarea>
+            <button class="calc-clear hidden" id="calcClear" title="Clear">✕</button>
+          </div>
           <div class="calc-tools">
             <button class="cbtn2 mic" id="calcMic">🎤 Speak</button>
             <button class="cbtn2 go" id="calcGo">✨ Calculate</button>
-          </div>
-          <div style="margin-top:0.8rem">
-            <div style="font-size:0.66rem;color:var(--t3);margin-bottom:0.35rem">Try:</div>
-            <button class="calc-ex">Khurja to Govardhan Mathura Vrindavan, 26 seater AC tempo traveller, round trip, 1 day</button>
-            <button class="calc-ex">Khurja to Khatu Shyam Salasar Pushkar, 40 seater AC bus, round trip, 50 passengers, 3 days</button>
-            <button class="calc-ex">Bulandshahr to Haridwar Rishikesh, 26 seater AC tempo traveller, round trip, 2 days</button>
           </div>
         </div>
         <div id="calcResult"></div>
@@ -1929,21 +1936,42 @@ function loadEnquiryToCalc(e){
   // also keep route for the quote reply
   CALC_CONTEXT.route=e.route||stops.join(' → ');
   setDashTab('calc');
-  // show the original enquiry details panel (auto-fetched) above the input
+  // show concise enquiry summary at top with edit + clear options
   var panel=document.getElementById('calcEnqPanel');
   if(panel){
     panel.style.display='block';
-    panel.innerHTML='<div style="font-size:0.7rem;font-weight:700;color:var(--purple);margin-bottom:0.4rem">📨 Auto-filled from enquiry</div>'+
-      '<div style="font-size:0.78rem;line-height:1.7">'+
-      '<b>'+(e.user_name||'Buyer')+'</b> · '+(e.user_phone||'')+'<br>'+
-      '🚐 '+(e.vehicle||'')+' · '+(e.seats||'')+' seats · '+(e.ac||'')+'<br>'+
-      '📍 '+(e.route||(e.from+' → '+e.to))+'<br>'+
-      '📅 '+(e.date_from||'date not set')+(e.date_to?' to '+e.date_to:'')+' · '+(e.trip_type==='round'?'Round trip':'One way')+
-      '</div><div style="font-size:0.64rem;color:var(--t3);margin-top:0.4rem">You can edit the text below before calculating.</div>';
+    panel.className='enq-ctx';
+    panel.innerHTML=
+      '<div class="enq-ctx-head">'+
+        '<span class="enq-ctx-tag">📨 Enquiry from '+(e.user_name||'Buyer')+'</span>'+
+        '<button class="enq-ctx-clear" id="enqCtxClear">✕ Clear</button>'+
+      '</div>'+
+      '<div class="enq-ctx-body">'+
+        '<b>'+(e.user_name||'Buyer')+'</b> · '+(e.user_phone||'')+'<br>'+
+        '🚐 '+(e.vehicle||'')+' · '+(e.seats||'')+' seats · '+(e.ac||'')+'<br>'+
+        '📍 '+(e.route||(e.from+' → '+e.to))+'<br>'+
+        '📅 '+(e.date_from||'date not set')+(e.date_to?' to '+e.date_to:'')+' · '+(e.trip_type==='round'?'Round trip':'One way')+
+      '</div>'+
+      '<button class="enq-ctx-edit" id="enqCtxEdit">✎ Edit trip text below</button>';
+    // clear -> reset calculator to blank so seller can do a fresh/other calc
+    var cc=document.getElementById('enqCtxClear');
+    if(cc)cc.addEventListener('click',function(){
+      panel.style.display='none';panel.innerHTML='';
+      document.getElementById('calcInp').value='';
+      document.getElementById('calcResult').innerHTML='';
+      CALC_CONTEXT={};
+      document.getElementById('calcClear').classList.add('hidden');
+      showToast('Cleared — calculator is now blank');
+    });
+    var ce=document.getElementById('enqCtxEdit');
+    if(ce)ce.addEventListener('click',function(){
+      var inp=document.getElementById('calcInp');inp.focus();inp.scrollIntoView({behavior:'smooth',block:'center'});
+    });
   }
   var inp=document.getElementById('calcInp');
   inp.value=txt;
-  showToast('Enquiry loaded — calculating...');
+  document.getElementById('calcClear').classList.remove('hidden');
+  showToast('Enquiry loaded — calculating cost...');
   setTimeout(function(){runCalc();},500);
 }
 function renderMyListings(){
@@ -2671,45 +2699,71 @@ function fallbackCopy(text){
     showToast(ok?'✅ Quote copied!':'Long-press the quote to copy');
   }catch(e){showToast('Long-press the quote text to copy');}
 }
-/* mic — voice input, understands Hindi + English (Indian accent) */
-var rec=null,listening=false;
+/* mic — smooth voice input like WhatsApp: continuous, appends, tap to stop */
+var rec=null,listening=false,voiceBase='';
 document.getElementById('calcMic').addEventListener('click',function(){
   var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-  if(!SR){showToast('🎤 Voice needs Chrome. Please type the trip instead.');return;}
+  if(!SR){showToast('🎤 Voice needs Chrome browser. Please type the trip instead.');return;}
   var mb=document.getElementById('calcMic');
+  var inp=document.getElementById('calcInp');
+  // tap again while listening -> stop (like WhatsApp send)
   if(listening){try{rec.stop();}catch(e){}return;}
   rec=new SR();
-  rec.lang='hi-IN';        // Hindi-India recognizes Hindi AND Indian-English words/place names
-  rec.interimResults=true;
-  rec.continuous=false;
+  rec.lang='hi-IN';            // recognizes Hindi + Indian-English place names
+  rec.interimResults=true;     // live transcription
+  rec.continuous=true;         // keep listening (WhatsApp-style) until tapped
   rec.maxAlternatives=1;
-  var inp=document.getElementById('calcInp');
+  // preserve any text already typed, append new speech after it
+  voiceBase=inp.value.trim();
+  var finalText=voiceBase;
   rec.onstart=function(){
-    listening=true;mb.classList.add('rec');mb.textContent='🔴 Listening… speak now';
-    showToast('🎤 Listening — say the trip (e.g. "Bulandshahr se Khatu Shyam, 40 seater AC bus, round trip")');
+    listening=true;mb.classList.add('rec');mb.textContent='⏹ Stop & calculate';
+    document.getElementById('calcClear').classList.remove('hidden');
+    showToast('🎤 Listening… speak the trip, then tap Stop');
   };
   rec.onresult=function(e){
-    var t='';for(var i=0;i<e.results.length;i++)t+=e.results[i][0].transcript;
-    inp.value=t; // show what was heard live, in the box
+    var interim='';
+    for(var i=e.resultIndex;i<e.results.length;i++){
+      var tr=e.results[i][0].transcript;
+      if(e.results[i].isFinal){finalText=(finalText+' '+tr).trim();}
+      else{interim+=tr;}
+    }
+    // show committed text + live interim
+    inp.value=(finalText+' '+interim).trim();
   };
   rec.onerror=function(ev){
     listening=false;mb.classList.remove('rec');mb.textContent='🎤 Speak';
-    if(ev.error==='not-allowed'||ev.error==='service-not-allowed')showToast('🎤 Allow microphone permission, then tap Speak again.');
-    else if(ev.error==='no-speech')showToast('🎤 Did not catch that — tap Speak and try again.');
+    if(ev.error==='not-allowed'||ev.error==='service-not-allowed')showToast('🎤 Allow microphone permission in your browser, then tap Speak.');
+    else if(ev.error==='no-speech')showToast('🎤 Didn\u2019t catch that — tap Speak and try again.');
+    else if(ev.error==='aborted'){/* user stopped, no error msg */}
     else showToast('🎤 Voice issue — please type the trip.');
     audit('voice_input',false,ev.error||'unknown');
   };
   rec.onend=function(){
     listening=false;mb.classList.remove('rec');mb.textContent='🎤 Speak';
     var said=inp.value.trim();
-    if(said){
+    if(said&&said!==voiceBase){
       audit('voice_input',true,said.slice(0,40));
-      showToast('Heard: "'+said.slice(0,40)+(said.length>40?'…':'')+'" — calculating');
-      setTimeout(function(){runCalc();},300); // auto-calculate what was heard
+      showToast('Heard it — calculating cost...');
+      setTimeout(function(){runCalc();},300);
     }
   };
   try{rec.start();}catch(e){showToast('🎤 Tap Speak again');}
 });
+// wire calc clear button (textarea X)
+(function(){
+  var cb=document.getElementById('calcClear');
+  if(cb)cb.addEventListener('click',function(){
+    if(listening){try{rec.stop();}catch(e){}}
+    document.getElementById('calcInp').value='';
+    cb.classList.add('hidden');
+    document.getElementById('calcInp').focus();
+  });
+  var ci=document.getElementById('calcInp');
+  if(ci)ci.addEventListener('input',function(){
+    document.getElementById('calcClear').classList.toggle('hidden',!ci.value.trim());
+  });
+})();
 
 function saveApi(){
   var u=document.getElementById('apiInput').value.trim();
