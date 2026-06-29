@@ -158,6 +158,10 @@ body{font-family:var(--body);background:var(--cream);color:var(--ink);font-size:
 .cbtn.wa{background:var(--wa);color:#fff;}
 .cbtn.getnum{background:#fff;color:var(--t2);border:1.5px solid var(--line);}
 
+/* RESEND OTP */
+.btn-resend{background:none;border:none;color:var(--saffron2);font-weight:700;font-size:0.76rem;cursor:pointer;margin-top:0.5rem;padding:0.3rem 0;font-family:var(--body);}
+.btn-resend:disabled{color:var(--t3);cursor:not-allowed;}
+
 /* BOTTOM NAVIGATION BAR */
 .bottomnav{position:fixed;bottom:0;left:0;right:0;z-index:1400;background:rgba(255,255,255,0.97);backdrop-filter:blur(12px);border-top:0.5px solid var(--line);display:flex;align-items:flex-end;justify-content:space-around;padding:0.4rem 0.5rem calc(0.4rem + env(safe-area-inset-bottom));max-width:560px;margin:0 auto;box-shadow:0 -2px 16px rgba(15,23,42,0.06);}
 @media(min-width:720px){.bottomnav{display:none;}}
@@ -491,6 +495,7 @@ body{font-family:var(--body);background:var(--cream);color:var(--ink);font-size:
       <div class="field"><label>Mobile Number (this becomes your login)</label><input class="inp" id="login-phone" type="tel" placeholder="98XXXXXXXX" maxlength="10"/></div>
       <div class="field hidden" id="otpField"><label>Enter OTP sent to your number</label><input class="inp" id="login-otp" type="tel" placeholder="6-digit OTP" maxlength="6" inputmode="numeric"/>
         <div style="font-size:0.66rem;color:var(--t3);margin-top:0.3rem" id="otpHint">We'll send an OTP by SMS to verify your number.</div>
+        <button class="btn-resend hidden" id="resendBtn" type="button">↻ Resend OTP <span id="resendTimer"></span></button>
       </div>
       <div id="recaptcha-container"></div>
       <button class="btn btn-saffron" id="loginBtn">Send OTP →</button>
@@ -1671,8 +1676,57 @@ document.getElementById('loginBackBtn').addEventListener('click',function(){
   document.getElementById('loginBackBtn').classList.add('hidden');
   document.getElementById('loginBtn').textContent='Send OTP →';
   document.getElementById('login-otp').value='';
+  var rb=document.getElementById('resendBtn');if(rb)rb.classList.add('hidden');
+  if(resendInterval)clearInterval(resendInterval);
   fbConfirmation=null;
 });
+// ─── RESEND OTP ───
+var resendInterval=null;
+function startResendTimer(){
+  var btn=document.getElementById('resendBtn');
+  var timerEl=document.getElementById('resendTimer');
+  btn.classList.remove('hidden');
+  btn.disabled=true;
+  var secs=30;
+  timerEl.textContent='('+secs+'s)';
+  clearInterval(resendInterval);
+  resendInterval=setInterval(function(){
+    secs--;
+    if(secs<=0){
+      clearInterval(resendInterval);
+      btn.disabled=false;
+      timerEl.textContent='';
+    }else{
+      timerEl.textContent='('+secs+'s)';
+    }
+  },1000);
+}
+document.getElementById('resendBtn').addEventListener('click',async function(){
+  var ph=document.getElementById('login-phone').value.trim();
+  if(!/^\d{10}$/.test(ph)){showToast('Enter a valid number');return;}
+  if(!FB_READY){showToast('Resend not available in demo mode');return;}
+  try{
+    document.getElementById('otpHint').innerHTML='↻ Resending OTP to +91 '+ph+'…';
+    try{if(fbRecaptcha){fbRecaptcha.clear();fbRecaptcha=null;}}catch(e){}
+    fbRecaptcha=new firebase.auth.RecaptchaVerifier('recaptcha-container',{size:'invisible'});
+    await fbRecaptcha.render();
+    fbConfirmation=await fbAuth.signInWithPhoneNumber('+91'+ph,fbRecaptcha);
+    var testNums=['8587809938'];
+    if(testNums.indexOf(ph)>=0){
+      document.getElementById('otpHint').innerHTML='✅ Test number — enter <b>123456</b> as the OTP.';
+    }else{
+      document.getElementById('otpHint').innerHTML='✅ OTP resent to <b>+91 '+ph+'</b>.';
+    }
+    showToast('OTP resent');
+    audit('otp_resend',true,'+91'+ph);
+    startResendTimer();
+  }catch(err){
+    var code=String(err&&err.code||'');
+    document.getElementById('otpHint').innerHTML='⚠️ Resend failed. <span style="font-size:0.6rem;color:#94A3B8">'+(code||'')+'</span>';
+    showToast('Resend failed');
+  }
+});
+
 document.getElementById('loginBtn').addEventListener('click',async function(){
   var biz=document.getElementById('login-biz').value.trim();
   var ph=document.getElementById('login-phone').value.trim();
@@ -1699,9 +1753,15 @@ document.getElementById('loginBtn').addEventListener('click',async function(){
           await fbRecaptcha.render();
         }
         fbConfirmation=await fbAuth.signInWithPhoneNumber('+91'+ph,fbRecaptcha);
-        document.getElementById('otpHint').innerHTML='✅ OTP sent by SMS to <b>+91 '+ph+'</b>. Check your messages (can take up to 30 sec).';
+        var testNums=['8587809938'];
+        if(testNums.indexOf(ph)>=0){
+          document.getElementById('otpHint').innerHTML='✅ Test number detected — enter <b>123456</b> as the OTP (no SMS needed).';
+        }else{
+          document.getElementById('otpHint').innerHTML='✅ OTP sent by SMS to <b>+91 '+ph+'</b>. If it doesn\u2019t arrive in 30 sec, tap Resend below.';
+        }
         showToast('OTP sent to +91 '+ph);
         audit('otp_send',true,'+91'+ph);
+        startResendTimer();
       }catch(err){
         // Reset reCAPTCHA on error so retry works cleanly
         try{if(fbRecaptcha){fbRecaptcha.clear();fbRecaptcha=null;}}catch(e){}
