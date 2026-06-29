@@ -1,0 +1,16 @@
+<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 280'>
+<rect width='400' height='280' fill='%23F3E5F5'/>
+<rect x='0' y='205' width='400' height='75' fill='%23E1BEE7'/>
+<rect x='45' y='120' width='310' height='95' rx='16' fill='%23FAFAFA' stroke='%237B1FA2' stroke-width='2.5'/>
+<rect x='55' y='128' width='290' height='79' rx='10' fill='%234A148C'/>
+<rect x='60' y='135' width='70' height='50' rx='8' fill='%23CE93D8'/>
+<rect x='160' y='135' width='80' height='50' rx='8' fill='%23CE93D8'/>
+<rect x='265' y='135' width='65' height='50' rx='8' fill='%23CE93D8'/>
+<rect x='55' y='185' width='290' height='16' rx='4' fill='%236A1B9A'/>
+<rect x='30' y='200' width='340' height='16' rx='7' fill='%231A237E'/>
+<circle cx='95' cy='222' r='20' fill='%231A237E' stroke='%23546E7A' stroke-width='3'/>
+<circle cx='95' cy='222' r='8' fill='%23546E7A'/>
+<circle cx='305' cy='222' r='20' fill='%231A237E' stroke='%23546E7A' stroke-width='3'/>
+<circle cx='305' cy='222' r='8' fill='%23546E7A'/>
+<text x='200' y='260' text-anchor='middle' font-family='Arial' font-size='13' fill='%234A148C' font-weight='700'>SUV / INNOVA</text>
+</svg>
