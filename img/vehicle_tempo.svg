@@ -1,0 +1,17 @@
+<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 280'>
+<rect width='400' height='280' fill='%23FFF8E1'/>
+<rect x='0' y='200' width='400' height='80' fill='%23FFECB3'/>
+<rect x='30' y='90' width='330' height='120' rx='22' fill='%23FFFFFF' stroke='%23FF8F00' stroke-width='3'/>
+<rect x='40' y='98' width='310' height='104' rx='16' fill='%23E65100'/>
+<rect x='280' y='105' width='55' height='70' rx='10' fill='%23FFCC02'/>
+<rect x='55' y='108' width='65' height='55' rx='8' fill='%2390CAF9'/>
+<rect x='130' y='108' width='65' height='55' rx='8' fill='%2390CAF9'/>
+<rect x='205' y='108' width='65' height='55' rx='8' fill='%2390CAF9'/>
+<rect x='40' y='172' width='310' height='20' rx='4' fill='%23BF360C'/>
+<rect x='15' y='198' width='370' height='18' rx='8' fill='%23212121'/>
+<circle cx='85' cy='222' r='22' fill='%23212121' stroke='%23546E7A' stroke-width='3'/>
+<circle cx='85' cy='222' r='9' fill='%23546E7A'/>
+<circle cx='315' cy='222' r='22' fill='%23212121' stroke='%23546E7A' stroke-width='3'/>
+<circle cx='315' cy='222' r='9' fill='%23546E7A'/>
+<text x='200' y='260' text-anchor='middle' font-family='Arial' font-size='13' fill='%23E65100' font-weight='700'>TEMPO TRAVELLER</text>
+</svg>
