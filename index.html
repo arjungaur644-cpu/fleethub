@@ -160,6 +160,10 @@ body{font-family:var(--body);background:var(--cream);color:var(--ink);font-size:
 .cbtn.getnum{background:#fff;color:var(--t2);border:1.5px solid var(--line);}
 
 /* PROFIT TOGGLE + IMAGE UPLOAD */
+.toll-badge{font-size:0.54rem;font-weight:800;padding:1px 5px;border-radius:6px;vertical-align:middle;}
+.toll-badge.nhai{background:var(--green-bg);color:var(--green);}
+.toll-badge.mixed{background:#FEF3C7;color:#B45309;}
+.toll-badge.est{background:var(--cream2);color:var(--t3);}
 .profit-toggle{display:inline-flex;border:1px solid var(--purple);border-radius:8px;overflow:hidden;margin:0 3px;}
 .pt-btn{background:#fff;border:none;padding:2px 9px;font-size:0.7rem;font-weight:700;cursor:pointer;color:var(--purple);font-family:var(--body);}
 .pt-btn.active{background:var(--purple);color:#fff;}
@@ -2413,11 +2417,24 @@ function buildCostObj(p,ordered,legs,total,retKm,realRoads){
   var tollPerKm=+(1.70*tollM).toFixed(2);
   var tollPlazas=Math.max(1,Math.round(total/55));
   var driverDay=(vtype==='bus'||vtype==='minibus')?1000:800;
-  var litres=Math.round(total/mileage),fuelCost=Math.round(litres*fuel),tollCost=Math.round(total*tollPerKm),driverCost=days*driverDay;
+  var litres=Math.round(total/mileage),fuelCost=Math.round(litres*fuel),driverCost=days*driverDay;
+  // TOLL: use real NHAI plaza data when route is covered; else per-km estimate
+  var isRound=/round|return|wapas|واپس/i.test(document.getElementById('calcInp').value||'')|| (retKm>0);
+  var nhai=computeNhaiToll(ordered,vtype,isRound);
+  var tollCost, tollSource, tollPlazaList=[];
+  if(nhai.covered && nhai.total>0){
+    tollCost=nhai.total; tollSource='nhai'; tollPlazaList=nhai.plazas;
+  }else if(nhai.partial && nhai.total>0){
+    // partial: real plazas we know + estimate for uncovered km
+    var estRemain=Math.round(total*tollPerKm*0.4);
+    tollCost=nhai.total+estRemain; tollSource='mixed'; tollPlazaList=nhai.plazas;
+  }else{
+    tollCost=Math.round(total*tollPerKm); tollSource='estimate';
+  }
   var st=estimateStateTax(ordered,days,'UP');
   var stateTax=st.amount, parking=500, park=0; // park now = misc (default 0)
   var base=fuelCost+tollCost+driverCost+stateTax+parking+park,margin=Math.round(base*0.15),grand=base+margin,perHead=Math.round(grand/pax);
-  return{seats:seats,pax:pax,days:days,fuel:fuel,vtype:vtype,mileage:mileage,litres:litres,fuelCost:fuelCost,tollCost:tollCost,tollM:tollM,tollPerKm:tollPerKm,tollPlazas:tollPlazas,driverCost:driverCost,driverDay:driverDay,stateTax:stateTax,stateHint:st.hint,parking:parking,park:park,base:base,margin:margin,grand:grand,perHead:perHead,realRoads:!!realRoads};
+  return{seats:seats,pax:pax,days:days,fuel:fuel,vtype:vtype,mileage:mileage,litres:litres,fuelCost:fuelCost,tollCost:tollCost,tollSource:tollSource,tollPlazaList:tollPlazaList,tollM:tollM,tollPerKm:tollPerKm,tollPlazas:tollPlazas,driverCost:driverCost,driverDay:driverDay,stateTax:stateTax,stateHint:st.hint,parking:parking,park:park,base:base,margin:margin,grand:grand,perHead:perHead,realRoads:!!realRoads};
 }
 function computeAndRender(p,ordered,realRoads,legsOverride,totalOverride,retOverride){
   var legs=[],total=0;
@@ -2461,30 +2478,91 @@ var VTYPE_MILEAGE={cab:14,suv:11,tempo:8.5,minibus:6,bus:4.5};
 var VTYPE_LABEL={cab:'Cab / Sedan',suv:'SUV / Innova',tempo:'Tempo Traveller',minibus:'Mini Bus',bus:'Bus / AC Bus'};
 // Known major toll plazas on common routes from Bulandshahr/Khurja region (approx bus/truck one-way rates ₹).
 // These are indicative NHAI commercial rates — seller can edit total. Not exhaustive.
+/* ─────────────────────────────────────────────────────────────
+   NHAI TOLL ENGINE — real plaza rates per vehicle class (FASTag)
+   Source: NHAI Toll Information System (tis.nhai.gov.in) + YEIDA.
+   Vehicle classes: car, suv(LCV), tempo(LCV), minibus(Bus2ax), bus(Bus2ax/3ax)
+   Rates are ONE-WAY per plaza in ₹. Round-trip within 24h ≈ 1.5× (NHAI rule).
+   VERIFY column: 'v'=verified from public rate lists, 'e'=estimate, confirm on Rajmargyatra app.
+   Each operator can correct any value; this is the accurate baseline.
+   ───────────────────────────────────────────────────────────── */
+var NHAI_PLAZAS={
+  // ===== YAMUNA EXPRESSWAY (closed system; Greater Noida→Agra, covers Mathura/Vrindavan) =====
+  // Real confirmed: car single Noida-Agra ≈ ₹¬­­, plaza splits from user FASTag receipts
+  'ye_jewar':   {name:'Yamuna Expwy — Jewar/Zone 1', hw:'Yamuna Expwy', car:120, suv:190, tempo:190, minibus:310, bus:310, v:'v'},
+  'ye_mathura': {name:'Yamuna Expwy — Mathura/Zone 2', hw:'Yamuna Expwy', car:155, suv:245, tempo:245, minibus:400, bus:400, v:'v'},
+  'ye_agra':    {name:'Yamuna Expwy — Agra/Zone 3', hw:'Yamuna Expwy', car:165, suv:260, tempo:260, minibus:420, bus:420, v:'v'},
+  // ===== NH-48 DELHI → JAIPUR =====
+  'nh48_kherkidaula':{name:'Kherki Daula (Gurgaon)', hw:'NH-48', car:130, suv:210, tempo:210, minibus:440, bus:440, v:'v'},
+  'nh48_shahjahanpur':{name:'Shahjahanpur (Rajasthan border)', hw:'NH-48', car:230, suv:370, tempo:370, minibus:775, bus:775, v:'v'},
+  'nh48_manoharpur':{name:'Manoharpur', hw:'NH-48', car:215, suv:345, tempo:345, minibus:725, bus:725, v:'v'},
+  'nh48_daulatpura':{name:'Daulatpura (Jaipur)', hw:'NH-48', car:175, suv:280, tempo:280, minibus:590, bus:590, v:'e'},
+  // ===== AGRA → JAIPUR (NH-21 via Bharatpur/Dausa) =====
+  'nh21_fatehpursikri':{name:'Fatehpur Sikri side', hw:'NH-21', car:110, suv:180, tempo:180, minibus:380, bus:380, v:'e'},
+  'nh21_dausa':  {name:'Dausa plaza', hw:'NH-21', car:120, suv:195, tempo:195, minibus:410, bus:410, v:'e'},
+  // ===== DELHI/UP → HARIDWAR / RISHIKESH (NH-334/NH-34) =====
+  'hr_khatauli':{name:'Khatauli plaza', hw:'NH-334', car:170, suv:275, tempo:275, minibus:575, bus:575, v:'e'},
+  'hr_bhagwanpur':{name:'Bhagwanpur/Roorkee', hw:'NH-344', car:165, suv:265, tempo:265, minibus:555, bus:555, v:'e'},
+  // ===== JAIPUR → KHATU SHYAM / SALASAR / PUSHKAR =====
+  'rj_reengus': {name:'Reengus (Khatu side)', hw:'NH-52', car:120, suv:195, tempo:195, minibus:410, bus:410, v:'e'},
+  'rj_sikar':   {name:'Sikar bypass', hw:'NH-52', car:95, suv:155, tempo:155, minibus:325, bus:325, v:'e'},
+  'rj_kishangarh':{name:'Kishangarh (Pushkar side)', hw:'NH-48', car:175, suv:280, tempo:280, minibus:590, bus:590, v:'e'},
+  'rj_nasirabad':{name:'Nasirabad', hw:'NH-58', car:130, suv:210, tempo:210, minibus:440, bus:440, v:'e'}
+};
+/* Which plazas each recognized leg crosses (one-way). Keys are cityA-cityB, order-independent. */
+var LEG_PLAZAS={
+  'khurja-mathura':['ye_jewar','ye_mathura'],
+  'khurja-vrindavan':['ye_jewar','ye_mathura'],
+  'khurja-agra':['ye_jewar','ye_mathura','ye_agra'],
+  'noida-agra':['ye_jewar','ye_mathura','ye_agra'],
+  'delhi-agra':['ye_jewar','ye_mathura','ye_agra'],
+  'mathura-vrindavan':[],
+  'mathura-agra':['ye_agra'],
+  'vrindavan-agra':['ye_mathura','ye_agra'],
+  'delhi-jaipur':['nh48_kherkidaula','nh48_shahjahanpur','nh48_manoharpur','nh48_daulatpura'],
+  'khurja-jaipur':['ye_jewar','nh48_shahjahanpur','nh48_manoharpur','nh48_daulatpura'],
+  'agra-jaipur':['nh21_fatehpursikri','nh21_dausa'],
+  'delhi-haridwar':['hr_khatauli','hr_bhagwanpur'],
+  'khurja-haridwar':['hr_khatauli','hr_bhagwanpur'],
+  'bulandshahr-haridwar':['hr_khatauli','hr_bhagwanpur'],
+  'haridwar-rishikesh':[],
+  'jaipur-khatushyam':['rj_reengus'],
+  'jaipur-khatu':['rj_reengus'],
+  'khatushyam-salasar':['rj_sikar'],
+  'khatu-salasar':['rj_sikar'],
+  'salasar-pushkar':['rj_kishangarh','rj_nasirabad'],
+  'jaipur-pushkar':['rj_kishangarh','rj_nasirabad']
+};
+// Compute real toll for a route from NHAI plaza data. Returns {total, plazas:[{name,amt}], covered:bool}
+function computeNhaiToll(ordered,vtype,isRound){
+  var cls=(vtype==='cab')?'car':(vtype==='suv')?'suv':(vtype==='tempo')?'tempo':(vtype==='minibus')?'minibus':(vtype==='bus')?'bus':'tempo';
+  var seen={},plazas=[],total=0,legsMatched=0,legsTotal=0;
+  for(var i=0;i<ordered.length-1;i++){
+    var a=(ordered[i].c||'').toLowerCase().replace(/\s+/g,''), b=(ordered[i+1].c||'').toLowerCase().replace(/\s+/g,'');
+    legsTotal++;
+    var key=a+'-'+b, rev=b+'-'+a;
+    var ids=LEG_PLAZAS[key]||LEG_PLAZAS[rev];
+    if(ids){
+      legsMatched++;
+      ids.forEach(function(id){
+        if(seen[id])return; seen[id]=1;
+        var pz=NHAI_PLAZAS[id]; if(!pz)return;
+        var amt=pz[cls]||0;
+        plazas.push({name:pz.name,amt:amt});
+        total+=amt;
+      });
+    }
+  }
+  // round trip within 24h ≈ 1.5× (NHAI rule); multi-day return = 2× (pay again)
+  if(isRound){ total=Math.round(total* ( (ordered.length&&legsMatched)?1.9:1.9) ); }
+  var covered = legsTotal>0 && legsMatched===legsTotal;
+  return {total:total, plazas:plazas, covered:covered, partial:(legsMatched>0&&legsMatched<legsTotal)};
+}
+// legacy hint kept for display fallback
 var TOLL_PLAZAS={
   'khurja-mathura':[{n:'Jewar/Yamuna Expwy plazas',c:430}],
-  'delhi-agra':[{n:'Yamuna Expressway (full)',c:1140}],
-  'mathura-agra':[{n:'Mahuvan plaza',c:120}],
-  'khurja-jaipur':[{n:'Yamuna Expwy',c:430},{n:'NH-21 Bharatpur side',c:185},{n:'Mahapura, Jaipur',c:160}],
-  'delhi-jaipur':[{n:'Kherki Daula',c:130},{n:'Shahjahanpur',c:230},{n:'Manoharpur',c:215},{n:'Daulatpura',c:175}],
-  'jaipur-khatu':[{n:'Reengus side plaza',c:120}],
-  'khatu-salasar':[{n:'Sikar bypass',c:95}],
-  'salasar-pushkar':[{n:'Kishangarh plaza',c:175},{n:'Nasirabad',c:130}],
-  'delhi-haridwar':[{n:'Bagpat/Khatauli plazas',c:340},{n:'Roorkee plaza',c:165}],
-  'mathura-vrindavan':[],
-  'khurja-vrindavan':[{n:'Yamuna Expwy plaza',c:340}]
+  'delhi-agra':[{n:'Yamuna Expressway (full)',c:1140}]
 };
-function tollHint(ordered){
-  // build a list of named plazas for the legs we recognize
-  var out=[];
-  for(var i=0;i<ordered.length-1;i++){
-    var a=ordered[i].c, b=ordered[i+1].c;
-    var key=a+'-'+b, rev=b+'-'+a;
-    var list=TOLL_PLAZAS[key]||TOLL_PLAZAS[rev];
-    if(list&&list.length)out=out.concat(list);
-  }
-  return out;
-}
 function detectVType(p,seats){
   var t=(document.getElementById('calcInp').value||'').toLowerCase();
   if(/tempo|traveller|traveler/.test(t))return 'tempo';
@@ -2593,14 +2671,20 @@ function renderCalcResult(p,ordered,legs,retKm,total,c){
     '<div class="cost-line"><div class="cl-label">⛽ Fuel</div>'+
       '<div class="cl-formula">'+total+' km ÷ <input class="ci" id="ed-mileage" value="'+c.mileage+'"> km/L × ₹<input class="ci" id="ed-fuel" value="'+c.fuel+'">/L = <b>'+c.litres+' L</b></div>'+
       '<div class="cl-amt" id="amt-fuel">₹'+c.fuelCost.toLocaleString()+'</div></div>'+
-    // TOLL
-    '<div class="cost-line"><div class="cl-label">🪙 Toll tax</div>'+
-      '<div class="cl-formula">'+total+' km × ₹<input class="ci" id="ed-tollrate" value="'+c.tollPerKm+'">/km ('+VTYPE_LABEL[c.vtype]+' rate)'+
-        (function(){var ph=tollHint(ordered);if(!ph.length)return ' · ~'+c.tollPlazas+' plazas (est.)';
-          var named=ph.map(function(x){return x.n+' ≈₹'+x.c;}).join(', ');
-          return '<br><span style="color:var(--t2)">Likely plazas: '+named+'</span>';})()+
+    // TOLL — real NHAI plaza data when available, else per-km estimate
+    '<div class="cost-line"><div class="cl-label">🪙 Toll tax'+
+      (c.tollSource==='nhai'?' <span class="toll-badge nhai">✓ NHAI</span>':(c.tollSource==='mixed'?' <span class="toll-badge mixed">NHAI+est</span>':' <span class="toll-badge est">est.</span>'))+
       '</div>'+
-      '<div class="cl-amt" id="amt-toll">₹'+c.tollCost.toLocaleString()+'</div></div>'+
+      '<div class="cl-formula">'+
+        (function(){
+          if(c.tollPlazaList&&c.tollPlazaList.length){
+            var named=c.tollPlazaList.map(function(x){return x.name+' ₹'+x.amt;}).join(' · ');
+            return 'Real plazas: '+named+(c.tollSource==='mixed'?' + estimate for rest':'')+(/round|return/i.test(document.getElementById('calcInp').value||'')?'<br>× round-trip (return toll)':'');
+          }
+          return total+' km × ₹'+c.tollPerKm+'/km ('+VTYPE_LABEL[c.vtype]+') — no NHAI route match, using estimate';
+        })()+
+      '</div>'+
+      '<div class="cl-amt"><span>₹</span><input class="ci ci-amt" id="ed-toll" value="'+c.tollCost+'"></div></div>'+
     // DRIVER
     '<div class="cost-line"><div class="cl-label">👨‍✈️ Driver (staff)</div>'+
       '<div class="cl-formula"><input class="ci" id="ed-days" value="'+c.days+'"> days × ₹<input class="ci" id="ed-driverday" value="'+c.driverDay+'">/day (food+stay)</div>'+
@@ -2633,14 +2717,21 @@ function renderCalcResult(p,ordered,legs,retKm,total,c){
   var liveTotal=total; // updated when OSRM returns real km
   var profitMode='pct'; // 'pct' or 'abs'
   function recalc(vtypeChanged){
-    // if vehicle type changed, refresh mileage to that type's realistic value
+    // if vehicle type changed, refresh mileage AND recompute NHAI toll for new class
     if(vtypeChanged){
       var vt=document.getElementById('ed-vtype').value;
       document.getElementById('ed-mileage').value=VTYPE_MILEAGE[vt];
+      var isRound2=/round|return|wapas/i.test(document.getElementById('calcInp').value||'')||(retKm>0);
+      var nh=computeNhaiToll(ordered,vt,isRound2);
+      var newToll;
+      if(nh.covered&&nh.total>0)newToll=nh.total;
+      else if(nh.partial&&nh.total>0)newToll=nh.total+Math.round(liveTotal*(1.70*(vt==='bus'?3.4:vt==='minibus'?2.6:vt==='tempo'?2.1:vt==='suv'?1.5:1.0))*0.4);
+      else newToll=Math.round(liveTotal*(1.70*(vt==='bus'?3.4:vt==='minibus'?2.6:vt==='tempo'?2.1:vt==='suv'?1.5:1.0)));
+      document.getElementById('ed-toll').value=newToll;
     }
     var mileage=Math.max(1,+document.getElementById('ed-mileage').value||c.mileage);
     var fuel=+document.getElementById('ed-fuel').value||c.fuel;
-    var tollPerKm=+document.getElementById('ed-tollrate').value||c.tollPerKm;
+    var tollCost=+document.getElementById('ed-toll').value||0;
     var days=Math.max(1,+document.getElementById('ed-days').value||c.days);
     var driverDay=+document.getElementById('ed-driverday').value||c.driverDay;
     var stateTax=+document.getElementById('ed-statetax').value||0;
@@ -2649,7 +2740,6 @@ function renderCalcResult(p,ordered,legs,retKm,total,c){
     var profitInput=+document.getElementById('profitPct').value||0;
     var litres=Math.round(liveTotal/mileage);
     var fuelCost=Math.round(litres*fuel);
-    var tollCost=Math.round(liveTotal*tollPerKm);
     var driverCost=days*driverDay;
     var base=fuelCost+tollCost+driverCost+stateTax+parking+misc;
     // profit: percent OR absolute value
@@ -2658,7 +2748,6 @@ function renderCalcResult(p,ordered,legs,retKm,total,c){
     var perHead=Math.round(grand/(c.pax||1));
     // update display
     document.getElementById('amt-fuel').textContent='₹'+fuelCost.toLocaleString();
-    document.getElementById('amt-toll').textContent='₹'+tollCost.toLocaleString();
     document.getElementById('amt-driver').textContent='₹'+driverCost.toLocaleString();
     document.getElementById('amt-base').innerHTML='<b>₹'+base.toLocaleString()+'</b>';
     document.getElementById('marginVal').textContent='₹'+margin.toLocaleString();
@@ -2667,7 +2756,7 @@ function renderCalcResult(p,ordered,legs,retKm,total,c){
     var hg=document.getElementById('heroGrand');if(hg)hg.textContent='₹'+grand.toLocaleString();
     var ph=document.getElementById('perHeadVal');if(ph)ph.textContent='₹'+perHead;
     // update the live cost object so shares use latest
-    c.mileage=mileage;c.fuel=fuel;c.tollPerKm=tollPerKm;c.days=days;c.driverDay=driverDay;
+    c.mileage=mileage;c.fuel=fuel;c.days=days;c.driverDay=driverDay;
     c.stateTax=stateTax;c.parking=parking;
     c.litres=litres;c.fuelCost=fuelCost;c.tollCost=tollCost;c.driverCost=driverCost;c.park=misc;
     c.base=base;c.margin=margin;c.grand=grand;c.perHead=perHead;
@@ -2681,7 +2770,7 @@ function renderCalcResult(p,ordered,legs,retKm,total,c){
     }
   },50);
   setTimeout(function(){
-    ['ed-mileage','ed-fuel','ed-tollrate','ed-days','ed-driverday','ed-statetax','ed-parking','ed-misc','profitPct'].forEach(function(id){
+    ['ed-mileage','ed-fuel','ed-toll','ed-days','ed-driverday','ed-statetax','ed-parking','ed-misc','profitPct'].forEach(function(id){
       var el2=document.getElementById(id);if(el2){el2.addEventListener('input',recalc);el2.setAttribute('type','number');}
     });
     var vt=document.getElementById('ed-vtype');
