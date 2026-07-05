@@ -8,6 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <style>
 :root{
   --saffron:#FF9F1C;--saffron2:#E8880A;--saffron-soft:#FFF4E0;
@@ -158,6 +159,16 @@ body{font-family:var(--body);background:var(--cream);color:var(--ink);font-size:
 .cbtn.wa{background:var(--wa);color:#fff;}
 .cbtn.getnum{background:#fff;color:var(--t2);border:1.5px solid var(--line);}
 
+/* PROFIT TOGGLE + IMAGE UPLOAD */
+.profit-toggle{display:inline-flex;border:1px solid var(--purple);border-radius:8px;overflow:hidden;margin:0 3px;}
+.pt-btn{background:#fff;border:none;padding:2px 9px;font-size:0.7rem;font-weight:700;cursor:pointer;color:var(--purple);font-family:var(--body);}
+.pt-btn.active{background:var(--purple);color:#fff;}
+.calc-img-btn{display:inline-flex;align-items:center;gap:5px;background:#fff;border:1.5px solid var(--saffron);color:var(--saffron2);padding:0.5rem 0.85rem;border-radius:11px;font-weight:700;font-size:0.78rem;cursor:pointer;font-family:var(--body);}
+.calc-img-btn:active{transform:scale(0.97);}
+.calc-img-preview{margin-top:0.6rem;position:relative;display:none;}
+.calc-img-preview img{width:100%;max-height:160px;object-fit:contain;border-radius:11px;border:1px solid var(--line);background:var(--cream2);}
+.calc-img-x{position:absolute;top:6px;right:6px;width:26px;height:26px;border-radius:50%;background:rgba(0,0,0,0.6);color:#fff;border:none;cursor:pointer;font-size:0.8rem;}
+.calc-img-status{font-size:0.68rem;color:var(--purple);margin-top:0.4rem;font-weight:600;}
 /* ENQUIRY CONTEXT in calculator */
 .enq-ctx{background:linear-gradient(135deg,#F3E8FF,#FAF5FF);border:1px solid #D8B4FE;border-radius:13px;padding:0.8rem 0.85rem;margin-bottom:0.8rem;}
 .enq-ctx-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem;}
@@ -641,6 +652,16 @@ body{font-family:var(--body);background:var(--cream);color:var(--ink);font-size:
           <div class="calc-tools">
             <button class="cbtn2 mic" id="calcMic">🎤 Speak</button>
             <button class="cbtn2 go" id="calcGo">✨ Calculate</button>
+          </div>
+          <div style="margin-top:0.6rem;display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap">
+            <button class="calc-img-btn" id="calcImgBtn">📷 Photo of route</button>
+            <input type="file" id="calcImgInput" accept="image/*" style="display:none"/>
+            <span style="font-size:0.64rem;color:var(--t3)">Upload a photo of a handwritten/printed route</span>
+          </div>
+          <div class="calc-img-preview" id="calcImgPreview">
+            <img id="calcImgEl" alt="route"/>
+            <button class="calc-img-x" id="calcImgX">✕</button>
+            <div class="calc-img-status" id="calcImgStatus"></div>
           </div>
         </div>
         <div id="calcResult"></div>
@@ -2346,6 +2367,44 @@ function resolveCities(cities,done){
       .finally(function(){if(--pending===0)done(resolved,missing);});
   });
 }
+// State-tax estimation: detect states crossed, apply per-day commercial entry tax
+var CITY_STATE={
+  // UP (home state - no tax)
+  'khurja':'UP','bulandshahr':'UP','aligarh':'UP','noida':'UP','ghaziabad':'UP','agra':'UP','mathura':'UP','vrindavan':'UP','govardhan':'UP','kanpur':'UP','lucknow':'UP','varanasi':'UP','ayodhya':'UP','meerut':'UP','moradabad':'UP','sikandrabad':'UP','anupshahr':'UP','hapur':'UP',
+  // Rajasthan
+  'jaipur':'RJ','khatu shyam':'RJ','khatushyam':'RJ','salasar':'RJ','pushkar':'RJ','ajmer':'RJ','jodhpur':'RJ','udaipur':'RJ','bikaner':'RJ','alwar':'RJ','bharatpur':'RJ','nathdwara':'RJ',
+  // Uttarakhand
+  'haridwar':'UK','rishikesh':'UK','dehradun':'UK','mussoorie':'UK','nainital':'UK','badrinath':'UK','kedarnath':'UK','haldwani':'UK',
+  // Haryana
+  'gurgaon':'HR','gurugram':'HR','faridabad':'HR','kurukshetra':'HR','panipat':'HR','ambala':'HR',
+  // Delhi
+  'delhi':'DL','new delhi':'DL',
+  // HP
+  'shimla':'HP','manali':'HP','dharamshala':'HP','dalhousie':'HP',
+  // MP
+  'gwalior':'MP','ujjain':'MP','indore':'MP','bhopal':'MP','khajuraho':'MP',
+  // Punjab
+  'amritsar':'PB','ludhiana':'PB','chandigarh':'PB','jalandhar':'PB'
+};
+// per-day commercial entry tax estimate (₹) for a mid-size tempo/bus, by state
+var STATE_TAX_DAY={'RJ':1000,'UK':600,'HR':500,'HP':550,'DL':600,'MP':700,'PB':550,'UP':0,'DL ':600};
+function estimateStateTax(ordered,days,homeState){
+  homeState=homeState||'UP';
+  var statesCrossed={};
+  ordered.forEach(function(s){
+    var key=(s.c||'').toLowerCase().trim();
+    var st=CITY_STATE[key];
+    if(st&&st!==homeState)statesCrossed[st]=true;
+  });
+  var states=Object.keys(statesCrossed);
+  var total=0,parts=[];
+  states.forEach(function(st){
+    var per=STATE_TAX_DAY[st]||500;
+    var amt=per*Math.max(1,days);
+    total+=amt;parts.push(st+' ₹'+per+'/day');
+  });
+  return{amount:total,hint:states.length?('crosses '+parts.join(', ')+' × '+days+' day(s)'):'stays in home state (UP) — no state tax'};
+}
 function buildCostObj(p,ordered,legs,total,retKm,realRoads){
   var seats=p.seats||40,pax=p.pax||seats,days=p.days||Math.max(1,Math.ceil(total/400)),fuel=p.fuel||96;
   var vtype=detectVType(p,seats);
@@ -2354,9 +2413,11 @@ function buildCostObj(p,ordered,legs,total,retKm,realRoads){
   var tollPerKm=+(1.70*tollM).toFixed(2);
   var tollPlazas=Math.max(1,Math.round(total/55));
   var driverDay=(vtype==='bus'||vtype==='minibus')?1000:800;
-  var litres=Math.round(total/mileage),fuelCost=Math.round(litres*fuel),tollCost=Math.round(total*tollPerKm),driverCost=days*driverDay,park=500;
-  var base=fuelCost+tollCost+driverCost+park,margin=Math.round(base*0.15),grand=base+margin,perHead=Math.round(grand/pax);
-  return{seats:seats,pax:pax,days:days,fuel:fuel,vtype:vtype,mileage:mileage,litres:litres,fuelCost:fuelCost,tollCost:tollCost,tollM:tollM,tollPerKm:tollPerKm,tollPlazas:tollPlazas,driverCost:driverCost,driverDay:driverDay,park:park,base:base,margin:margin,grand:grand,perHead:perHead,realRoads:!!realRoads};
+  var litres=Math.round(total/mileage),fuelCost=Math.round(litres*fuel),tollCost=Math.round(total*tollPerKm),driverCost=days*driverDay;
+  var st=estimateStateTax(ordered,days,'UP');
+  var stateTax=st.amount, parking=500, park=0; // park now = misc (default 0)
+  var base=fuelCost+tollCost+driverCost+stateTax+parking+park,margin=Math.round(base*0.15),grand=base+margin,perHead=Math.round(grand/pax);
+  return{seats:seats,pax:pax,days:days,fuel:fuel,vtype:vtype,mileage:mileage,litres:litres,fuelCost:fuelCost,tollCost:tollCost,tollM:tollM,tollPerKm:tollPerKm,tollPlazas:tollPlazas,driverCost:driverCost,driverDay:driverDay,stateTax:stateTax,stateHint:st.hint,parking:parking,park:park,base:base,margin:margin,grand:grand,perHead:perHead,realRoads:!!realRoads};
 }
 function computeAndRender(p,ordered,realRoads,legsOverride,totalOverride,retOverride){
   var legs=[],total=0;
@@ -2541,17 +2602,28 @@ function renderCalcResult(p,ordered,legs,retKm,total,c){
       '</div>'+
       '<div class="cl-amt" id="amt-toll">₹'+c.tollCost.toLocaleString()+'</div></div>'+
     // DRIVER
-    '<div class="cost-line"><div class="cl-label">👨‍✈️ Driver</div>'+
+    '<div class="cost-line"><div class="cl-label">👨‍✈️ Driver (staff)</div>'+
       '<div class="cl-formula"><input class="ci" id="ed-days" value="'+c.days+'"> days × ₹<input class="ci" id="ed-driverday" value="'+c.driverDay+'">/day (food+stay)</div>'+
       '<div class="cl-amt" id="amt-driver">₹'+c.driverCost.toLocaleString()+'</div></div>'+
-    // PARKING / STATE TAX / MISC
-    '<div class="cost-line"><div class="cl-label">🅿️ Parking + state permit + misc</div>'+
-      '<div class="cl-formula">flat estimate, edit as needed →</div>'+
-      '<div class="cl-amt"><span>₹</span><input class="ci ci-amt" id="ed-misc" value="'+c.park+'"></div></div>'+
+    // STATE TAX / INTERSTATE PERMIT (separate, auto-detected)
+    '<div class="cost-line"><div class="cl-label">🛂 State tax / permit</div>'+
+      '<div class="cl-formula" id="stateTaxHint">'+(c.stateHint||'interstate border crossing — edit if needed')+'</div>'+
+      '<div class="cl-amt"><span>₹</span><input class="ci ci-amt" id="ed-statetax" value="'+(c.stateTax||0)+'"></div></div>'+
+    // PARKING
+    '<div class="cost-line"><div class="cl-label">🅿️ Parking</div>'+
+      '<div class="cl-formula">toll plaza + monument + city parking</div>'+
+      '<div class="cl-amt"><span>₹</span><input class="ci ci-amt" id="ed-parking" value="'+(c.parking||0)+'"></div></div>'+
+    // MISC
+    '<div class="cost-line"><div class="cl-label">➕ Miscellaneous</div>'+
+      '<div class="cl-formula">any other expense</div>'+
+      '<div class="cl-amt"><span>₹</span><input class="ci ci-amt" id="ed-misc" value="'+(c.park||0)+'"></div></div>'+
     // OPERATING TOTAL
     '<div class="crow" style="border-top:2px solid var(--line);margin-top:0.3rem;padding-top:0.5rem"><span><b>Operating cost</b></span><span class="cv" id="amt-base"><b>₹'+c.base.toLocaleString()+'</b></span></div>'+
-    // PROFIT
-    '<div class="crow mrow"><span>📈 Your profit <input class="ci" id="profitPct" value="15">%</span><span class="cv" id="marginVal">₹'+c.margin.toLocaleString()+'</span></div>'+
+    // PROFIT — toggle between % and absolute ₹
+    '<div class="crow mrow"><span>📈 Your profit '+
+      '<span class="profit-toggle"><button type="button" class="pt-btn active" id="ptPct">%</button><button type="button" class="pt-btn" id="ptAbs">₹</button></span> '+
+      '<input class="ci" id="profitPct" value="15"><span id="profitUnit">%</span></span>'+
+      '<span class="cv" id="marginVal">₹'+c.margin.toLocaleString()+'</span></div>'+
     // GRAND
     '<div class="crow tot"><span>💰 Customer Quote</span><span class="cv" id="grandVal">₹'+c.grand.toLocaleString()+'</span></div>'+
     '<div style="font-size:0.62rem;color:var(--t3);margin-top:0.4rem;text-align:center">Per head: <b id="perHeadInline">₹'+c.perHead+'</b> · all values editable above</div>'+
@@ -2559,6 +2631,7 @@ function renderCalcResult(p,ordered,legs,retKm,total,c){
   el.appendChild(co);
   // LIVE RECALC — any edited input recomputes the whole chain
   var liveTotal=total; // updated when OSRM returns real km
+  var profitMode='pct'; // 'pct' or 'abs'
   function recalc(vtypeChanged){
     // if vehicle type changed, refresh mileage to that type's realistic value
     if(vtypeChanged){
@@ -2570,14 +2643,17 @@ function renderCalcResult(p,ordered,legs,retKm,total,c){
     var tollPerKm=+document.getElementById('ed-tollrate').value||c.tollPerKm;
     var days=Math.max(1,+document.getElementById('ed-days').value||c.days);
     var driverDay=+document.getElementById('ed-driverday').value||c.driverDay;
+    var stateTax=+document.getElementById('ed-statetax').value||0;
+    var parking=+document.getElementById('ed-parking').value||0;
     var misc=+document.getElementById('ed-misc').value||0;
-    var pct=+document.getElementById('profitPct').value||0;
+    var profitInput=+document.getElementById('profitPct').value||0;
     var litres=Math.round(liveTotal/mileage);
     var fuelCost=Math.round(litres*fuel);
     var tollCost=Math.round(liveTotal*tollPerKm);
     var driverCost=days*driverDay;
-    var base=fuelCost+tollCost+driverCost+misc;
-    var margin=Math.round(base*pct/100);
+    var base=fuelCost+tollCost+driverCost+stateTax+parking+misc;
+    // profit: percent OR absolute value
+    var margin=profitMode==='abs'?Math.round(profitInput):Math.round(base*profitInput/100);
     var grand=base+margin;
     var perHead=Math.round(grand/(c.pax||1));
     // update display
@@ -2592,11 +2668,20 @@ function renderCalcResult(p,ordered,legs,retKm,total,c){
     var ph=document.getElementById('perHeadVal');if(ph)ph.textContent='₹'+perHead;
     // update the live cost object so shares use latest
     c.mileage=mileage;c.fuel=fuel;c.tollPerKm=tollPerKm;c.days=days;c.driverDay=driverDay;
+    c.stateTax=stateTax;c.parking=parking;
     c.litres=litres;c.fuelCost=fuelCost;c.tollCost=tollCost;c.driverCost=driverCost;c.park=misc;
     c.base=base;c.margin=margin;c.grand=grand;c.perHead=perHead;
   }
+  // profit toggle wiring
   setTimeout(function(){
-    ['ed-mileage','ed-fuel','ed-tollrate','ed-days','ed-driverday','ed-misc','profitPct'].forEach(function(id){
+    var ptPct=document.getElementById('ptPct'),ptAbs=document.getElementById('ptAbs');
+    if(ptPct&&ptAbs){
+      ptPct.addEventListener('click',function(){profitMode='pct';ptPct.classList.add('active');ptAbs.classList.remove('active');document.getElementById('profitUnit').textContent='%';document.getElementById('profitPct').value='15';recalc();});
+      ptAbs.addEventListener('click',function(){profitMode='abs';ptAbs.classList.add('active');ptPct.classList.remove('active');document.getElementById('profitUnit').textContent='₹';document.getElementById('profitPct').value=Math.max(1000,Math.round(c.base*0.15));recalc();});
+    }
+  },50);
+  setTimeout(function(){
+    ['ed-mileage','ed-fuel','ed-tollrate','ed-days','ed-driverday','ed-statetax','ed-parking','ed-misc','profitPct'].forEach(function(id){
       var el2=document.getElementById(id);if(el2){el2.addEventListener('input',recalc);el2.setAttribute('type','number');}
     });
     var vt=document.getElementById('ed-vtype');
@@ -2631,7 +2716,7 @@ function renderCalcResult(p,ordered,legs,retKm,total,c){
       'Route: '+((CALC_CONTEXT&&CALC_CONTEXT.route)||ordered.map(function(o){return cap(o.c);}).join(' → '))+'\n'+
       jdate+
       'Distance: '+total+' km · '+c.days+' day(s)\n'+
-      'Fuel: Rs'+c.fuelCost.toLocaleString()+' · Toll: Rs'+c.tollCost.toLocaleString()+'\n'+
+      'Fuel: Rs'+c.fuelCost.toLocaleString()+' · Toll: Rs'+c.tollCost.toLocaleString()+(c.stateTax?' · State tax: Rs'+c.stateTax.toLocaleString():'')+'\n'+
       'Total trip cost: Rs '+c.grand.toLocaleString()+'\n'+
       'Per head: Rs '+c.perHead+'\n\nShall we confirm your booking?';
   }
@@ -2762,6 +2847,53 @@ document.getElementById('calcMic').addEventListener('click',function(){
   var ci=document.getElementById('calcInp');
   if(ci)ci.addEventListener('input',function(){
     document.getElementById('calcClear').classList.toggle('hidden',!ci.value.trim());
+  });
+})();
+
+// ─── IMAGE OF ROUTE → OCR → text (killer feature) ───
+(function(){
+  var btn=document.getElementById('calcImgBtn');
+  var input=document.getElementById('calcImgInput');
+  var preview=document.getElementById('calcImgPreview');
+  var imgEl=document.getElementById('calcImgEl');
+  var statusEl=document.getElementById('calcImgStatus');
+  var xBtn=document.getElementById('calcImgX');
+  if(!btn)return;
+  btn.addEventListener('click',function(){input.click();});
+  xBtn.addEventListener('click',function(){preview.style.display='none';input.value='';statusEl.textContent='';});
+  input.addEventListener('change',async function(){
+    var file=input.files&&input.files[0];
+    if(!file)return;
+    var url=URL.createObjectURL(file);
+    imgEl.src=url;preview.style.display='block';
+    statusEl.textContent='⏳ Reading the route from image…';
+    audit('img_ocr_start',true,file.name);
+    if(typeof Tesseract==='undefined'){
+      statusEl.textContent='⚠️ OCR library still loading — try again in a moment.';
+      return;
+    }
+    try{
+      var result=await Tesseract.recognize(url,'eng',{
+        logger:function(m){if(m.status==='recognizing text'){statusEl.textContent='⏳ Reading… '+Math.round(m.progress*100)+'%';}}
+      });
+      var text=(result&&result.data&&result.data.text||'').trim();
+      if(text){
+        // clean up OCR text into a route-ish line
+        var cleaned=text.replace(/\n+/g,', ').replace(/\s{2,}/g,' ').replace(/,\s*,/g,',').trim();
+        var inp=document.getElementById('calcInp');
+        inp.value=(inp.value.trim()?inp.value.trim()+', ':'')+cleaned;
+        document.getElementById('calcClear').classList.remove('hidden');
+        statusEl.innerHTML='✅ Route text extracted — review it above, edit if needed, then Calculate.';
+        audit('img_ocr',true,cleaned.slice(0,50));
+        showToast('Route read from image — check & calculate');
+      }else{
+        statusEl.textContent='⚠️ Could not read clear text. Try a sharper photo, or type the route.';
+        audit('img_ocr',false,'no text');
+      }
+    }catch(err){
+      statusEl.textContent='⚠️ Could not read the image. Please type the route instead.';
+      audit('img_ocr',false,String(err).slice(0,50));
+    }
   });
 })();
 
