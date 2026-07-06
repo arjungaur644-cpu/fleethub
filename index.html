@@ -667,6 +667,17 @@ body{font-family:var(--body);background:var(--cream);color:var(--ink);font-size:
             <button class="calc-img-x" id="calcImgX">✕</button>
             <div class="calc-img-status" id="calcImgStatus"></div>
           </div>
+          <div style="margin-top:0.7rem;border-top:1px dashed var(--line);padding-top:0.6rem">
+            <button id="gkeyToggle" style="background:none;border:none;color:var(--t3);font-size:0.66rem;cursor:pointer;font-family:var(--body);padding:0">⚙️ Distance accuracy settings</button>
+            <div id="gkeyBox" style="display:none;margin-top:0.5rem">
+              <div style="font-size:0.66rem;color:var(--t2);margin-bottom:0.35rem">Paste your Google Routes API key for exact Google distances (optional). Without it, free road distance is used.</div>
+              <div style="display:flex;gap:0.4rem">
+                <input id="gkeyInput" placeholder="AIzaSy… (Google Routes API key)" style="flex:1;border:1px solid var(--line);border-radius:8px;padding:0.45rem;font-size:0.72rem;outline:none"/>
+                <button id="gkeySave" style="background:var(--saffron);color:var(--navy);border:none;border-radius:8px;padding:0.45rem 0.8rem;font-size:0.72rem;font-weight:700;cursor:pointer">Save</button>
+              </div>
+              <div id="gkeyStatus" style="font-size:0.62rem;margin-top:0.35rem;color:var(--t3)"></div>
+            </div>
+          </div>
         </div>
         <div id="calcResult"></div>
       </div>
@@ -981,6 +992,33 @@ function allProv(){return SEED.concat(userListings);}
 /* ═══ BACKEND (Google Sheets via Apps Script) ═══ */
 var FH_API='';
 try{FH_API=localStorage.getItem('fh_api')||'';}catch(e){}
+// Google Routes API key (optional) — for exact all-India distance. Falls back to OSRM if absent.
+var GKEY='';
+try{GKEY=localStorage.getItem('fh_gkey')||'';}catch(e){}
+function saveGKey(k){GKEY=(k||'').trim();try{localStorage.setItem('fh_gkey',GKEY);}catch(e){}}
+// Get exact road distance (metres) via Google Routes API for an ordered list of [lat,lng] points.
+// Returns a Promise resolving to {km, source} or null on failure (caller falls back to OSRM).
+function googleRouteKm(pts){
+  if(!GKEY||!pts||pts.length<2)return Promise.resolve(null);
+  var origin=pts[0], dest=pts[pts.length-1];
+  var intermediates=pts.slice(1,-1).map(function(p){return{location:{latLng:{latitude:p[0],longitude:p[1]}}};});
+  var body={
+    origin:{location:{latLng:{latitude:origin[0],longitude:origin[1]}}},
+    destination:{location:{latLng:{latitude:dest[0],longitude:dest[1]}}},
+    travelMode:'DRIVE'
+  };
+  if(intermediates.length)body.intermediates=intermediates;
+  return fetch('https://routes.googleapis.com/directions/v2:computeRoutes',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','X-Goog-Api-Key':GKEY,'X-Goog-FieldMask':'routes.distanceMeters'},
+    body:JSON.stringify(body)
+  }).then(function(r){return r.json();}).then(function(d){
+    if(d&&d.routes&&d.routes[0]&&d.routes[0].distanceMeters){
+      return{km:Math.round(d.routes[0].distanceMeters/1000),source:'google'};
+    }
+    return null;
+  }).catch(function(){return null;});
+}
 // a stable anonymous user id for tracking
 var USER_ID='';
 try{USER_ID=localStorage.getItem('fh_uid')||'';if(!USER_ID){USER_ID='u'+Date.now()+Math.floor(Math.random()*1000);localStorage.setItem('fh_uid',USER_ID);}}catch(e){USER_ID='u'+Date.now();}
@@ -2775,25 +2813,30 @@ function renderCalcResult(p,ordered,legs,retKm,total,c){
     });
     var vt=document.getElementById('ed-vtype');
     if(vt)vt.addEventListener('change',function(){recalc(true);});
-    // Fetch REAL road distance from OSRM and update the cost with it
+    // Fetch REAL road distance: Google Routes API first (if key set), else OSRM
     var pts=ordered.filter(function(s){return s.coord;}).map(function(s){return s.coord;});
     if(p.isRet&&pts.length)pts.push(pts[0]);
     if(pts.length>=2){
-      var coordStr=pts.map(function(pt){return pt[1]+','+pt[0];}).join(';');
-      fetch('https://router.project-osrm.org/route/v1/driving/'+coordStr+'?overview=false')
-        .then(function(r){return r.json();})
-        .then(function(d){
-          if(d&&d.routes&&d.routes[0]&&d.routes[0].distance){
-            var realKm=Math.round(d.routes[0].distance/1000);
-            if(realKm>0){
-              liveTotal=realKm;
-              var dl=document.getElementById('distLabel');if(dl)dl.textContent=realKm+' km';
-              var ds=document.getElementById('distSrc');if(ds){ds.textContent='· real road distance ✓';ds.style.color='var(--green)';}
-              recalc(); // recompute cost with real km
-              audit('real_km',true,realKm+' km via OSRM');
-            }
-          }
-        }).catch(function(e){audit('real_km',false,'OSRM unavailable — using road estimate');});
+      var applyKm=function(realKm,src){
+        if(realKm>0){
+          liveTotal=realKm;
+          var dl=document.getElementById('distLabel');if(dl)dl.textContent=realKm+' km';
+          var ds=document.getElementById('distSrc');if(ds){ds.textContent=src==='google'?'· Google distance ✓':'· real road distance ✓';ds.style.color='var(--green)';}
+          recalc();
+          audit('real_km',true,realKm+' km via '+src);
+        }
+      };
+      // 1) Google (exact, all-India) if key present
+      googleRouteKm(pts).then(function(g){
+        if(g&&g.km){applyKm(g.km,'google');return;}
+        // 2) fallback OSRM (free)
+        var coordStr=pts.map(function(pt){return pt[1]+','+pt[0];}).join(';');
+        fetch('https://router.project-osrm.org/route/v1/driving/'+coordStr+'?overview=false')
+          .then(function(r){return r.json();})
+          .then(function(d){
+            if(d&&d.routes&&d.routes[0]&&d.routes[0].distance){applyKm(Math.round(d.routes[0].distance/1000),'OSRM');}
+          }).catch(function(e){audit('real_km',false,'OSRM unavailable — using road estimate');});
+      });
     }
   },120);
   function buildShareText(){
@@ -2939,7 +2982,22 @@ document.getElementById('calcMic').addEventListener('click',function(){
   });
 })();
 
-// ─── IMAGE OF ROUTE → OCR → text (killer feature) ───
+// ─── GOOGLE ROUTES API KEY settings ───
+(function(){
+  var tog=document.getElementById('gkeyToggle'),box=document.getElementById('gkeyBox');
+  var inp=document.getElementById('gkeyInput'),save=document.getElementById('gkeySave'),st=document.getElementById('gkeyStatus');
+  if(!tog)return;
+  function refreshStatus(){
+    if(GKEY){st.innerHTML='✅ Google distance active (key saved). <a href="#" id="gkeyClear" style="color:var(--red)">Remove</a>';var cl=document.getElementById('gkeyClear');if(cl)cl.addEventListener('click',function(e){e.preventDefault();saveGKey('');inp.value='';refreshStatus();showToast('Google key removed — using free road distance');});}
+    else{st.textContent='No key set — using free OpenStreetMap road distance (~90% accurate).';}
+  }
+  tog.addEventListener('click',function(){box.style.display=box.style.display==='none'?'block':'none';if(box.style.display==='block'){inp.value=GKEY;refreshStatus();}});
+  save.addEventListener('click',function(){
+    var k=inp.value.trim();
+    if(k&&!/^AIza/.test(k)){showToast('That doesn\u2019t look like a Google key (starts with AIza)');return;}
+    saveGKey(k);refreshStatus();showToast(k?'Google key saved — distances now exact':'Key cleared');
+  });
+})();
 (function(){
   var btn=document.getElementById('calcImgBtn');
   var input=document.getElementById('calcImgInput');
