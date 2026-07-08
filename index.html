@@ -181,6 +181,20 @@ body{font-family:var(--body);background:var(--cream);color:var(--ink);font-size:
 .enq-ctx-body{font-size:0.76rem;line-height:1.65;color:var(--ink);}
 .enq-ctx-edit{margin-top:0.5rem;background:none;border:none;color:#7C3AED;font-size:0.68rem;font-weight:700;cursor:pointer;padding:0;font-family:var(--body);}
 .calc-inp-wrap{position:relative;}
+/* GEMINI-STYLE UNIFIED INPUT */
+.gem-inp{border:1.5px solid var(--line);border-radius:22px;background:#fff;padding:0.7rem 0.9rem 0.5rem;box-shadow:0 2px 10px rgba(15,23,42,0.05);transition:border-color .15s;}
+.gem-inp:focus-within{border-color:var(--saffron);box-shadow:0 2px 14px rgba(255,159,28,0.15);}
+.gem-ta{width:100%;border:none;outline:none;resize:none;font-family:var(--body);font-size:0.9rem;color:var(--ink);background:transparent;line-height:1.5;max-height:120px;}
+.gem-bar{display:flex;align-items:center;gap:0.5rem;margin-top:0.35rem;}
+.gem-plus{width:34px;height:34px;border-radius:50%;border:1.5px solid var(--line);background:#fff;color:var(--t2);font-size:1.2rem;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s;}
+.gem-plus:active{transform:scale(0.9);}
+.gem-plus.has-img{background:var(--saffron);border-color:var(--saffron);color:#fff;}
+.gem-hint{flex:1;font-size:0.66rem;color:var(--t3);overflow:hidden;white-space:nowrap;text-overflow:ellipsis;}
+.gem-mic{width:34px;height:34px;border-radius:50%;border:none;background:var(--cream2);color:var(--ink);font-size:0.95rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s;}
+.gem-mic.rec{background:var(--red);color:#fff;animation:pulse 1.2s infinite;}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.12)}}
+.gem-send{width:38px;height:38px;border-radius:50%;border:none;background:linear-gradient(135deg,var(--saffron),#F77F00);color:#fff;font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 2px 8px rgba(255,159,28,0.4);transition:transform .12s;}
+.gem-send:active{transform:scale(0.9);}
 .calc-clear{position:absolute;top:8px;right:8px;width:24px;height:24px;border-radius:50%;background:var(--cream2);border:1px solid var(--line);color:var(--t2);font-size:0.7rem;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:2;}
 /* RESEND OTP */
 .btn-resend{background:none;border:none;color:var(--saffron2);font-weight:700;font-size:0.76rem;cursor:pointer;margin-top:0.5rem;padding:0.3rem 0;font-family:var(--body);}
@@ -647,32 +661,31 @@ body{font-family:var(--body);background:var(--cream);color:var(--ink);font-size:
       <div id="calcTool" class="hidden">
         <div class="calc-card">
           <h3>🧮 Trip Cost Calculator</h3>
-          <div class="cc-sub">Type the trip, or tap Speak. Add cities, seats, AC, days for an accurate quote.</div>
+          <div class="cc-sub">Type, speak, or add a photo of the route. We calculate the full cost.</div>
           <div id="calcEnqPanel" style="display:none"></div>
-          <div class="calc-inp-wrap">
-            <textarea class="calc-inp" id="calcInp" placeholder="Type here or speak… e.g. Khurja to Govardhan, Mathura, Vrindavan, 26 seater AC tempo traveller, round trip, 1 day"></textarea>
-            <button class="calc-clear hidden" id="calcClear" title="Clear">✕</button>
+          <!-- Gemini-style unified input bar -->
+          <div class="gem-inp">
+            <textarea class="gem-ta" id="calcInp" rows="2" placeholder="Type the trip… e.g. Khurja to Mathura, Vrindavan, 26 seat AC tempo, round trip, 1 day"></textarea>
+            <div class="gem-bar">
+              <button class="gem-plus" id="calcImgBtn" title="Add photo of route">＋</button>
+              <input type="file" id="calcImgInput" accept="image/*" style="display:none"/>
+              <span class="gem-hint" id="gemHint">Add photo · or type / speak</span>
+              <button class="gem-mic" id="calcMic" title="Speak">🎤</button>
+              <button class="gem-send" id="calcGo" title="Calculate">➤</button>
+            </div>
           </div>
-          <div class="calc-tools">
-            <button class="cbtn2 mic" id="calcMic">🎤 Speak</button>
-            <button class="cbtn2 go" id="calcGo">✨ Calculate</button>
-          </div>
-          <div style="margin-top:0.6rem;display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap">
-            <button class="calc-img-btn" id="calcImgBtn">📷 Photo of route</button>
-            <input type="file" id="calcImgInput" accept="image/*" style="display:none"/>
-            <span style="font-size:0.64rem;color:var(--t3)">Upload a photo of a handwritten/printed route</span>
-          </div>
+          <button class="calc-clear hidden" id="calcClear" style="display:none">✕</button>
           <div class="calc-img-preview" id="calcImgPreview">
             <img id="calcImgEl" alt="route"/>
             <button class="calc-img-x" id="calcImgX">✕</button>
             <div class="calc-img-status" id="calcImgStatus"></div>
           </div>
           <div style="margin-top:0.7rem;border-top:1px dashed var(--line);padding-top:0.6rem">
-            <button id="gkeyToggle" style="background:none;border:none;color:var(--t3);font-size:0.66rem;cursor:pointer;font-family:var(--body);padding:0">⚙️ Distance accuracy settings</button>
+            <button id="gkeyToggle" style="background:none;border:none;color:var(--t3);font-size:0.66rem;cursor:pointer;font-family:var(--body);padding:0">⚙️ Accuracy settings (Google distance + Hindi photo reading)</button>
             <div id="gkeyBox" style="display:none;margin-top:0.5rem">
-              <div style="font-size:0.66rem;color:var(--t2);margin-bottom:0.35rem">Paste your Google Routes API key for exact Google distances (optional). Without it, free road distance is used.</div>
+              <div style="font-size:0.66rem;color:var(--t2);margin-bottom:0.35rem">Paste your Google API key for exact Google distances AND accurate Hindi handwriting reading (Gemini). Without it, free road distance + basic OCR are used.</div>
               <div style="display:flex;gap:0.4rem">
-                <input id="gkeyInput" placeholder="AIzaSy… (Google Routes API key)" style="flex:1;border:1px solid var(--line);border-radius:8px;padding:0.45rem;font-size:0.72rem;outline:none"/>
+                <input id="gkeyInput" placeholder="AIzaSy… (Google API key)" style="flex:1;border:1px solid var(--line);border-radius:8px;padding:0.45rem;font-size:0.72rem;outline:none"/>
                 <button id="gkeySave" style="background:var(--saffron);color:var(--navy);border:none;border-radius:8px;padding:0.45rem 0.8rem;font-size:0.72rem;font-weight:700;cursor:pointer">Save</button>
               </div>
               <div id="gkeyStatus" style="font-size:0.62rem;margin-top:0.35rem;color:var(--t3)"></div>
@@ -2934,9 +2947,9 @@ document.getElementById('calcMic').addEventListener('click',function(){
   voiceBase=inp.value.trim();
   var finalText=voiceBase;
   rec.onstart=function(){
-    listening=true;mb.classList.add('rec');mb.textContent='⏹ Stop & calculate';
+    listening=true;mb.classList.add('rec');mb.textContent='⏹';
     document.getElementById('calcClear').classList.remove('hidden');
-    showToast('🎤 Listening… speak the trip, then tap Stop');
+    showToast('🎤 Listening… speak the trip, then tap ⏹ to stop');
   };
   rec.onresult=function(e){
     var interim='';
@@ -2949,15 +2962,15 @@ document.getElementById('calcMic').addEventListener('click',function(){
     inp.value=(finalText+' '+interim).trim();
   };
   rec.onerror=function(ev){
-    listening=false;mb.classList.remove('rec');mb.textContent='🎤 Speak';
-    if(ev.error==='not-allowed'||ev.error==='service-not-allowed')showToast('🎤 Allow microphone permission in your browser, then tap Speak.');
-    else if(ev.error==='no-speech')showToast('🎤 Didn\u2019t catch that — tap Speak and try again.');
+    listening=false;mb.classList.remove('rec');mb.textContent='🎤';
+    if(ev.error==='not-allowed'||ev.error==='service-not-allowed')showToast('🎤 Allow microphone permission in your browser, then tap the mic.');
+    else if(ev.error==='no-speech')showToast('🎤 Didn\u2019t catch that — tap the mic and try again.');
     else if(ev.error==='aborted'){/* user stopped, no error msg */}
     else showToast('🎤 Voice issue — please type the trip.');
     audit('voice_input',false,ev.error||'unknown');
   };
   rec.onend=function(){
-    listening=false;mb.classList.remove('rec');mb.textContent='🎤 Speak';
+    listening=false;mb.classList.remove('rec');mb.textContent='🎤';
     var said=inp.value.trim();
     if(said&&said!==voiceBase){
       audit('voice_input',true,said.slice(0,40));
@@ -2965,7 +2978,7 @@ document.getElementById('calcMic').addEventListener('click',function(){
       setTimeout(function(){runCalc();},300);
     }
   };
-  try{rec.start();}catch(e){showToast('🎤 Tap Speak again');}
+  try{rec.start();}catch(e){showToast('🎤 Tap the mic again');}
 });
 // wire calc clear button (textarea X)
 (function(){
@@ -3005,37 +3018,57 @@ document.getElementById('calcMic').addEventListener('click',function(){
   var imgEl=document.getElementById('calcImgEl');
   var statusEl=document.getElementById('calcImgStatus');
   var xBtn=document.getElementById('calcImgX');
+  var plus=document.getElementById('calcImgBtn');
   if(!btn)return;
   btn.addEventListener('click',function(){input.click();});
-  xBtn.addEventListener('click',function(){preview.style.display='none';input.value='';statusEl.textContent='';});
+  xBtn.addEventListener('click',function(){preview.style.display='none';input.value='';statusEl.textContent='';if(plus)plus.classList.remove('has-img');});
   input.addEventListener('change',async function(){
     var file=input.files&&input.files[0];
     if(!file)return;
     var url=URL.createObjectURL(file);
     imgEl.src=url;preview.style.display='block';
-    statusEl.textContent='⏳ Reading the route from image…';
+    if(plus)plus.classList.add('has-img');
+    var inp=document.getElementById('calcInp');
     audit('img_ocr_start',true,file.name);
-    if(typeof Tesseract==='undefined'){
-      statusEl.textContent='⚠️ OCR library still loading — try again in a moment.';
-      return;
+    // PATH 1: Gemini vision (accurate Hindi handwriting + translation) if key present
+    if(GKEY){
+      statusEl.textContent='⏳ Reading route with Google AI (Hindi supported)…';
+      try{
+        var b64=await fileToB64(file);
+        var places=await geminiReadRoute(b64,file.type);
+        if(places&&places.trim()){
+          inp.value=places.trim();               // REPLACE, don't append
+          document.getElementById('calcClear').style.display='';
+          document.getElementById('calcClear').classList.remove('hidden');
+          statusEl.innerHTML='✅ Route read (Hindi→English). Review above & Calculate.';
+          audit('img_gemini',true,places.slice(0,50));
+          showToast('Route read from image');
+          return;
+        }
+      }catch(e){audit('img_gemini',false,String(e).slice(0,40));}
+      // if gemini failed, fall through to Tesseract
     }
+    // PATH 2: Tesseract with Hindi+English (works for printed; weak on handwriting)
+    statusEl.textContent='⏳ Reading image (basic OCR)…';
+    if(typeof Tesseract==='undefined'){statusEl.textContent='⚠️ OCR still loading — try again in a moment.';return;}
     try{
-      var result=await Tesseract.recognize(url,'eng',{
+      var result=await Tesseract.recognize(url,'hin+eng',{
         logger:function(m){if(m.status==='recognizing text'){statusEl.textContent='⏳ Reading… '+Math.round(m.progress*100)+'%';}}
       });
       var text=(result&&result.data&&result.data.text||'').trim();
-      if(text){
-        // clean up OCR text into a route-ish line
+      // detect garbage (Latin gibberish from Hindi handwriting)
+      var looksHindi=/[\u0900-\u097F]/.test(text);
+      var tooGarbled=text.length>0 && !looksHindi && (text.match(/[^a-zA-Z0-9\s,.\-\/]/g)||[]).length > text.length*0.15;
+      if(text && !tooGarbled){
         var cleaned=text.replace(/\n+/g,', ').replace(/\s{2,}/g,' ').replace(/,\s*,/g,',').trim();
-        var inp=document.getElementById('calcInp');
-        inp.value=(inp.value.trim()?inp.value.trim()+', ':'')+cleaned;
+        inp.value=cleaned;                        // REPLACE, don't append
+        document.getElementById('calcClear').style.display='';
         document.getElementById('calcClear').classList.remove('hidden');
-        statusEl.innerHTML='✅ Route text extracted — review it above, edit if needed, then Calculate.';
+        statusEl.innerHTML='✅ Text extracted — please review & fix any errors, then Calculate.'+(looksHindi?'<br><span style="color:var(--t3)">Tip: add your Google key in settings for accurate Hindi reading.</span>':'');
         audit('img_ocr',true,cleaned.slice(0,50));
-        showToast('Route read from image — check & calculate');
       }else{
-        statusEl.textContent='⚠️ Could not read clear text. Try a sharper photo, or type the route.';
-        audit('img_ocr',false,'no text');
+        statusEl.innerHTML='⚠️ This looks like <b>Hindi handwriting</b> — basic OCR can\u2019t read it accurately. Add your Google API key in ⚙️ settings for AI reading, or type the places manually.';
+        audit('img_ocr',false,'handwriting/garbled');
       }
     }catch(err){
       statusEl.textContent='⚠️ Could not read the image. Please type the route instead.';
@@ -3043,6 +3076,28 @@ document.getElementById('calcMic').addEventListener('click',function(){
     }
   });
 })();
+// helper: file → base64 (no prefix)
+function fileToB64(file){
+  return new Promise(function(res,rej){
+    var r=new FileReader();
+    r.onload=function(){res(String(r.result).split(',')[1]);};
+    r.onerror=rej;r.readAsDataURL(file);
+  });
+}
+// Gemini vision: read a route note (incl. Hindi handwriting) → clean English place list
+function geminiReadRoute(b64,mime){
+  if(!GKEY)return Promise.resolve('');
+  var prompt='This image is a travel route / itinerary note, possibly handwritten in Hindi. '+
+    'Extract ONLY the place names (cities, towns, temples, monuments, landmarks) in the order written. '+
+    'Transliterate Hindi place names to English (e.g. मथुरा→Mathura, वृन्दावन→Vrindavan, बरसाना→Barsana, पुष्कर→Pushkar). '+
+    'Return them as a single comma-separated line, nothing else. No dates, no notes, no explanation.';
+  var body={contents:[{parts:[{text:prompt},{inline_data:{mime_type:mime||'image/jpeg',data:b64}}]}]};
+  return fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key='+encodeURIComponent(GKEY),{
+    method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)
+  }).then(function(r){return r.json();}).then(function(d){
+    try{return d.candidates[0].content.parts[0].text.trim();}catch(e){return '';}
+  });
+}
 
 function saveApi(){
   var u=document.getElementById('apiInput').value.trim();
