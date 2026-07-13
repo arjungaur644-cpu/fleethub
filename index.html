@@ -1037,6 +1037,56 @@ function googleRouteKm(pts){
     return null;
   }).catch(function(){return null;});
 }
+// GOOGLE GEOCODING — turn a place name into exact coords (biased to India / north region).
+// Returns Promise<[lat,lng]|null>. This fixes the "wrong village in south India" problem.
+function googleGeocode(place){
+  if(!GKEY||!place)return Promise.resolve(null);
+  var url='https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(place+', India')
+    +'&region=in&bounds=22.5,72.0|32.5,84.5&key='+encodeURIComponent(GKEY);
+  return fetch(url).then(function(r){return r.json();}).then(function(d){
+    if(d&&d.results&&d.results[0]&&d.results[0].geometry){
+      var loc=d.results[0].geometry.location;
+      return[loc.lat,loc.lng];
+    }
+    return null;
+  }).catch(function(){return null;});
+}
+// FULL GOOGLE ROUTE — exact distance + toll + optimized waypoint order in ONE call.
+// pts = ordered [lat,lng] array. Returns {km, tollINR, order, source} or null.
+function googleFullRoute(pts,optimize){
+  if(!GKEY||!pts||pts.length<2)return Promise.resolve(null);
+  var origin=pts[0], dest=pts[pts.length-1];
+  var mids=pts.slice(1,-1).map(function(p){return{location:{latLng:{latitude:p[0],longitude:p[1]}}};});
+  var body={
+    origin:{location:{latLng:{latitude:origin[0],longitude:origin[1]}}},
+    destination:{location:{latLng:{latitude:dest[0],longitude:dest[1]}}},
+    travelMode:'DRIVE',
+    extraComputations:['TOLLS'],
+    routeModifiers:{vehicleInfo:{emissionType:'DIESEL'}}
+  };
+  if(mids.length){body.intermediates=mids;if(optimize)body.optimizeWaypointOrder=true;}
+  return fetch('https://routes.googleapis.com/directions/v2:computeRoutes',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','X-Goog-Api-Key':GKEY,
+      'X-Goog-FieldMask':'routes.distanceMeters,routes.travelAdvisory.tollInfo,routes.optimizedIntermediateWaypointIndex'},
+    body:JSON.stringify(body)
+  }).then(function(r){return r.json();}).then(function(d){
+    if(!d||!d.routes||!d.routes[0])return null;
+    var rt=d.routes[0];
+    var km=rt.distanceMeters?Math.round(rt.distanceMeters/1000):0;
+    var tollINR=0;
+    try{
+      var tp=rt.travelAdvisory.tollInfo.estimatedPrice;
+      if(tp&&tp.length){
+        // prefer INR entry
+        var inr=tp.filter(function(x){return x.currencyCode==='INR';})[0]||tp[0];
+        tollINR=Math.round(parseFloat(inr.units||0)+(inr.nanos?inr.nanos/1e9:0));
+      }
+    }catch(e){}
+    var order=rt.optimizedIntermediateWaypointIndex||null;
+    return{km:km,tollINR:tollINR,order:order,source:'google'};
+  }).catch(function(){return null;});
+}
 // a stable anonymous user id for tracking
 var USER_ID='';
 try{USER_ID=localStorage.getItem('fh_uid')||'';if(!USER_ID){USER_ID='u'+Date.now()+Math.floor(Math.random()*1000);localStorage.setItem('fh_uid',USER_ID);}}catch(e){USER_ID='u'+Date.now();}
@@ -2440,37 +2490,46 @@ function resolveCities(cities,done){
   var ANCHOR=[28.25,77.85];
   function distKm(a,b){var R=6371,x=(b[0]-a[0])*Math.PI/180,y=(b[1]-a[1])*Math.PI/180;var h=Math.sin(x/2)*Math.sin(x/2)+Math.cos(a[0]*Math.PI/180)*Math.cos(b[0]*Math.PI/180)*Math.sin(y/2)*Math.sin(y/2);return R*2*Math.atan2(Math.sqrt(h),Math.sqrt(1-h));}
   toLookup.forEach(function(item){
-    var q=encodeURIComponent(item.c);
-    // bounded=1 + viewbox strongly prefers places inside the north/central India box
-    fetch('https://nominatim.openstreetmap.org/search?format=json&limit=5&countrycodes=in&viewbox='+VIEWBOX+'&bounded=1&q='+q,{headers:{'Accept':'application/json'}})
-      .then(function(r){return r.json();})
-      .then(function(d){
-        if((!d||!d.length)){
-          // retry WITHOUT bounded box (place may be legit outside, e.g. Shirdi) but still region-biased
-          return fetch('https://nominatim.openstreetmap.org/search?format=json&limit=5&countrycodes=in&viewbox='+VIEWBOX+'&q='+q,{headers:{'Accept':'application/json'}}).then(function(r){return r.json();});
-        }
-        return d;
-      })
-      .then(function(d){
-        if(d&&d.length&&d[0].lat){
-          // pick the candidate closest to our anchor region (avoids far namesakes)
-          var best=null,bestD=1e9;
-          d.forEach(function(x){
-            if(!x.lat)return;
-            var co=[parseFloat(x.lat),parseFloat(x.lon)];
-            var dd=distKm(ANCHOR,co);
-            if(dd<bestD){bestD=dd;best=co;}
-          });
-          if(best){
-            item.coord=best;
-            GEO_CACHE[item.c]=item.coord;
-            try{localStorage.setItem('fh_geocache',JSON.stringify(GEO_CACHE));}catch(e){}
-            audit('geocode',true,item.c+' @'+Math.round(bestD)+'km');
+    // GOOGLE geocoding first (exact) when key present, else region-biased Nominatim
+    googleGeocode(item.c).then(function(gcoord){
+      if(gcoord){
+        item.coord=gcoord;
+        GEO_CACHE[item.c]=gcoord;
+        try{localStorage.setItem('fh_geocache',JSON.stringify(GEO_CACHE));}catch(e){}
+        audit('geocode',true,item.c+' (google)');
+        if(--pending===0)done(resolved,missing);
+        return;
+      }
+      // fallback: region-biased Nominatim
+      var q=encodeURIComponent(item.c);
+      fetch('https://nominatim.openstreetmap.org/search?format=json&limit=5&countrycodes=in&viewbox='+VIEWBOX+'&bounded=1&q='+q,{headers:{'Accept':'application/json'}})
+        .then(function(r){return r.json();})
+        .then(function(d){
+          if((!d||!d.length)){
+            return fetch('https://nominatim.openstreetmap.org/search?format=json&limit=5&countrycodes=in&viewbox='+VIEWBOX+'&q='+q,{headers:{'Accept':'application/json'}}).then(function(r){return r.json();});
+          }
+          return d;
+        })
+        .then(function(d){
+          if(d&&d.length&&d[0].lat){
+            var best=null,bestD=1e9;
+            d.forEach(function(x){
+              if(!x.lat)return;
+              var co=[parseFloat(x.lat),parseFloat(x.lon)];
+              var dd=distKm(ANCHOR,co);
+              if(dd<bestD){bestD=dd;best=co;}
+            });
+            if(best){
+              item.coord=best;
+              GEO_CACHE[item.c]=item.coord;
+              try{localStorage.setItem('fh_geocache',JSON.stringify(GEO_CACHE));}catch(e){}
+              audit('geocode',true,item.c+' @'+Math.round(bestD)+'km');
+            }else{missing.push(item.c);audit('geocode',false,item.c+' not found');}
           }else{missing.push(item.c);audit('geocode',false,item.c+' not found');}
-        }else{missing.push(item.c);audit('geocode',false,item.c+' not found');}
-      })
-      .catch(function(){missing.push(item.c);audit('geocode',false,item.c+' lookup failed');})
-      .finally(function(){if(--pending===0)done(resolved,missing);});
+        })
+        .catch(function(){missing.push(item.c);audit('geocode',false,item.c+' lookup failed');})
+        .finally(function(){if(--pending===0)done(resolved,missing);});
+    });
   });
 }
 // State-tax estimation: detect states crossed, apply per-day commercial entry tax
@@ -2775,7 +2834,7 @@ function renderCalcResult(p,ordered,legs,retKm,total,c){
       '<div class="cl-amt" id="amt-fuel">₹'+c.fuelCost.toLocaleString()+'</div></div>'+
     // TOLL — real NHAI plaza data when available, else per-km estimate
     '<div class="cost-line"><div class="cl-label">🪙 Toll tax'+
-      (c.tollSource==='nhai'?' <span class="toll-badge nhai">✓ NHAI</span>':(c.tollSource==='mixed'?' <span class="toll-badge mixed">NHAI+est</span>':' <span class="toll-badge est">est.</span>'))+
+      (c.tollSource==='google'?' <span class="toll-badge nhai" id="tollBadge">✓ Google</span>':(c.tollSource==='nhai'?' <span class="toll-badge nhai" id="tollBadge">✓ NHAI</span>':(c.tollSource==='mixed'?' <span class="toll-badge mixed" id="tollBadge">NHAI+est</span>':' <span class="toll-badge est" id="tollBadge">est.</span>')))+
       '</div>'+
       '<div class="cl-formula">'+
         (function(){
@@ -2877,28 +2936,33 @@ function renderCalcResult(p,ordered,legs,retKm,total,c){
     });
     var vt=document.getElementById('ed-vtype');
     if(vt)vt.addEventListener('change',function(){recalc(true);});
-    // Fetch REAL road distance: Google Routes API first (if key set), else OSRM
+    // Fetch REAL road distance + toll: Google first (if key set), else OSRM + NHAI estimate
     var pts=ordered.filter(function(s){return s.coord;}).map(function(s){return s.coord;});
     if(p.isRet&&pts.length)pts.push(pts[0]);
     if(pts.length>=2){
-      var applyKm=function(realKm,src){
+      var applyKm=function(realKm,src,realToll){
         if(realKm>0){
           liveTotal=realKm;
           var dl=document.getElementById('distLabel');if(dl)dl.textContent=realKm+' km';
           var ds=document.getElementById('distSrc');if(ds){ds.textContent=src==='google'?'· Google distance ✓':'· real road distance ✓';ds.style.color='var(--green)';}
+          // if Google returned a real toll, set it directly
+          if(realToll&&realToll>0){
+            var et=document.getElementById('ed-toll');if(et){et.value=realToll;c.tollCost=realToll;c.tollSource='google';}
+            var tb=document.getElementById('tollBadge');if(tb){tb.textContent='✓ Google';tb.className='toll-badge nhai';}
+          }
           recalc();
-          audit('real_km',true,realKm+' km via '+src);
+          audit('real_km',true,realKm+' km via '+src+(realToll?(' toll ₹'+realToll):''));
         }
       };
-      // 1) Google (exact, all-India) if key present
-      googleRouteKm(pts).then(function(g){
-        if(g&&g.km){applyKm(g.km,'google');return;}
-        // 2) fallback OSRM (free)
+      // 1) Google full route (exact distance + toll) if key present
+      googleFullRoute(pts,false).then(function(g){
+        if(g&&g.km){applyKm(g.km,'google',g.tollINR);return;}
+        // 2) fallback OSRM (free) — toll stays as NHAI estimate
         var coordStr=pts.map(function(pt){return pt[1]+','+pt[0];}).join(';');
         fetch('https://router.project-osrm.org/route/v1/driving/'+coordStr+'?overview=false')
           .then(function(r){return r.json();})
           .then(function(d){
-            if(d&&d.routes&&d.routes[0]&&d.routes[0].distance){applyKm(Math.round(d.routes[0].distance/1000),'OSRM');}
+            if(d&&d.routes&&d.routes[0]&&d.routes[0].distance){applyKm(Math.round(d.routes[0].distance/1000),'OSRM',0);}
           }).catch(function(e){audit('real_km',false,'OSRM unavailable — using road estimate');});
       });
     }
