@@ -2293,10 +2293,14 @@ function hav(a,b){var R=6371,x=(b[0]-a[0])*Math.PI/180,y=(b[1]-a[1])*Math.PI/180
 function optOrd(co){if(co.length<=2)return co.map(function(_,i){return i;});var o=[0],u={0:1},c=0;while(o.length<co.length){var bi=-1,bd=1e9;for(var i=0;i<co.length;i++){if(u[i])continue;var d=hav(co[c],co[i]);if(d<bd){bd=d;bi=i;}}o.push(bi);u[bi]=1;c=bi;}return o;}
 function parseTrip(text){
   var t=text.toLowerCase();
-  // Pull the route part = everything before the first comma (cities are usually listed first)
-  var routePart=text.split(',')[0];
-  // Split on connectors: "to", "se", "->", "→", "then", "via", ">", and dashes between words
-  var rawStops=routePart.split(/\s*(?:→|->|>|\bto\b|\bse\b|\bthen\b|\bvia\b|\baur\b|\band\b)\s*/i)
+  // Route = the leading place list. Stops may be separated by commas AND connectors.
+  // Strategy: cut off the trailing "details" part (seats/ac/days/vehicle) then treat commas as stop separators.
+  var routePart=text;
+  // find where vehicle/trip details start (first occurrence of a detail keyword) and cut there
+  var detailMatch=routePart.match(/\b(\d+\s*seat|seater|\bac\b|non[- ]?ac|tempo|traveller|traveler|\bbus\b|\bcab\b|\btaxi\b|\bsuv\b|innova|sleeper|round trip|one way|\d+\s*day|\d+\s*passenger|\d+\s*people)\b/i);
+  if(detailMatch&&detailMatch.index>3){routePart=routePart.substring(0,detailMatch.index);}
+  // Split on connectors AND commas/slashes
+  var rawStops=routePart.split(/\s*(?:→|->|>|,|\/|\bto\b|\bse\b|\bthen\b|\bvia\b|\baur\b|\band\b)\s*/i)
     .map(function(s){return s.trim();})
     .filter(function(s){return s.length>1 && !/^\d+$/.test(s);}); // drop blanks and pure numbers
   // Clean each stop, then split space-separated lists into individual places
@@ -2319,6 +2323,14 @@ function parseTrip(text){
   });
   // de-dupe, preserve order
   var seen={},out=[];cities.forEach(function(c){if(!seen[c]){seen[c]=1;out.push(c);}});
+  // Drop obvious junk fragments: very short unknown words, and common non-place words
+  var STOP={'ki':1,'ka':1,'ke':1,'se':1,'me':1,'aur':1,'wala':1,'wali':1,'ko':1,'ji':1,'the':1,'and':1,'for':1,'via':1,'trip':1,'day':1,'days':1,'seat':1,'seater':1,'ac':1,'bus':1,'tempo':1,'cab':1,'taxi':1,'traveller':1,'round':1,'one':1,'way':1,'return':1};
+  out=out.filter(function(c){
+    if(CC[c])return true;               // known place → always keep
+    if(STOP[c])return false;            // junk word → drop
+    if(c.length<3)return false;         // too short & unknown → drop
+    return true;                        // unknown but plausible → keep (will geocode)
+  });
   var sm=t.match(/(\d+)\s*[- ]?\s*(?:seat|seater|sitar)/);var seats=sm?+sm[1]:null;
   var ac=/non[- ]?ac|nonac|bina ac/.test(t)?false:(/\bac\b|a\.c/.test(t)?true:null);
   var pm=t.match(/(\d+)\s*(passenger|people|pax|person|log|sawari|yatri)/);var pax=pm?+pm[1]:null;
@@ -2405,22 +2417,56 @@ function runCalc(){
    Known places use the built-in table (instant). Unknown places are looked up
    live via free OpenStreetMap Nominatim — so ANY place works, not just a fixed list. */
 var GEO_CACHE={};
-try{GEO_CACHE=JSON.parse(localStorage.getItem('fh_geocache')||'{}');}catch(e){GEO_CACHE={};}
+// v2: region-biased geocoding. Clear old cache that may hold wrong far-away coords.
+try{
+  if(localStorage.getItem('fh_geocache_v')!=='2'){
+    localStorage.removeItem('fh_geocache');
+    localStorage.setItem('fh_geocache_v','2');
+    GEO_CACHE={};
+  }else{
+    GEO_CACHE=JSON.parse(localStorage.getItem('fh_geocache')||'{}');
+  }
+}catch(e){GEO_CACHE={};}
 function resolveCities(cities,done){
   var resolved=cities.map(function(c){return{c:c,coord:CC[c]||GEO_CACHE[c]||null};});
   var toLookup=resolved.filter(function(x){return !x.coord;});
   if(!toLookup.length){done(resolved,[]);return;}
   var pending=toLookup.length, missing=[];
+  // Region bias: operators run trips across north/central India. Bias results to this box
+  // so a place-name matches the NEARBY town, not a far-away namesake in south India.
+  // viewbox = left,top,right,bottom (lng,lat) covering Rajasthan→UP→Uttarakhand→MP belt
+  var VIEWBOX='72.0,32.5,84.5,22.5';
+  // anchor to compute plausibility (Khurja) — reject matches absurdly far (>900km) unless no better
+  var ANCHOR=[28.25,77.85];
+  function distKm(a,b){var R=6371,x=(b[0]-a[0])*Math.PI/180,y=(b[1]-a[1])*Math.PI/180;var h=Math.sin(x/2)*Math.sin(x/2)+Math.cos(a[0]*Math.PI/180)*Math.cos(b[0]*Math.PI/180)*Math.sin(y/2)*Math.sin(y/2);return R*2*Math.atan2(Math.sqrt(h),Math.sqrt(1-h));}
   toLookup.forEach(function(item){
-    var q=encodeURIComponent(item.c+', India');
-    fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=in&q='+q,{headers:{'Accept':'application/json'}})
+    var q=encodeURIComponent(item.c);
+    // bounded=1 + viewbox strongly prefers places inside the north/central India box
+    fetch('https://nominatim.openstreetmap.org/search?format=json&limit=5&countrycodes=in&viewbox='+VIEWBOX+'&bounded=1&q='+q,{headers:{'Accept':'application/json'}})
       .then(function(r){return r.json();})
       .then(function(d){
+        if((!d||!d.length)){
+          // retry WITHOUT bounded box (place may be legit outside, e.g. Shirdi) but still region-biased
+          return fetch('https://nominatim.openstreetmap.org/search?format=json&limit=5&countrycodes=in&viewbox='+VIEWBOX+'&q='+q,{headers:{'Accept':'application/json'}}).then(function(r){return r.json();});
+        }
+        return d;
+      })
+      .then(function(d){
         if(d&&d.length&&d[0].lat){
-          item.coord=[parseFloat(d[0].lat),parseFloat(d[0].lon)];
-          GEO_CACHE[item.c]=item.coord;
-          try{localStorage.setItem('fh_geocache',JSON.stringify(GEO_CACHE));}catch(e){}
-          audit('geocode',true,item.c);
+          // pick the candidate closest to our anchor region (avoids far namesakes)
+          var best=null,bestD=1e9;
+          d.forEach(function(x){
+            if(!x.lat)return;
+            var co=[parseFloat(x.lat),parseFloat(x.lon)];
+            var dd=distKm(ANCHOR,co);
+            if(dd<bestD){bestD=dd;best=co;}
+          });
+          if(best){
+            item.coord=best;
+            GEO_CACHE[item.c]=item.coord;
+            try{localStorage.setItem('fh_geocache',JSON.stringify(GEO_CACHE));}catch(e){}
+            audit('geocode',true,item.c+' @'+Math.round(bestD)+'km');
+          }else{missing.push(item.c);audit('geocode',false,item.c+' not found');}
         }else{missing.push(item.c);audit('geocode',false,item.c+' not found');}
       })
       .catch(function(){missing.push(item.c);audit('geocode',false,item.c+' lookup failed');})
