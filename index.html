@@ -2338,9 +2338,125 @@ document.addEventListener('click',function(ev){
 
 /* ═══ CALCULATOR ═══ */
 var CC={'bulandshahr':[28.4070,77.8498],'khurja':[28.2536,77.8556],'sikandrabad':[28.4500,77.7000],'anupshahr':[28.3600,78.2700],'jewar':[28.1200,77.5600],'delhi':[28.6139,77.2090],'noida':[28.5355,77.3910],'ghaziabad':[28.6692,77.4538],'agra':[27.1767,78.0081],'mathura':[27.4924,77.6737],'vrindavan':[27.5650,77.6593],'govardhan':[27.4969,77.4636],'goverdhan':[27.4969,77.4636],'barsana':[27.6463,77.3766],'gokul':[27.4380,77.7170],'nandgaon':[27.7167,77.3833],'aligarh':[27.8974,78.0880],'meerut':[28.9845,77.7064],'jaipur':[26.9124,75.7873],'khatu shyam':[27.3964,75.3997],'khatu':[27.3964,75.3997],'salasar':[27.6090,74.7271],'pushkar':[26.4899,74.5511],'ajmer':[26.4499,74.6399],'nathdwara':[24.9387,73.8231],'haridwar':[29.9457,78.1642],'rishikesh':[30.0869,78.2676],'dehradun':[30.3165,78.0322],'katra':[32.9916,74.9319],'vaishno devi':[33.0299,74.9490],'varanasi':[25.3176,82.9739],'ayodhya':[26.7922,82.1998],'lucknow':[26.8467,80.9462],'kanpur':[26.4499,80.3319],'mumbai':[19.0760,72.8777],'shirdi':[19.7645,74.4769],'gwalior':[26.2183,78.1828],'ujjain':[23.1765,75.7885],'amritsar':[31.6340,74.8723],'shimla':[31.1048,77.1734],'manali':[32.2396,77.1887],'chandigarh':[30.7333,76.7794],'mehandipur':[26.8000,76.5500],'mehandipur balaji':[26.8000,76.5500],'sambhar':[26.9100,75.1900],'deshnok':[27.7990,73.3410],'karni mata':[27.7990,73.3410],'bikaner':[28.0229,73.3119],'jodhpur':[26.2389,73.0243],'udaipur':[24.5854,73.7125],'kota':[25.2138,75.8648],'bharatpur':[27.2152,77.5030],'deeg':[27.4710,77.3250],'fatehpur sikri':[27.0940,77.6610],'sikandra':[27.2210,77.9500],'kasganj':[27.8090,78.6470],'etah':[27.5580,78.6620],'hathras':[27.5950,78.0530],'firozabad':[27.1591,78.3958],'moradabad':[28.8386,78.7733],'rampur':[28.7900,79.0250],'bareilly':[28.3670,79.4304],'badrinath':[30.7433,79.4938],'kedarnath':[30.7346,79.0669],'gangotri':[30.9947,78.9398],'yamunotri':[31.0118,78.4600],'dwarka':[22.2442,68.9685],'somnath':[20.8880,70.4010],'tirupati':[13.6288,79.4192]};
+/* ── EXTRA PLACES + COMMON SPELLING VARIANTS ──
+   Operators type place names phonetically (jhangirabad / jahangirabad,
+   mehandipur / mehendipur). Every variant maps to the same real coords. */
+var CC_EXTRA={
+  'jahangirabad':[28.2500,78.0600],'jhangirabad':[28.2500,78.0600],'jahangirabaad':[28.2500,78.0600],
+  'jehangirabad':[28.2500,78.0600],'jhangirabaad':[28.2500,78.0600],
+  'mehendipur':[26.8000,76.5500],'mehendipur balaji':[26.8000,76.5500],'mehandipur balaji':[26.8000,76.5500],
+  'mehndipur':[26.8000,76.5500],'mehndipur balaji':[26.8000,76.5500],'balaji':[26.8000,76.5500],
+  'khatushyam':[27.3964,75.3997],'khatu shyam ji':[27.3964,75.3997],'khatu shyamji':[27.3964,75.3997],
+  'shikarpur':[28.2830,78.0140],'khanpur':[28.3300,78.0000],'gulaothi':[28.5860,77.7940],
+  'siyana':[28.6300,78.0600],'dibai':[28.2100,78.2600],'narora':[28.1900,78.3800],
+  'aurangabad':[28.5000,77.9600],'garhmukteshwar':[28.7860,78.1030],'brajghat':[28.7830,78.1200],
+  'pahasu':[28.1700,78.0700],'jahangeerabad':[28.2500,78.0600],'danpur':[28.1500,78.2200],
+  'greater noida':[28.4744,77.5040],'yamuna expressway':[28.1200,77.5600],'palwal':[28.1440,77.3320],
+  'sohna':[28.2470,77.0650],'dausa':[26.8900,76.3300],'bandikui':[27.0500,76.5700],
+  'alwar':[27.5530,76.6350],'behror':[27.8870,76.2830],'kotputli':[27.7020,76.2000],
+  'neemrana':[27.9880,76.3860],'shahpura':[27.3910,75.9600],'ringas':[27.3600,75.5700],
+  'reengus':[27.3600,75.5700],'sikar':[27.6094,75.1399],'chomu':[27.1670,75.7220],
+  'vrindavan dham':[27.5650,77.6593],'banke bihari':[27.5750,77.7000],'prem mandir':[27.5730,77.6720],
+  'iskcon vrindavan':[27.5750,77.6600],'goverdhan parikrama':[27.4969,77.4636],
+  'hapur':[28.7300,77.7800],'pilkhuwa':[28.7120,77.6540],'dadri':[28.5520,77.5530],
+  'sikandarabad':[28.4500,77.7000],'jewar airport':[28.1200,77.5600],'jhajjar':[28.6060,76.6560]
+};
+for(var _k in CC_EXTRA){if(!CC[_k])CC[_k]=CC_EXTRA[_k];}
 var CN=Object.keys(CC);
+/* Levenshtein distance — used to auto-correct small typos to a known place */
+function _lev(a,b){
+  if(a===b)return 0;var m=a.length,n=b.length;if(!m)return n;if(!n)return m;
+  var prev=[],cur=[],i,j;
+  for(j=0;j<=n;j++)prev[j]=j;
+  for(i=1;i<=m;i++){
+    cur[0]=i;
+    for(j=1;j<=n;j++){
+      cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(a.charAt(i-1)===b.charAt(j-1)?0:1));
+    }
+    for(j=0;j<=n;j++)prev[j]=cur[j];
+  }
+  return prev[n];
+}
+/* Variant → canonical name. Without this, "jahangirabad" and "jhangirabad"
+   survive as two separate stops even though they are the same town, which
+   inflates the route and breaks the round-trip close. */
+var ALIAS={
+  'jhangirabad':'jahangirabad','jahangirabaad':'jahangirabad','jehangirabad':'jahangirabad',
+  'jhangirabaad':'jahangirabad','jahangeerabad':'jahangirabad',
+  'mehandipur':'mehendipur balaji','mehandipur balaji':'mehendipur balaji','mehndipur':'mehendipur balaji',
+  'mehndipur balaji':'mehendipur balaji','mehendipur':'mehendipur balaji','balaji':'mehendipur balaji',
+  'khatushyam':'khatu shyam','khatu':'khatu shyam','khatu shyam ji':'khatu shyam','khatu shyamji':'khatu shyam',
+  'goverdhan':'govardhan','goverdhan parikrama':'govardhan',
+  'sikandarabad':'sikandrabad','gurugram':'gurgaon','new delhi':'delhi',
+  'vrindavan dham':'vrindavan','banke bihari':'vrindavan','prem mandir':'vrindavan','iskcon vrindavan':'vrindavan',
+  'reengus':'ringas','vaishno devi':'katra','karni mata':'deshnok','jewar airport':'jewar'
+};
+/* Snap a typed name to a known place when it is clearly the same word.
+   Returns the corrected name, or the original if no confident match. */
+function snapToKnown(name){
+  if(ALIAS[name])return ALIAS[name];
+  if(CC[name])return name;
+  if(name.length<4)return name;
+  var best=null,bestD=99;
+  for(var i=0;i<CN.length;i++){
+    var cand=CN[i];
+    if(Math.abs(cand.length-name.length)>3)continue;
+    var d=_lev(name,cand);
+    if(d<bestD){bestD=d;best=cand;}
+  }
+  var allow=name.length<=6?1:2;
+  if(best&&bestD<=allow)return ALIAS[best]||best;
+  return name;
+}
 function hav(a,b){var R=6371,x=(b[0]-a[0])*Math.PI/180,y=(b[1]-a[1])*Math.PI/180;var h=Math.sin(x/2)*Math.sin(x/2)+Math.cos(a[0]*Math.PI/180)*Math.cos(b[0]*Math.PI/180)*Math.sin(y/2)*Math.sin(y/2);return R*2*Math.atan2(Math.sqrt(h),Math.sqrt(1-h));}
-function optOrd(co){if(co.length<=2)return co.map(function(_,i){return i;});var o=[0],u={0:1},c=0;while(o.length<co.length){var bi=-1,bd=1e9;for(var i=0;i<co.length;i++){if(u[i])continue;var d=hav(co[c],co[i]);if(d<bd){bd=d;bi=i;}}o.push(bi);u[bi]=1;c=bi;}return o;}
+/* ── TOUR OPTIMISER ──
+   Generic solver used for both straight-line and real-road matrices.
+   D = distance matrix (D[i][j]). Start index 0 is always fixed (pickup point).
+   isRet=true  → round trip: route must come back to 0, so the loop is closed.
+   isRet=false → one-way: last stop stays wherever the optimiser puts it.
+   Nearest-neighbour builds a first guess, then 2-opt repeatedly un-crosses
+   segments until no swap improves the total. This is what turns a naive
+   "visit in typed order" list into a genuinely shortest tour. */
+function solveOrder(D,n,isRet){
+  if(n<=2){var t=[];for(var q=0;q<n;q++)t.push(q);return t;}
+  // 1) nearest-neighbour seed from the fixed start
+  var seq=[0],used={0:1},cur=0;
+  while(seq.length<n){
+    var bi=-1,bd=Infinity;
+    for(var j=0;j<n;j++){if(used[j])continue;if(D[cur][j]<bd){bd=D[cur][j];bi=j;}}
+    if(bi<0)break;
+    seq.push(bi);used[bi]=1;cur=bi;
+  }
+  // total length of a candidate sequence (closing the loop if round trip)
+  function tourLen(s){
+    var t=0;
+    for(var i=0;i<s.length-1;i++)t+=D[s[i]][s[i+1]];
+    if(isRet)t+=D[s[s.length-1]][s[0]];
+    return t;
+  }
+  // 2) 2-opt: reverse any sub-path that shortens the tour. Index 0 never moves.
+  var best=tourLen(seq),improved=true,guard=0;
+  while(improved&&guard++<60){
+    improved=false;
+    var last=isRet?seq.length:seq.length-1; // one-way: end point is free to stay last
+    for(var a=1;a<seq.length-1;a++){
+      for(var b=a+1;b<last;b++){
+        var trial=seq.slice(0,a).concat(seq.slice(a,b+1).reverse(),seq.slice(b+1));
+        var len=tourLen(trial);
+        if(len<best-0.0001){seq=trial;best=len;improved=true;}
+      }
+    }
+  }
+  return seq;
+}
+/* straight-line optimiser (instant, used before real road data arrives) */
+function optOrd(co,isRet){
+  var n=co.length;
+  if(n<=2){var t=[];for(var q=0;q<n;q++)t.push(q);return t;}
+  var D=[];
+  for(var i=0;i<n;i++){D[i]=[];for(var j=0;j<n;j++){D[i][j]=(i===j)?0:hav(co[i],co[j]);}}
+  return solveOrder(D,n,!!isRet);
+}
 function parseTrip(text){
   var t=text.toLowerCase();
   // Route = the leading place list. Stops may be separated by commas AND connectors.
@@ -2350,7 +2466,13 @@ function parseTrip(text){
   var detailMatch=routePart.match(/\b(\d+\s*seat|seater|\bac\b|non[- ]?ac|tempo|traveller|traveler|\bbus\b|\bcab\b|\btaxi\b|\bsuv\b|innova|sleeper|round trip|one way|\d+\s*day|\d+\s*passenger|\d+\s*people)\b/i);
   if(detailMatch&&detailMatch.index>3){routePart=routePart.substring(0,detailMatch.index);}
   // Split on connectors AND commas/slashes
-  var rawStops=routePart.split(/\s*(?:→|->|>|,|\/|\bto\b|\bse\b|\bthen\b|\bvia\b|\baur\b|\band\b)\s*/i)
+  /* Split on EVERY separator an operator might type — arrows, commas, dashes,
+     slashes, newlines, semicolons, plus English and Hindi connector words.
+     A dash between two names ("khurja - agra") is a separator, so it must be
+     handled here or the whole line collapses into a single unusable token. */
+  var rawStops=routePart.split(
+      /\s*(?:→|->|-->|>>|>|,|;|\||\/|\n|\r|\s+-\s+|\s+–\s+|\s+—\s+|\bto\b|\btak\b|\bse\b|\bthen\b|\bthan\b|\bvia\b|\bhote hue\b|\bhokar\b|\baur\b|\band\b|\bphir\b|\bfir\b|\bplus\b|\bfrom\b|\bके बाद\b|\bफिर\b|\bसे\b|\bतक\b|\bऔर\b)\s*/i
+    )
     .map(function(s){return s.trim();})
     .filter(function(s){return s.length>1 && !/^\d+$/.test(s);}); // drop blanks and pure numbers
   // Clean each stop, then split space-separated lists into individual places
@@ -2371,10 +2493,16 @@ function parseTrip(text){
       else{cities.push(words[i]);i+=1;}
     }
   });
+  /* Auto-correct phonetic spellings to a known place BEFORE de-duping, so that
+     "jahangirabad ... back to jhangirabad" collapses to one stop instead of two. */
+  cities=cities.map(function(c){return snapToKnown(c);});
   // de-dupe, preserve order
   var seen={},out=[];cities.forEach(function(c){if(!seen[c]){seen[c]=1;out.push(c);}});
   // Drop obvious junk fragments: very short unknown words, and common non-place words
-  var STOP={'ki':1,'ka':1,'ke':1,'se':1,'me':1,'aur':1,'wala':1,'wali':1,'ko':1,'ji':1,'the':1,'and':1,'for':1,'via':1,'trip':1,'day':1,'days':1,'seat':1,'seater':1,'ac':1,'bus':1,'tempo':1,'cab':1,'taxi':1,'traveller':1,'round':1,'one':1,'way':1,'return':1};
+  /* "back"/"wapas" are return INSTRUCTIONS, not destinations — they are detected
+     separately as isRet below and must never be geocoded as a place. */
+  var STOP={'ki':1,'ka':1,'ke':1,'se':1,'me':1,'aur':1,'wala':1,'wali':1,'ko':1,'ji':1,'the':1,'and':1,'for':1,'via':1,'trip':1,'day':1,'days':1,'seat':1,'seater':1,'ac':1,'bus':1,'tempo':1,'cab':1,'taxi':1,'traveller':1,'round':1,'one':1,'way':1,'return':1,
+    'back':1,'wapas':1,'wapis':1,'vapas':1,'vapis':1,'wapsi':1,'vapsi':1,'waapas':1,'returning':1,'again':1,'same':1,'start':1,'starting':1,'pickup':1,'pick':1,'drop':1,'point':1,'home':1,'origin':1,'end':1,'ending':1,'last':1,'first':1,'then':1,'phir':1,'fir':1,'hokar':1,'hote':1,'hue':1,'yatra':1,'tour':1,'darshan':1,'jana':1,'jaana':1,'aana':1,'chalna':1,'nikalna':1,'वापस':1,'वापसी':1,'फिर':1,'दर्शन':1,'यात्रा':1};
   out=out.filter(function(c){
     if(CC[c])return true;               // known place → always keep
     if(STOP[c])return false;            // junk word → drop
@@ -2387,7 +2515,9 @@ function parseTrip(text){
   var dm=t.match(/(\d+)\s*(day|din)/);var days=dm?+dm[1]:null;
   var fm=t.match(/(?:diesel|petrol|fuel|@)\s*(\d{2,3})/);var fuel=fm?+fm[1]:null;
   if(!fuel){var f2=t.match(/(\d{2,3})\s*(?:rupee|rs|rupaye)/);if(f2)fuel=+f2[1];}
-  var isRet=/round|return|\bback\b|wapsi|aana jaana|दोनों/.test(t);
+  /* Round trip = the vehicle must come back to the pickup point.
+     Operators say this many ways; missing any of them silently under-quotes the trip. */
+  var isRet=/round|return|\bback\b|wapsi|vapsi|wapas|vapas|wapis|waapas|aana jaana|aana-jaana|up and down|both way|both side|dono taraf|वापस|वापसी|दोनों/.test(t);
   return{cities:out,seats:seats,ac:ac,pax:pax,days:days,fuel:fuel,isRet:isRet};
 }
 function cap(s){return s.replace(/\b\w/g,function(c){return c.toUpperCase();});}
@@ -2452,16 +2582,70 @@ function runCalc(){
   // Resolve EVERY city: use built-in coords if known, else look up live (free OpenStreetMap)
   resolveCities(p.cities,function(resolved,stillMissing){
     var valid=resolved.filter(function(x){return x.coord;});
+    /* A place we cannot pin down is a QUESTION, not an error. Show the operator
+       real candidate matches to tap, instead of blocking the whole quote. */
     if(stillMissing.length){
-      showToast('⚠️ Could not find: '+stillMissing.map(cap).join(', ')+' — check spelling. Calculated with the rest.');
+      askPlaceChoice(stillMissing[0],p,function(){runCalc();});
+      if(valid.length<2)return;
     }
-    if(valid.length<2){showToast('❌ Need at least 2 locatable places. Not found: '+stillMissing.map(cap).join(', '));return;}
+    if(valid.length<2){showToast('Add at least 2 places so I can build the route');return;}
     // optimize straight-line first (instant), then refine with real OSRM road matrix
-    var order=optOrd(valid.map(function(x){return x.coord;}));
+    var order=optOrd(valid.map(function(x){return x.coord;}),p.isRet);
     var ordered=order.map(function(i){return valid[i];});
     computeAndRender(p,ordered,false);
     refineWithRealRoads(p,valid);
   });
+}
+/* ── PLACE DISAMBIGUATION ──
+   Asks "which one did you mean?" with tappable real candidates from OpenStreetMap,
+   nearest-first. Choosing one caches its coords and re-runs the calculation. */
+function askPlaceChoice(name,p,onPicked){
+  var host=document.getElementById('calcResult');
+  if(!host)return;
+  var card=document.createElement('div');card.className='rescard';
+  card.innerHTML='<div class="rc-h">📍 Which "'+cap(name)+'" did you mean?</div>'+
+    '<div class="rc-b"><div style="font-size:0.76rem;color:var(--t3);margin-bottom:0.5rem">Tap the correct place — I will remember it for next time.</div>'+
+    '<div id="pcOpts" style="display:flex;flex-direction:column;gap:0.4rem"><div style="font-size:0.76rem;color:var(--t3)">Searching…</div></div></div>';
+  host.insertBefore(card,host.firstChild);
+  var ANCHOR=[28.25,77.85];
+  function dKm(a,b){var R=6371,x=(b[0]-a[0])*Math.PI/180,y=(b[1]-a[1])*Math.PI/180;var h=Math.sin(x/2)*Math.sin(x/2)+Math.cos(a[0]*Math.PI/180)*Math.cos(b[0]*Math.PI/180)*Math.sin(y/2)*Math.sin(y/2);return R*2*Math.atan2(Math.sqrt(h),Math.sqrt(1-h));}
+  fetch('https://nominatim.openstreetmap.org/search?format=json&limit=8&countrycodes=in&q='+encodeURIComponent(name))
+    .then(function(r){return r.json();})
+    .then(function(d){
+      var box=document.getElementById('pcOpts');if(!box)return;
+      if(!d||!d.length){
+        box.innerHTML='<div style="font-size:0.76rem;color:var(--t3)">No match found. Try a different spelling, or the nearest bigger town.</div>';
+        return;
+      }
+      var list=d.map(function(x){
+        var co=[parseFloat(x.lat),parseFloat(x.lon)];
+        return{co:co,label:x.display_name,km:Math.round(dKm(ANCHOR,co))};
+      }).sort(function(a,b){return a.km-b.km;}).slice(0,5);
+      box.innerHTML='';
+      list.forEach(function(it){
+        var b=document.createElement('button');
+        b.className='cbtn';
+        b.style.cssText='text-align:left;width:100%;padding:0.55rem 0.7rem;font-size:0.78rem;line-height:1.35';
+        b.innerHTML='📍 <b>'+it.label.split(',')[0]+'</b><br><span style="font-size:0.68rem;color:var(--t3)">'+it.label.split(',').slice(1,4).join(', ')+' · ~'+it.km+' km away</span>';
+        b.addEventListener('click',function(){
+          GEO_CACHE[name]=it.co;
+          try{localStorage.setItem('fh_geocache',JSON.stringify(GEO_CACHE));}catch(e){}
+          card.remove();
+          showToast('✓ '+cap(name)+' set — recalculating…');
+          if(onPicked)onPicked();
+        });
+        box.appendChild(b);
+      });
+      var skip=document.createElement('button');
+      skip.className='cbtn';skip.style.cssText='width:100%;font-size:0.76rem;opacity:0.75';
+      skip.textContent='Skip this stop';
+      skip.addEventListener('click',function(){card.remove();});
+      box.appendChild(skip);
+    })
+    .catch(function(){
+      var box=document.getElementById('pcOpts');
+      if(box)box.innerHTML='<div style="font-size:0.76rem;color:var(--t3)">Lookup failed — check your connection and try again.</div>';
+    });
 }
 /* Resolve a list of place names to coordinates.
    Known places use the built-in table (instant). Unknown places are looked up
@@ -2469,9 +2653,9 @@ function runCalc(){
 var GEO_CACHE={};
 // v2: region-biased geocoding. Clear old cache that may hold wrong far-away coords.
 try{
-  if(localStorage.getItem('fh_geocache_v')!=='2'){
+  if(localStorage.getItem('fh_geocache_v')!=='3'){
     localStorage.removeItem('fh_geocache');
-    localStorage.setItem('fh_geocache_v','2');
+    localStorage.setItem('fh_geocache_v','3');
     GEO_CACHE={};
   }else{
     GEO_CACHE=JSON.parse(localStorage.getItem('fh_geocache')||'{}');
@@ -2617,13 +2801,12 @@ function refineWithRealRoads(p,valid){
     .then(function(d){
       if(!d||!d.distances)throw 'no matrix';
       var D=d.distances; // metres, D[i][j]
-      // nearest-neighbour on REAL distances, origin = index 0 (first city user said)
-      var n=valid.length,used={0:1},seq=[0],cur=0;
-      while(seq.length<n){
-        var bi=-1,bd=1e15;
-        for(var j=0;j<n;j++){if(used[j])continue;if(D[cur][j]<bd){bd=D[cur][j];bi=j;}}
-        seq.push(bi);used[bi]=1;cur=bi;
-      }
+      /* Optimise on REAL road distances with the same NN + 2-opt solver.
+         Origin (index 0) stays fixed — it is the pickup point the operator named.
+         Round trips close the loop back to it, so the optimiser accounts for the
+         return leg when choosing the order, not just the outbound legs. */
+      var n=valid.length;
+      var seq=solveOrder(D,n,!!p.isRet);
       var ordered=seq.map(function(i){return valid[i];});
       var legs=[];
       for(var k=0;k<seq.length-1;k++){legs.push(Math.round(D[seq[k]][seq[k+1]]/1000));}
@@ -2789,7 +2972,7 @@ function renderCalcResult(p,ordered,legs,retKm,total,c){
   var chips=[];
   if(p.seats)chips.push(p.seats+'-seat');if(p.ac!==null)chips.push(p.ac?'AC':'Non-AC');if(p.pax)chips.push(p.pax+' pax');if(p.days)chips.push(p.days+' days');if(p.fuel)chips.push('Rs'+p.fuel+'/L');if(p.isRet)chips.push('round trip');
   ex.innerHTML='<div class="rc-h">🤖 Read from your trip<span class="rc-tag">EXTRACTED</span></div><div class="rc-b"><div class="pgrid">'+
-    '<div class="pf"><div class="pl">Cities</div><div class="pv">'+p.cities.length+' stops</div></div>'+
+    '<div class="pf"><div class="pl">Cities</div><div class="pv">'+ordered.length+' stops</div><div style="font-size:0.6rem;color:var(--t3);margin-top:2px;line-height:1.3">'+ordered.map(function(o){return cap(o.c);}).join(' · ')+'</div></div>'+
     '<div class="pf"><div class="pl">Vehicle</div><div class="pv">'+c.seats+'-seat '+(p.ac===false?'Non-AC':'AC')+'</div></div>'+
     '<div class="pf"><div class="pl">Days</div><div class="pv">'+c.days+'</div></div></div>'+
     '<div style="display:flex;flex-wrap:wrap;gap:0.35rem;margin-top:0.6rem">'+chips.map(function(x){return '<span class="xtag">✓ '+x+'</span>';}).join('')+'</div></div>';
@@ -2815,7 +2998,30 @@ function renderCalcResult(p,ordered,legs,retKm,total,c){
   });
   if(p.isRet&&retKm){cum+=retKm;lh+='<div class="legl" style="color:#E8880A">↩ <b>'+retKm+' km</b> return to '+cap(ordered[0].c)+' · total '+cum+' km</div>';}
   var srcBadge=c.realRoads?'<span style="font-size:0.6rem;background:var(--green-bg);color:var(--green);padding:1px 7px;border-radius:10px;font-weight:700">✓ real road km</span>':'<span style="font-size:0.6rem;background:var(--cream2);color:var(--t3);padding:1px 7px;border-radius:10px">estimating…</span>';
-  ro.innerHTML='<div class="rc-h">🗺️ Tour Plan — Optimized Order '+srcBadge+'</div><div class="rc-b"><div style="font-size:0.66rem;color:var(--t3);margin-bottom:0.5rem">Visit in this sequence for least distance</div>'+lh+'</div>';
+  /* Compare the optimised order against the order the operator typed, so the
+     value of reordering is visible instead of implied. */
+  var savedNote='';
+  try{
+    var typedSeq=p.cities.map(function(nm){
+      for(var z=0;z<ordered.length;z++){if(ordered[z].c===nm)return ordered[z];}
+      return null;
+    }).filter(Boolean);
+    if(typedSeq.length===ordered.length&&ordered.length>2){
+      var tl=0;
+      for(var z2=0;z2<typedSeq.length-1;z2++)tl+=hav(typedSeq[z2].coord,typedSeq[z2+1].coord)*1.27;
+      if(p.isRet)tl+=hav(typedSeq[typedSeq.length-1].coord,typedSeq[0].coord)*1.27;
+      var ol=0;
+      for(var z3=0;z3<ordered.length-1;z3++)ol+=hav(ordered[z3].coord,ordered[z3+1].coord)*1.27;
+      if(p.isRet)ol+=hav(ordered[ordered.length-1].coord,ordered[0].coord)*1.27;
+      var savedKm=Math.round(tl-ol);
+      if(savedKm>=5){
+        savedNote='<div style="font-size:0.7rem;background:var(--green-bg);color:var(--green);font-weight:700;padding:0.4rem 0.6rem;border-radius:8px;margin-bottom:0.5rem">✓ This order saves about '+savedKm+' km versus the order you typed</div>';
+      }else{
+        savedNote='<div style="font-size:0.7rem;color:var(--t3);margin-bottom:0.5rem">✓ The order you typed is already the shortest route</div>';
+      }
+    }
+  }catch(e){}
+  ro.innerHTML='<div class="rc-h">🗺️ Tour Plan — Optimized Order '+srcBadge+'</div><div class="rc-b">'+savedNote+'<div style="font-size:0.66rem;color:var(--t3);margin-bottom:0.5rem">Visit in this sequence for least distance</div>'+lh+'</div>';
   el.appendChild(ro);
   // cost — TRANSPARENT & EDITABLE. Every input recalculates live.
   var co=document.createElement('div');co.className='rescard';
