@@ -2496,9 +2496,20 @@ function parseTrip(text){
   // Route = the leading place list. Stops may be separated by commas AND connectors.
   // Strategy: cut off the trailing "details" part (seats/ac/days/vehicle) then treat commas as stop separators.
   var routePart=text;
-  // find where vehicle/trip details start (first occurrence of a detail keyword) and cut there
-  var detailMatch=routePart.match(/\b(\d+\s*seat|seater|\bac\b|non[- ]?ac|tempo|traveller|traveler|\bbus\b|\bcab\b|\btaxi\b|\bsuv\b|innova|sleeper|round trip|one way|\d+\s*day|\d+\s*passenger|\d+\s*people)\b/i);
-  if(detailMatch&&detailMatch.index>3){routePart=routePart.substring(0,detailMatch.index);}
+  /* Vehicle details can appear ANYWHERE — operators often lead with them
+     ("gadi bus 56 seater ac khurja se mathura…"). The old code cut the string at
+     the first detail keyword, which threw away the entire route when details came
+     first. Strip the detail phrases in place instead, and keep everything else. */
+  routePart=routePart
+    .replace(/\d+\s*[- ]?\s*(?:seater|seats?|sitar)/gi,' ')
+    .replace(/\d+\s*(?:passengers?|people|pax|persons?|log|sawari|yatri)/gi,' ')
+    .replace(/\d+\s*(?:days?|din|nights?|raat)/gi,' ')
+    .replace(/\b(?:non[- ]?ac|nonac|a\.c\.?|ac)\b/gi,' ')
+    .replace(/\b(?:tempo\s*traveller|tempo\s*traveler|traveller|traveler|tempo|mini\s*bus|minibus|bus|coach|sleeper|cab|taxi|suv|innova|crysta|ertiga|dzire|etios|sedan|gadi|gaadi|vehicle|car)\b/gi,' ')
+    .replace(/\b(?:round\s*trip|one\s*way|both\s*ways?)\b/gi,' ')
+    .replace(/\b(?:diesel|petrol|fuel)\s*\d*/gi,' ')
+    .replace(/\s{2,}/g,' ')
+    .trim();
   // Split on connectors AND commas/slashes
   /* Split on EVERY separator an operator might type — arrows, commas, dashes,
      slashes, newlines, semicolons, plus English and Hindi connector words.
@@ -2616,7 +2627,78 @@ function normWa(raw){
   if(d.length>=10)return '91'+d.slice(-10);
   return '';
 }
-/* Places the operator has already confirmed once — never asked about again. */
+/* ── AI TRIP UNDERSTANDING ──
+   Sends the operator's raw sentence to Gemini and gets back structured trip data.
+   This handles phrasing the rule-based parser cannot anticipate: mixed Hindi and
+   English, missing punctuation, vehicle details buried mid-sentence.
+   The rule-based parseTrip() stays as the fallback, so the app still works with
+   no API key and when the network or the model fails. */
+function geminiParseTrip(text){
+  if(!GKEY)return Promise.resolve(null);
+  var prompt='You read trip enquiries sent to a bus and taxi operator in North India. '+
+    'The text may be Hindi, English, Hinglish, or Devanagari, often with no punctuation.\n'+
+    'Extract the trip and return STRICT JSON only — no markdown, no backticks, no explanation.\n'+
+    'Schema: {"pickup":string,"stops":[string],"returnsToStart":boolean,"vehicle":"cab"|"suv"|"tempo"|"minibus"|"bus","seats":number|null,"ac":true|false|null,"days":number|null,"pax":number|null}\n'+
+    'Rules:\n'+
+    '- "pickup" is the first place named, unless the text clearly names a different starting/pickup point.\n'+
+    '- "stops" lists every OTHER place to visit, in the order mentioned. Do not repeat the pickup.\n'+
+    '- Transliterate all place names to English (मथुरा->Mathura, खाटू श्याम->Khatu Shyam, बालाजी->Mehendipur Balaji).\n'+
+    '- Words like back, wapas, वापस, return, round trip mean returnsToStart=true. They are NOT places.\n'+
+    '- Ignore filler such as mujhe, jana hai, chahiye, gadi, batao, kitna.\n'+
+    '- "56 seater bus" means vehicle="bus", seats=56. Tempo traveller means "tempo". Innova means "suv".\n'+
+    '- Use null for anything not stated. Never invent places that were not mentioned.\n\n'+
+    'Enquiry: '+text;
+  var body={contents:[{parts:[{text:prompt}]}],generationConfig:{temperature:0,maxOutputTokens:600}};
+  return fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key='+encodeURIComponent(GKEY),{
+    method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)
+  }).then(function(r){return r.json();}).then(function(d){
+    try{
+      var raw=d.candidates[0].content.parts[0].text.trim();
+      raw=raw.replace(/```json/gi,'').replace(/```/g,'').trim();
+      var j=JSON.parse(raw);
+      if(!j||!j.pickup)return null;
+      var names=[j.pickup].concat(j.stops||[]);
+      // normalise to the app's internal lowercase + alias form
+      names=names.map(function(x){return snapToKnown(String(x||'').trim().toLowerCase());})
+                 .filter(function(x){return x.length>1;});
+      var seen={},cities=[];
+      names.forEach(function(c){if(!seen[c]){seen[c]=1;cities.push(c);}});
+      if(cities.length<2)return null;
+      return{
+        cities:cities,
+        isRet:!!j.returnsToStart,
+        seats:j.seats||null,
+        ac:(j.ac===true||j.ac===false)?j.ac:null,
+        pax:j.pax||null,
+        days:j.days||null,
+        fuel:null,
+        vehicle:j.vehicle||null,
+        _ai:true
+      };
+    }catch(e){return null;}
+  }).catch(function(){return null;});
+}
+/* Run the AI parser, fall back to the rule-based one if it is unavailable or
+   returns something unusable. Always yields a trip object. */
+function understandTrip(text,cb){
+  var rule=parseTrip(text);
+  if(!GKEY){cb(rule);return;}
+  var settled=false;
+  var finish=function(res){if(settled)return;settled=true;cb(res||rule);};
+  // never let a slow model block the operator
+  setTimeout(function(){finish(null);},6000);
+  geminiParseTrip(text).then(function(ai){
+    if(!ai){finish(null);return;}
+    // keep rule-based extras the model did not provide
+    ai.fuel=rule.fuel;
+    if(ai.seats==null)ai.seats=rule.seats;
+    if(ai.ac==null)ai.ac=rule.ac;
+    if(ai.pax==null)ai.pax=rule.pax;
+    if(ai.days==null)ai.days=rule.days;
+    if(!ai.isRet&&rule.isRet)ai.isRet=true;
+    finish(ai);
+  }).catch(function(){finish(null);});
+}
 var PLACE_OK={};
 try{PLACE_OK=JSON.parse(localStorage.getItem('fh_place_ok')||'{}');}catch(e){PLACE_OK={};}
 /* Stops the operator chose to leave out — excluded from every future route. */
@@ -2672,32 +2754,34 @@ function checkAmbiguous(names,cb){
 function runCalc(){
   var text=document.getElementById('calcInp').value.trim();
   if(!text){showToast('Type or speak the trip first');return;}
-  var p=parseTrip(text);
-  p.cities=p.cities.filter(function(c){return !PLACE_SKIP[c];});
-  if(p.cities.length<2){showToast('Mention at least 2 cities (from and to)');return;}
-  showToast('🔍 Finding all locations…');
-  /* STEP 1 — confirm any genuinely ambiguous place name BEFORE calculating,
-     so the route, distance and quote are never built on the wrong town. */
-  checkAmbiguous(p.cities,function(ambig){
-    if(ambig.length){
-      askPlaceChoice(ambig[0].name,ambig[0].cands,function(){runCalc();});
-      return;
-    }
-    // STEP 2 — resolve coordinates
-    resolveCities(p.cities,function(resolved,stillMissing){
-      var valid=resolved.filter(function(x){return x.coord;});
-      /* A place we cannot pin down is a QUESTION, not an error. Show the operator
-         real candidate matches to tap, instead of blocking the whole quote. */
-      if(stillMissing.length){
-        askPlaceChoice(stillMissing[0],null,function(){runCalc();});
-        if(valid.length<2)return;
+  showToast('🤖 Reading your trip…');
+  understandTrip(text,function(p){
+    p.cities=p.cities.filter(function(c){return !PLACE_SKIP[c];});
+    if(p.cities.length<2){showToast('Mention at least 2 places (from and to)');return;}
+    if(p._ai)showToast('🔍 Finding all locations…');
+    /* STEP 1 — confirm any genuinely ambiguous place name BEFORE calculating,
+       so the route, distance and quote are never built on the wrong town. */
+    checkAmbiguous(p.cities,function(ambig){
+      if(ambig.length){
+        askPlaceChoice(ambig[0].name,ambig[0].cands,function(){runCalc();});
+        return;
       }
-      if(valid.length<2){showToast('Add at least 2 places so I can build the route');return;}
-      // STEP 3 — optimize straight-line first (instant), then refine with real road matrix
-      var order=optOrd(valid.map(function(x){return x.coord;}),p.isRet);
-      var ordered=order.map(function(i){return valid[i];});
-      computeAndRender(p,ordered,false);
-      refineWithRealRoads(p,valid);
+      // STEP 2 — resolve coordinates
+      resolveCities(p.cities,function(resolved,stillMissing){
+        var valid=resolved.filter(function(x){return x.coord;});
+        /* A place we cannot pin down is a QUESTION, not an error. Show the operator
+           real candidate matches to tap, instead of blocking the whole quote. */
+        if(stillMissing.length){
+          askPlaceChoice(stillMissing[0],null,function(){runCalc();});
+          if(valid.length<2)return;
+        }
+        if(valid.length<2){showToast('Add at least 2 places so I can build the route');return;}
+        // STEP 3 — optimize straight-line first (instant), then refine with real road matrix
+        var order=optOrd(valid.map(function(x){return x.coord;}),p.isRet);
+        var ordered=order.map(function(i){return valid[i];});
+        computeAndRender(p,ordered,false);
+        refineWithRealRoads(p,valid);
+      });
     });
   });
 }
@@ -3016,6 +3100,9 @@ var TOLL_PLAZAS={
   'delhi-agra':[{n:'Yamuna Expressway (full)',c:1140}]
 };
 function detectVType(p,seats){
+  /* The AI parser understands phrasing like "gadi bus 56 seater ac" that the
+     keyword rules below can miss, so its answer wins when present. */
+  if(p&&p.vehicle&&VTYPE_LABEL[p.vehicle])return p.vehicle;
   var t=(document.getElementById('calcInp').value||'').toLowerCase();
   if(/tempo|traveller|traveler/.test(t))return 'tempo';
   if(/mini\s*bus|minibus/.test(t))return 'minibus';
@@ -3147,6 +3234,47 @@ function renderCalcResult(p,ordered,legs,retKm,total,c){
   }catch(e){}
   ro.innerHTML='<div class="rc-h">🗺️ Tour Plan — Optimized Order '+srcBadge+'</div><div class="rc-b">'+savedNote+'<div style="font-size:0.66rem;color:var(--t3);margin-bottom:0.5rem">Visit in this sequence for least distance</div>'+lh+'</div>';
   el.appendChild(ro);
+  /* ── ALTERNATIVE ORDERS ──
+     The shortest route is not always the one an operator wants: darshan timings,
+     overnight halts and customer preference matter. So show the realistic
+     alternatives with their true cost in km, and let the operator decide. */
+  if(ordered.length>=3){
+    var alt=document.createElement('div');alt.className='rescard';
+    var coA=ordered.map(function(o){return o.coord;});
+    function pathKm(seq){
+      var t=0;
+      for(var i=0;i<seq.length-1;i++)t+=hav(coA[seq[i]],coA[seq[i+1]])*1.27;
+      if(p.isRet)t+=hav(coA[seq[seq.length-1]],coA[seq[0]])*1.27;
+      return Math.round(t);
+    }
+    var baseSeq=ordered.map(function(_,i){return i;});
+    var options=[{name:'Shortest route',seq:baseSeq,note:'least distance and fuel'}];
+    // reverse loop: same stops, opposite direction — often better for arrival timings
+    var rev=[0].concat(baseSeq.slice(1).reverse());
+    if(pathKm(rev)!==pathKm(baseSeq))options.push({name:'Reverse direction',seq:rev,note:'same stops, opposite way round'});
+    // farthest-first: get the long haul done on day one, short legs later
+    var far=[0].concat(baseSeq.slice(1).sort(function(a,b){
+      return hav(coA[0],coA[b])-hav(coA[0],coA[a]);
+    }));
+    options.push({name:'Farthest first',seq:far,note:'long drive on day 1, shorter legs after'});
+    var bestKm=Math.min.apply(null,options.map(function(o){return pathKm(o.seq);}));
+    var oh='';
+    options.forEach(function(o){
+      var km=pathKm(o.seq);
+      var diff=km-bestKm;
+      oh+='<div style="padding:0.55rem 0;border-bottom:1px solid var(--line)">'+
+        '<div style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap">'+
+          '<b style="font-size:0.82rem">'+o.name+'</b>'+
+          '<span style="font-size:0.72rem;font-weight:700;color:'+(diff===0?'var(--green)':'var(--t3)')+'">'+km+' km'+(diff>0?' (+'+diff+')':' ✓')+'</span>'+
+        '</div>'+
+        '<div style="font-size:0.68rem;color:var(--t3);margin:2px 0 3px">'+o.note+'</div>'+
+        '<div style="font-size:0.72rem;line-height:1.45">'+o.seq.map(function(i){return cap(ordered[i].c);}).join(' → ')+(p.isRet?' → '+cap(ordered[0].c):'')+'</div>'+
+      '</div>';
+    });
+    alt.innerHTML='<div class="rc-h">🔀 Other route options</div><div class="rc-b">'+
+      '<div style="font-size:0.68rem;color:var(--t3);margin-bottom:0.3rem">Distances are estimates for comparison. The quote above uses the shortest route.</div>'+oh+'</div>';
+    el.appendChild(alt);
+  }
   // cost — TRANSPARENT & EDITABLE. Every input recalculates live.
   var co=document.createElement('div');co.className='rescard';
   co.innerHTML='<div class="rc-h">🧾 Cost Breakdown <span style="font-size:0.6rem;color:var(--t3);font-weight:400;margin-left:auto">tap any value to edit</span></div>'+
@@ -3410,6 +3538,24 @@ function fallbackCopy(text){
     showToast(ok?'✅ Quote copied!':'Long-press the quote to copy');
   }catch(e){showToast('Long-press the quote text to copy');}
 }
+/* Android's speech engine often returns a CUMULATIVE transcript: every chunk
+   already contains everything said before it. Blindly joining chunks produces a
+   staircase ("khurja se vrindavan agra / khurja se vrindavan agra jaipur / …").
+   Merging by overlap keeps only what is genuinely new in each chunk. */
+function mergeTranscript(acc,next){
+  acc=(acc||'').trim();next=(next||'').trim();
+  if(!acc)return next;
+  if(!next)return acc;
+  var a=acc.toLowerCase(),n=next.toLowerCase();
+  if(n.indexOf(a)===0)return next;   // next repeats acc and adds more → take next
+  if(a.indexOf(n)===0)return acc;    // next is old news → keep acc
+  // otherwise splice at the largest overlap between end of acc and start of next
+  var max=Math.min(a.length,n.length);
+  for(var k=max;k>3;k--){
+    if(a.slice(a.length-k)===n.slice(0,k))return acc+next.slice(k);
+  }
+  return acc+' '+next;
+}
 /* Safety net for speech: collapse immediately-repeated words and phrases.
    Even with indexed results, phone dictation sometimes stutters a phrase.
    Only CONSECUTIVE repeats are removed, so "Khurja to Khurja" style real
@@ -3471,11 +3617,12 @@ document.getElementById('calcMic').addEventListener('click',function(){
     for(var j=e.resultIndex;j<e.results.length;j++){
       if(!e.results[j].isFinal)interim+=e.results[j][0].transcript;
     }
-    var joined=Object.keys(finals)
+    var joined='';
+    Object.keys(finals)
       .sort(function(a,b){return a-b;})
-      .map(function(k){return finals[k];})
-      .join(' ');
-    inp.value=dedupeSpeech((voiceBase+' '+joined+' '+interim).trim());
+      .forEach(function(k){joined=mergeTranscript(joined,finals[k]);});
+    var live=mergeTranscript(joined,interim);
+    inp.value=dedupeSpeech(mergeTranscript(voiceBase,live));
   };
   rec.onerror=function(ev){
     listening=false;mb.classList.remove('rec');mb.textContent='🎤';
