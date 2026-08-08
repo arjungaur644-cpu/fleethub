@@ -2352,6 +2352,24 @@ var CC_EXTRA={
   'aurangabad':[28.5000,77.9600],'garhmukteshwar':[28.7860,78.1030],'brajghat':[28.7830,78.1200],
   'pahasu':[28.1700,78.0700],'jahangeerabad':[28.2500,78.0600],'danpur':[28.1500,78.2200],
   'greater noida':[28.4744,77.5040],'yamuna expressway':[28.1200,77.5600],'palwal':[28.1440,77.3320],
+  /* Major cities operators quote to. Having them here means no lookup, no
+     ambiguity prompt, and no chance of matching a same-named village. */
+  'ahmedabad':[23.0225,72.5714],'surat':[21.1702,72.8311],'vadodara':[22.3072,73.1812],
+  'pune':[18.5204,73.8567],'nagpur':[21.1458,79.0882],'indore':[22.7196,75.8577],
+  'bhopal':[23.2599,77.4126],'jabalpur':[23.1815,79.9864],'raipur':[21.2514,81.6296],
+  'patna':[25.5941,85.1376],'ranchi':[23.3441,85.3096],'kolkata':[22.5726,88.3639],
+  'jammu':[32.7266,74.8570],'srinagar':[34.0837,74.7973],'ludhiana':[30.9010,75.8573],
+  'jalandhar':[31.3260,75.5762],'panipat':[29.3909,76.9635],'karnal':[29.6857,76.9905],
+  'kurukshetra':[29.9695,76.8783],'ambala':[30.3782,76.7767],'rohtak':[28.8955,76.6066],
+  'mount abu':[24.5925,72.7156],'ranthambore':[26.0173,76.5026],'chittorgarh':[24.8887,74.6269],
+  /* Uttarakhand hill towns — Bageshwar here is the Uttarakhand one; the app now
+     asks the operator when a name like this also exists in another state. */
+  'bageshwar':[29.8370,79.7710],'almora':[29.5892,79.6467],'ranikhet':[29.6434,79.4322],
+  'kausani':[29.8400,79.6000],'pithoragarh':[29.5829,80.2182],'chopta':[30.4900,79.1500],
+  'auli':[30.5290,79.5660],'joshimath':[30.5550,79.5650],'munsyari':[30.0670,80.2380],
+  'nainital':[29.3919,79.4542],'bhimtal':[29.3450,79.5590],'mukteshwar':[29.4700,79.6500],
+  'lansdowne':[29.8377,78.6810],'chakrata':[30.7040,77.8670],'tehri':[30.3900,78.4800],
+  'uttarkashi':[30.7300,78.4500],'chamoli':[30.4000,79.3300],'rudraprayag':[30.2840,78.9810],
   'sohna':[28.2470,77.0650],'dausa':[26.8900,76.3300],'bandikui':[27.0500,76.5700],
   'alwar':[27.5530,76.6350],'behror':[27.8870,76.2830],'kotputli':[27.7020,76.2000],
   'neemrana':[27.9880,76.3860],'shahpura':[27.3910,75.9600],'ringas':[27.3600,75.5700],
@@ -2573,79 +2591,144 @@ function normWa(raw){
   if(d.length>=10)return '91'+d.slice(-10);
   return '';
 }
+/* Places the operator has already confirmed once — never asked about again. */
+var PLACE_OK={};
+try{PLACE_OK=JSON.parse(localStorage.getItem('fh_place_ok')||'{}');}catch(e){PLACE_OK={};}
+/* Stops the operator chose to leave out — excluded from every future route. */
+var PLACE_SKIP={};
+try{PLACE_SKIP=JSON.parse(localStorage.getItem('fh_place_skip')||'{}');}catch(e){PLACE_SKIP={};}
+function markPlaceConfirmed(name){
+  PLACE_OK[name]=1;
+  try{localStorage.setItem('fh_place_ok',JSON.stringify(PLACE_OK));}catch(e){}
+}
+/* Find real, far-apart alternatives for a place name.
+   Bageshwar exists in Uttarakhand AND in Madhya Pradesh — silently picking the
+   nearest one can put an 800 km error into the quote, so we ask instead. */
+function findCandidates(name){
+  return fetch('https://nominatim.openstreetmap.org/search?format=json&limit=8&countrycodes=in&q='+encodeURIComponent(name))
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(!d||!d.length)return [];
+      var ANCHOR=[28.25,77.85],groups=[];
+      d.forEach(function(x){
+        if(!x.lat)return;
+        var co=[parseFloat(x.lat),parseFloat(x.lon)];
+        // collapse results that are effectively the same place (<60 km apart)
+        for(var i=0;i<groups.length;i++){if(hav(groups[i].co,co)<60)return;}
+        groups.push({co:co,label:x.display_name,km:Math.round(hav(ANCHOR,co))});
+      });
+      return groups.sort(function(a,b){return a.km-b.km;});
+    })
+    .catch(function(){return [];});
+}
+/* Town names that genuinely exist in several Indian states. Even though the
+   built-in table holds a default coordinate for these, picking silently can
+   put hundreds of km of error into a quote — so the operator is asked once. */
+var AMBIG_NAMES={'bageshwar':1,'aurangabad':1,'bilaspur':1,'hamirpur':1,'pratapgarh':1,
+  'rajgarh':1,'shahpura':1,'khanpur':1,'rampur':1,'fatehpur':1,'raipur':1,'sultanpur':1,
+  'chandrapur':1,'jamalpur':1,'deoria':1,'nawada':1,'rajnagar':1,'sikandra':1,'nagar':1,
+  'kotwali':1,'balaji':1,'shivpuri':1,'mahoba':1,'baran':1,'sirsa':1,'palwal':1};
+/* Check every un-confirmed place for real ambiguity. Calls cb(ambiguousList). */
+function checkAmbiguous(names,cb){
+  var toCheck=names.filter(function(n){
+    if(PLACE_OK[n])return false;              // operator already decided
+    if(AMBIG_NAMES[n])return true;            // known multi-state name → always ask
+    return !CC[n];                            // otherwise only unknown places
+  });
+  if(!toCheck.length){cb([]);return;}
+  var out=[],pending=toCheck.length;
+  toCheck.forEach(function(n){
+    findCandidates(n).then(function(g){
+      if(g.length>1)out.push({name:n,cands:g});
+      if(--pending===0)cb(out);
+    });
+  });
+}
 function runCalc(){
   var text=document.getElementById('calcInp').value.trim();
   if(!text){showToast('Type or speak the trip first');return;}
   var p=parseTrip(text);
+  p.cities=p.cities.filter(function(c){return !PLACE_SKIP[c];});
   if(p.cities.length<2){showToast('Mention at least 2 cities (from and to)');return;}
   showToast('🔍 Finding all locations…');
-  // Resolve EVERY city: use built-in coords if known, else look up live (free OpenStreetMap)
-  resolveCities(p.cities,function(resolved,stillMissing){
-    var valid=resolved.filter(function(x){return x.coord;});
-    /* A place we cannot pin down is a QUESTION, not an error. Show the operator
-       real candidate matches to tap, instead of blocking the whole quote. */
-    if(stillMissing.length){
-      askPlaceChoice(stillMissing[0],p,function(){runCalc();});
-      if(valid.length<2)return;
+  /* STEP 1 — confirm any genuinely ambiguous place name BEFORE calculating,
+     so the route, distance and quote are never built on the wrong town. */
+  checkAmbiguous(p.cities,function(ambig){
+    if(ambig.length){
+      askPlaceChoice(ambig[0].name,ambig[0].cands,function(){runCalc();});
+      return;
     }
-    if(valid.length<2){showToast('Add at least 2 places so I can build the route');return;}
-    // optimize straight-line first (instant), then refine with real OSRM road matrix
-    var order=optOrd(valid.map(function(x){return x.coord;}),p.isRet);
-    var ordered=order.map(function(i){return valid[i];});
-    computeAndRender(p,ordered,false);
-    refineWithRealRoads(p,valid);
+    // STEP 2 — resolve coordinates
+    resolveCities(p.cities,function(resolved,stillMissing){
+      var valid=resolved.filter(function(x){return x.coord;});
+      /* A place we cannot pin down is a QUESTION, not an error. Show the operator
+         real candidate matches to tap, instead of blocking the whole quote. */
+      if(stillMissing.length){
+        askPlaceChoice(stillMissing[0],null,function(){runCalc();});
+        if(valid.length<2)return;
+      }
+      if(valid.length<2){showToast('Add at least 2 places so I can build the route');return;}
+      // STEP 3 — optimize straight-line first (instant), then refine with real road matrix
+      var order=optOrd(valid.map(function(x){return x.coord;}),p.isRet);
+      var ordered=order.map(function(i){return valid[i];});
+      computeAndRender(p,ordered,false);
+      refineWithRealRoads(p,valid);
+    });
   });
 }
 /* ── PLACE DISAMBIGUATION ──
    Asks "which one did you mean?" with tappable real candidates from OpenStreetMap,
-   nearest-first. Choosing one caches its coords and re-runs the calculation. */
-function askPlaceChoice(name,p,onPicked){
+   nearest-first. Choosing one caches its coords and re-runs the calculation.
+   `preCands` may hold candidates already fetched by the ambiguity pre-check. */
+function askPlaceChoice(name,preCands,onPicked){
   var host=document.getElementById('calcResult');
   if(!host)return;
+  host.innerHTML='';
   var card=document.createElement('div');card.className='rescard';
   card.innerHTML='<div class="rc-h">📍 Which "'+cap(name)+'" did you mean?</div>'+
-    '<div class="rc-b"><div style="font-size:0.76rem;color:var(--t3);margin-bottom:0.5rem">Tap the correct place — I will remember it for next time.</div>'+
+    '<div class="rc-b"><div style="font-size:0.76rem;color:var(--t3);margin-bottom:0.55rem">There is more than one place with this name. Pick the right one so the distance and quote are correct — I will remember your choice.</div>'+
     '<div id="pcOpts" style="display:flex;flex-direction:column;gap:0.4rem"><div style="font-size:0.76rem;color:var(--t3)">Searching…</div></div></div>';
-  host.insertBefore(card,host.firstChild);
-  var ANCHOR=[28.25,77.85];
-  function dKm(a,b){var R=6371,x=(b[0]-a[0])*Math.PI/180,y=(b[1]-a[1])*Math.PI/180;var h=Math.sin(x/2)*Math.sin(x/2)+Math.cos(a[0]*Math.PI/180)*Math.cos(b[0]*Math.PI/180)*Math.sin(y/2)*Math.sin(y/2);return R*2*Math.atan2(Math.sqrt(h),Math.sqrt(1-h));}
-  fetch('https://nominatim.openstreetmap.org/search?format=json&limit=8&countrycodes=in&q='+encodeURIComponent(name))
-    .then(function(r){return r.json();})
-    .then(function(d){
-      var box=document.getElementById('pcOpts');if(!box)return;
-      if(!d||!d.length){
-        box.innerHTML='<div style="font-size:0.76rem;color:var(--t3)">No match found. Try a different spelling, or the nearest bigger town.</div>';
-        return;
-      }
-      var list=d.map(function(x){
-        var co=[parseFloat(x.lat),parseFloat(x.lon)];
-        return{co:co,label:x.display_name,km:Math.round(dKm(ANCHOR,co))};
-      }).sort(function(a,b){return a.km-b.km;}).slice(0,5);
-      box.innerHTML='';
-      list.forEach(function(it){
-        var b=document.createElement('button');
-        b.className='cbtn';
-        b.style.cssText='text-align:left;width:100%;padding:0.55rem 0.7rem;font-size:0.78rem;line-height:1.35';
-        b.innerHTML='📍 <b>'+it.label.split(',')[0]+'</b><br><span style="font-size:0.68rem;color:var(--t3)">'+it.label.split(',').slice(1,4).join(', ')+' · ~'+it.km+' km away</span>';
-        b.addEventListener('click',function(){
-          GEO_CACHE[name]=it.co;
-          try{localStorage.setItem('fh_geocache',JSON.stringify(GEO_CACHE));}catch(e){}
-          card.remove();
-          showToast('✓ '+cap(name)+' set — recalculating…');
-          if(onPicked)onPicked();
-        });
-        box.appendChild(b);
+  host.appendChild(card);
+  function render(list){
+    var box=document.getElementById('pcOpts');if(!box)return;
+    if(!list||!list.length){
+      box.innerHTML='<div style="font-size:0.76rem;color:var(--t3)">No match found. Try a different spelling, or the nearest bigger town.</div>';
+      return;
+    }
+    box.innerHTML='';
+    list.slice(0,5).forEach(function(it){
+      var parts=it.label.split(',').map(function(s){return s.trim();});
+      var town=parts[0];
+      var state=parts.length>2?parts[parts.length-2]:parts[parts.length-1];
+      var b=document.createElement('button');
+      b.className='cbtn';
+      b.style.cssText='text-align:left;width:100%;padding:0.6rem 0.7rem;font-size:0.8rem;line-height:1.4';
+      b.innerHTML='📍 <b>'+town+'</b> — <span style="color:var(--orange);font-weight:700">'+state+'</span>'+
+        '<br><span style="font-size:0.67rem;color:var(--t3)">'+parts.slice(1,4).join(', ')+' · about '+it.km+' km from Khurja</span>';
+      b.addEventListener('click',function(){
+        GEO_CACHE[name]=it.co;
+        try{localStorage.setItem('fh_geocache',JSON.stringify(GEO_CACHE));}catch(e){}
+        markPlaceConfirmed(name);
+        card.remove();
+        showToast('✓ '+cap(name)+' set — recalculating…');
+        if(onPicked)onPicked();
       });
-      var skip=document.createElement('button');
-      skip.className='cbtn';skip.style.cssText='width:100%;font-size:0.76rem;opacity:0.75';
-      skip.textContent='Skip this stop';
-      skip.addEventListener('click',function(){card.remove();});
-      box.appendChild(skip);
-    })
-    .catch(function(){
-      var box=document.getElementById('pcOpts');
-      if(box)box.innerHTML='<div style="font-size:0.76rem;color:var(--t3)">Lookup failed — check your connection and try again.</div>';
+      box.appendChild(b);
     });
+    var skip=document.createElement('button');
+    skip.className='cbtn';skip.style.cssText='width:100%;font-size:0.76rem;opacity:0.75;margin-top:0.2rem';
+    skip.textContent='Leave this stop out of the trip';
+    skip.addEventListener('click',function(){
+      markPlaceConfirmed(name);
+      PLACE_SKIP[name]=1;
+      try{localStorage.setItem('fh_place_skip',JSON.stringify(PLACE_SKIP));}catch(e){}
+      card.remove();
+      if(onPicked)onPicked();
+    });
+    box.appendChild(skip);
+  }
+  if(preCands&&preCands.length){render(preCands);return;}
+  findCandidates(name).then(render);
 }
 /* Resolve a list of place names to coordinates.
    Known places use the built-in table (instant). Unknown places are looked up
@@ -2653,9 +2736,9 @@ function askPlaceChoice(name,p,onPicked){
 var GEO_CACHE={};
 // v2: region-biased geocoding. Clear old cache that may hold wrong far-away coords.
 try{
-  if(localStorage.getItem('fh_geocache_v')!=='3'){
+  if(localStorage.getItem('fh_geocache_v')!=='4'){
     localStorage.removeItem('fh_geocache');
-    localStorage.setItem('fh_geocache_v','3');
+    localStorage.setItem('fh_geocache_v','4');
     GEO_CACHE={};
   }else{
     GEO_CACHE=JSON.parse(localStorage.getItem('fh_geocache')||'{}');
@@ -2973,7 +3056,23 @@ function renderCalcResult(p,ordered,legs,retKm,total,c){
   if(p.seats)chips.push(p.seats+'-seat');if(p.ac!==null)chips.push(p.ac?'AC':'Non-AC');if(p.pax)chips.push(p.pax+' pax');if(p.days)chips.push(p.days+' days');if(p.fuel)chips.push('Rs'+p.fuel+'/L');if(p.isRet)chips.push('round trip');
   ex.innerHTML='<div class="rc-h">🤖 Read from your trip<span class="rc-tag">EXTRACTED</span></div><div class="rc-b"><div class="pgrid">'+
     '<div class="pf"><div class="pl">Cities</div><div class="pv">'+ordered.length+' stops</div><div style="font-size:0.6rem;color:var(--t3);margin-top:2px;line-height:1.3">'+ordered.map(function(o){return cap(o.c);}).join(' · ')+'</div></div>'+
-    '<div class="pf"><div class="pl">Vehicle</div><div class="pv">'+c.seats+'-seat '+(p.ac===false?'Non-AC':'AC')+'</div></div>'+
+    /* Vehicle is a GUESS from the text — the operator must be able to correct it
+       here without retyping the whole trip. Each control recalculates the quote. */
+    '<div class="pf"><div class="pl">Vehicle</div>'+
+      '<select class="ci" id="ex-vtype" style="width:100%;margin-top:2px;font-size:0.76rem">'+
+        Object.keys(VTYPE_LABEL).map(function(k){return '<option value="'+k+'"'+(k===c.vtype?' selected':'')+'>'+VTYPE_LABEL[k]+'</option>';}).join('')+
+      '</select>'+
+      '<div style="display:flex;gap:0.25rem;margin-top:0.3rem;align-items:center">'+
+        '<input class="ci" id="ex-seats" value="'+c.seats+'" style="width:46px;font-size:0.74rem"><span style="font-size:0.62rem;color:var(--t3)">seats</span>'+
+        '<select class="ci" id="ex-ac" style="width:auto;font-size:0.74rem;margin-left:auto">'+
+          '<option value="1"'+(p.ac===false?'':' selected')+'>AC</option>'+
+          '<option value="0"'+(p.ac===false?' selected':'')+'>Non-AC</option>'+
+        '</select>'+
+      '</div>'+
+      '<div style="display:flex;gap:0.25rem;margin-top:0.3rem;align-items:center">'+
+        '<input class="ci" id="ex-pax" value="'+c.pax+'" style="width:46px;font-size:0.74rem"><span style="font-size:0.62rem;color:var(--t3)">passengers</span>'+
+      '</div>'+
+    '</div>'+
     '<div class="pf"><div class="pl">Days</div><div class="pv">'+c.days+'</div></div></div>'+
     '<div style="display:flex;flex-wrap:wrap;gap:0.35rem;margin-top:0.6rem">'+chips.map(function(x){return '<span class="xtag">✓ '+x+'</span>';}).join('')+'</div></div>';
   el.appendChild(ex);
@@ -3087,6 +3186,7 @@ function renderCalcResult(p,ordered,legs,retKm,total,c){
     // if vehicle type changed, refresh mileage AND recompute NHAI toll for new class
     if(vtypeChanged){
       var vt=document.getElementById('ed-vtype').value;
+      var exSync=document.getElementById('ex-vtype');if(exSync)exSync.value=vt;
       document.getElementById('ed-mileage').value=VTYPE_MILEAGE[vt];
       var isRound2=/round|return|wapas/i.test(document.getElementById('calcInp').value||'')||(retKm>0);
       var nh=computeNhaiToll(ordered,vt,isRound2);
@@ -3142,6 +3242,41 @@ function renderCalcResult(p,ordered,legs,retKm,total,c){
     });
     var vt=document.getElementById('ed-vtype');
     if(vt)vt.addEventListener('change',function(){recalc(true);});
+    /* Vehicle controls in the extracted card mirror the ones in the cost
+       breakdown, so changing either place updates the quote immediately. */
+    var exVt=document.getElementById('ex-vtype');
+    if(exVt)exVt.addEventListener('change',function(){
+      if(vt){vt.value=exVt.value;}
+      recalc(true);
+    });
+    var exSeats=document.getElementById('ex-seats'),exPax=document.getElementById('ex-pax'),exAc=document.getElementById('ex-ac');
+    if(exSeats){
+      exSeats.setAttribute('type','number');
+      exSeats.addEventListener('input',function(){
+        var s=Math.max(1,+exSeats.value||c.seats);
+        c.seats=s;
+        // passengers follow the seat count unless the operator set them apart
+        if(exPax&&(!exPax.dataset.touched)){exPax.value=s;c.pax=s;}
+        recalc();
+      });
+    }
+    if(exPax){
+      exPax.setAttribute('type','number');
+      exPax.addEventListener('input',function(){
+        exPax.dataset.touched='1';
+        c.pax=Math.max(1,+exPax.value||c.pax);
+        recalc();
+      });
+    }
+    if(exAc)exAc.addEventListener('change',function(){
+      /* AC raises running cost: an AC coach burns roughly 12% more fuel than
+         the same vehicle running non-AC, so mileage moves with the switch. */
+      var base=VTYPE_MILEAGE[(vt?vt.value:c.vtype)]||c.mileage;
+      var m=document.getElementById('ed-mileage');
+      if(m)m.value=(exAc.value==='1')?base:+(base*1.12).toFixed(1);
+      p.ac=(exAc.value==='1');
+      recalc();
+    });
     // Fetch REAL road distance + toll: Google first (if key set), else OSRM + NHAI estimate
     var pts=ordered.filter(function(s){return s.coord;}).map(function(s){return s.coord;});
     if(p.isRet&&pts.length)pts.push(pts[0]);
