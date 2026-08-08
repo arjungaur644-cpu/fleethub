@@ -2697,23 +2697,9 @@ function geminiParseTrip(text){
 /* Run the AI parser, fall back to the rule-based one if it is unavailable or
    returns something unusable. Always yields a trip object. */
 function understandTrip(text,cb){
-  var rule=parseTrip(text);
-  if(!GKEY){cb(rule);return;}
-  var settled=false;
-  var finish=function(res){if(settled)return;settled=true;cb(res||rule);};
-  // never let a slow model block the operator
-  setTimeout(function(){finish(null);},6000);
-  geminiParseTrip(text).then(function(ai){
-    if(!ai){finish(null);return;}
-    // keep rule-based extras the model did not provide
-    ai.fuel=rule.fuel;
-    if(ai.seats==null)ai.seats=rule.seats;
-    if(ai.ac==null)ai.ac=rule.ac;
-    if(ai.pax==null)ai.pax=rule.pax;
-    if(ai.days==null)ai.days=rule.days;
-    if(!ai.isRet&&rule.isRet)ai.isRet=true;
-    finish(ai);
-  }).catch(function(){finish(null);});
+  // Delegates to the ranked language chain (Gemini → rule parser).
+  languageChain(text).then(function(p){cb(p||parseTrip(text));})
+    .catch(function(){cb(parseTrip(text));});
 }
 /* ── AI ROUTE AGENT ──
    Design decision, written down so it doesn't get "fixed" back to something
@@ -2793,29 +2779,44 @@ function buildRouteCandidates(p,valid,D,vtype){
 }
 function cap2(s){return s?String(s):'';}
 /* ── SOURCES & ACCURACY ──
-   A quote is only credible if the operator can see where each number came from
-   and how far to trust it. This card states the source of distance, toll and
-   time, and is honest about the known limitation in Google's toll figures. */
-function renderSourcesCard(el,c){
-  var distSrc,tollSrc,tollNote='';
-  if(c.distSource==='google'){distSrc='Google Routes API — real road distance, traffic-aware';}
-  else if(c.realRoads){distSrc='OSRM on OpenStreetMap data — real road distance';}
-  else{distSrc='Straight-line estimate × 1.27 road factor — refine by adding a Google key';}
-  if(c.tollSource==='learned'){tollSrc='Your own saved rate for this exact route';tollNote='You corrected this figure before, so it is used instead of any estimate.';}
-  else if(c.tollSource==='google'){
-    tollSrc='Google Routes API toll data';
-    tollNote='Google returns the <b>car</b> toll. Its documentation states commercial vehicle prices differ, so FleetHub scales it by the NHAI class ratio for your vehicle ('+(NHAI_CLASS_MULT[c.vtype]||1)+'×).';
-  }
-  else if(c.tollSource==='nhai'){tollSrc='NHAI plaza rates (NH Fee Rules 2008, as amended)';tollNote='Every plaza on this route matched the built-in rate table.';}
-  else if(c.tollSource==='mixed'){tollSrc='NHAI plaza rates + per-km estimate';tollNote='Some legs matched real plazas; the rest use a per-km estimate. Verify on the Rajmargyatra app.';}
-  else{tollSrc='Per-km estimate by vehicle class';tollNote='No plaza match for this route yet — please verify and correct it, and FleetHub will remember your figure.';}
-  var card=document.createElement('div');card.className='rescard';
-  card.innerHTML='<div class="rc-h">🔍 Where these numbers come from</div><div class="rc-b" style="font-size:0.72rem;line-height:1.55">'+
-    '<div style="margin-bottom:0.45rem"><b>Distance</b><br><span style="color:var(--t3)">'+distSrc+'</span></div>'+
-    '<div style="margin-bottom:0.45rem"><b>Toll</b><br><span style="color:var(--t3)">'+tollSrc+'</span>'+(tollNote?'<br><span style="color:var(--t3);font-size:0.68rem">'+tollNote+'</span>':'')+'</div>'+
-    '<div style="margin-bottom:0.45rem"><b>Places</b><br><span style="color:var(--t3)">'+(GKEY?'Google Geocoding API':'OpenStreetMap Nominatim')+', with a built-in table of verified local coordinates</span></div>'+
-    '<div style="border-top:1px solid var(--line);padding-top:0.45rem;color:var(--t3);font-size:0.68rem">'+
-      'Toll rates change on 1 April each year and at individual plazas. Verify large quotes on the official <b>NHAI Toll Information System</b> (tis.nhai.gov.in) or the <b>Rajmargyatra</b> app. Every value above is editable, and your corrections are saved for next time.'+
+   A quote is only credible if the operator can see where each number came
+   from and how far to trust it. This lists the full ranked chain for each
+   capability and marks which tier actually answered, so a fallback to an
+   estimate is visible rather than hidden. */
+var CHAIN_DEFS={
+  language:{icon:'🗣️',title:'Understanding your text',tiers:['Gemini 1.5 Flash','FleetHub rule parser']},
+  places:{icon:'📍',title:'Place coordinates',tiers:['FleetHub verified places','Google Geocoding API','OpenStreetMap Nominatim']},
+  distance:{icon:'📏',title:'Distance & time',tiers:['Google Routes API','OSRM (OpenStreetMap)','Geometric estimate']},
+  optimize:{icon:'🔀',title:'Stop order',tiers:['Google Route Optimization','2-opt on real road matrix','2-opt on straight-line']},
+  toll:{icon:'🪙',title:'Toll',tiers:['Your saved rate','Google Routes API × NHAI class','NHAI plaza rates','NHAI plazas + estimate','Per-km estimate']}
+};
+function renderSourcesCard(el,c,replace){
+  var existing=document.getElementById('sourcesCard');
+  if(existing&&replace)existing.remove();
+  else if(existing)return;
+  var body='';
+  Object.keys(CHAIN_DEFS).forEach(function(cap){
+    var def=CHAIN_DEFS[cap];
+    var used=PROVENANCE[cap];
+    var rows=def.tiers.map(function(t,i){
+      var isUsed=used&&used.label===t;
+      var skipped=used&&!isUsed&&def.tiers.indexOf(used.label)>i;
+      return '<div style="display:flex;gap:0.35rem;align-items:baseline;font-size:0.68rem;'+
+        (isUsed?'color:var(--green);font-weight:700':'color:var(--t3)')+'">'+
+        '<span style="min-width:14px">'+(isUsed?'✓':(skipped?'✗':'·'))+'</span>'+
+        '<span>'+t+(isUsed&&used.note?' <span style="font-weight:400">— '+used.note+'</span>':'')+
+        (skipped?' <span style="font-weight:400">(unavailable)</span>':'')+'</span></div>';
+    }).join('');
+    body+='<div style="margin-bottom:0.6rem">'+
+      '<div style="font-size:0.75rem;font-weight:700;margin-bottom:0.2rem">'+def.icon+' '+def.title+'</div>'+
+      rows+'</div>';
+  });
+  var card=document.createElement('div');card.className='rescard';card.id='sourcesCard';
+  card.innerHTML='<div class="rc-h">🔍 Where these numbers come from</div><div class="rc-b">'+
+    '<div style="font-size:0.68rem;color:var(--t3);margin-bottom:0.55rem;line-height:1.5">Each item tries the most credible source first and falls back down the list. ✓ marks the source actually used.</div>'+
+    body+
+    '<div style="border-top:1px solid var(--line);padding-top:0.5rem;color:var(--t3);font-size:0.67rem;line-height:1.5">'+
+      '<b>Toll accuracy note:</b> Google returns the <b>car</b> rate — its documentation states commercial vehicle prices differ — so FleetHub scales it by the NHAI class ratio ('+(NHAI_CLASS_MULT[c.vtype]||1)+'× for '+(VTYPE_LABEL[c.vtype]||'this vehicle')+'). Rates revise on 1 April each year. Verify large quotes on <b>tis.nhai.gov.in</b> or the <b>Rajmargyatra</b> app. Every value is editable and your corrections are reused automatically.'+
     '</div></div>';
   el.appendChild(card);
 }
@@ -2853,6 +2854,208 @@ function renderAltRoutes(p,cands,verdict,isEstimate){
   host.innerHTML='<div class="rescard"><div class="rc-h">🔀 Other route options'+(isEstimate?' <span style="font-size:0.58rem;color:var(--t3);font-weight:400;margin-left:auto">estimating…</span>':'')+'</div><div class="rc-b">'+
     vh+
     '<div style="font-size:0.66rem;color:var(--t3);margin-bottom:0.3rem">'+(isEstimate?'Straight-line estimate — refining with real road distance and toll…':'Real road distance and toll for each option.')+'</div>'+oh+'</div></div>';
+}
+/* ═══════════════════════════════════════════════════════════════
+   PROVIDER CHAIN ENGINE
+
+   Every number FleetHub shows comes from a RANKED chain of sources.
+   Tier 1 is the most credible source available; if it is missing a key,
+   errors, times out, or returns something unusable, the chain silently
+   falls through to Tier 2, then Tier 3, and so on. The last tier in every
+   chain always works offline with no key, so the app NEVER dead-ends --
+   it degrades to a clearly-labelled estimate instead.
+
+   Whichever tier actually answered is recorded in PROVENANCE and shown to
+   the operator in the "Where these numbers come from" card, so a quote is
+   never a black box. A provider returning null/0 counts as a miss, not an
+   answer -- that is what makes the fallback honest rather than cosmetic.
+   ═══════════════════════════════════════════════════════════════ */
+var PROVENANCE={};
+function recordSource(capability,label,tier,note){
+  PROVENANCE[capability]={label:label,tier:tier,note:note||'',at:Date.now()};
+}
+function runChain(capability,providers,args,accept){
+  accept=accept||function(v){return v!==null&&v!==undefined&&v!==false;};
+  var tried=[];
+  function step(i){
+    if(i>=providers.length){
+      recordSource(capability,'none','-','all sources unavailable');
+      return Promise.resolve({value:null,source:null,tried:tried});
+    }
+    var pv=providers[i];
+    var out;
+    try{out=pv.run(args);}catch(e){out=null;}
+    return Promise.resolve(out).then(function(v){
+      if(accept(v)){
+        recordSource(capability,pv.label,pv.tier,pv.note);
+        return{value:v,source:pv.label,tier:pv.tier,tried:tried};
+      }
+      tried.push(pv.label);
+      return step(i+1);
+    }).catch(function(){
+      tried.push(pv.label);
+      return step(i+1);
+    });
+  }
+  return step(0);
+}
+/* Wraps a promise so a slow provider can never stall the whole chain. */
+function withTimeout(promise,ms){
+  return new Promise(function(resolve){
+    var done=false;
+    setTimeout(function(){if(!done){done=true;resolve(null);}},ms);
+    Promise.resolve(promise).then(function(v){if(!done){done=true;resolve(v);}})
+      .catch(function(){if(!done){done=true;resolve(null);}});
+  });
+}
+/* -- CHAIN 1: PLACE -> COORDINATES --
+   1. Built-in verified table (instant, hand-checked for this region)
+   2. Google Geocoding API (best coverage, needs key)
+   3. OpenStreetMap Nominatim, region-biased to North India
+   Region bias matters: an unbiased Nominatim query for a UP village
+   frequently matches a same-named village 1500 km away in the south. */
+function nominatimGeocode(name){
+  var url='https://nominatim.openstreetmap.org/search?format=json&limit=5&countrycodes=in'+
+    '&viewbox=72,32.5,84.5,22.5&bounded=0&q='+encodeURIComponent(name);
+  return fetch(url).then(function(r){return r.json();}).then(function(d){
+    if(!d||!d.length)return null;
+    var ANCHOR=[28.25,77.85];
+    var best=null,bd=1e9;
+    d.forEach(function(x){
+      var co=[parseFloat(x.lat),parseFloat(x.lon)];
+      var dist=hav(ANCHOR,co);
+      if(dist<bd){bd=dist;best=co;}
+    });
+    return best;
+  }).catch(function(){return null;});
+}
+function geocodeChain(name){
+  return runChain('places',[
+    {label:'FleetHub verified places',tier:'1',note:'hand-checked local coordinates',
+     run:function(n){return CC[n]||null;}},
+    {label:'Google Geocoding API',tier:'2',note:'region-biased to North India',
+     run:function(n){return GKEY?withTimeout(googleGeocode(n),5000):null;}},
+    {label:'OpenStreetMap Nominatim',tier:'3',note:'free, region-biased',
+     run:function(n){return withTimeout(nominatimGeocode(n),6000);}}
+  ],name,function(v){return v&&v.length===2&&isFinite(v[0])&&isFinite(v[1]);});
+}
+/* -- CHAIN 2: ROUTE DISTANCE + DRIVING TIME --
+   1. Google Routes API - real roads, traffic-aware duration
+   2. OSRM on OpenStreetMap - real roads, free, no key
+   3. Haversine x 1.27 - geometric fallback, clearly labelled an estimate */
+function distanceChain(pts,straightKm){
+  return runChain('distance',[
+    {label:'Google Routes API',tier:'1',note:'real road distance, traffic-aware time',
+     run:function(a){
+       if(!GKEY)return null;
+       return withTimeout(googleFullRoute(a.pts,false),8000).then(function(g){
+         return (g&&g.km)?{km:g.km,durSec:g.durSec,carToll:g.tollINR,via:'google'}:null;
+       });
+     }},
+    {label:'OSRM (OpenStreetMap)',tier:'2',note:'real road distance, free',
+     run:function(a){
+       var coordStr=a.pts.map(function(pt){return pt[1]+','+pt[0];}).join(';');
+       return withTimeout(
+         fetch('https://router.project-osrm.org/route/v1/driving/'+coordStr+'?overview=false')
+           .then(function(r){return r.json();})
+           .then(function(d){
+             if(d&&d.routes&&d.routes[0]&&d.routes[0].distance){
+               return{km:Math.round(d.routes[0].distance/1000),
+                      durSec:Math.round(d.routes[0].duration||0),carToll:0,via:'osrm'};
+             }
+             return null;
+           }),8000);
+     }},
+    {label:'Geometric estimate',tier:'3',note:'straight-line x 1.27 road factor',
+     run:function(a){return a.straightKm>0?{km:a.straightKm,durSec:0,carToll:0,via:'estimate'}:null;}}
+  ],{pts:pts,straightKm:straightKm},function(v){return v&&v.km>0;});
+}
+/* -- CHAIN 3: TOLL --
+   1. The operator's own saved correction for this exact route + vehicle
+   2. Google toll data, scaled to the NHAI class for the actual vehicle
+   3. NHAI plaza rate table (NH Fee Rules 2008) when all legs match
+   4. NHAI table for matched legs + per-km estimate for the rest
+   5. Pure per-km estimate by vehicle class
+   The operator outranks every API here deliberately: they drive these
+   roads and pay these plazas, so their correction is the best evidence
+   available for that specific route. */
+function tollChain(ordered,vtype,isRound,googleCarToll,totalKm){
+  var perKm=1.70*(NHAI_CLASS_MULT[vtype]||1);
+  return runChain('toll',[
+    {label:'Your saved rate',tier:'1',note:'you corrected this route before',
+     run:function(){
+       var v=TOLL_LEARNED[tollLearnKey(ordered,vtype)];
+       return (v!=null&&v>0)?{amount:v,plazas:[{name:'Your saved toll for this route',amt:v}],exact:true}:null;
+     }},
+    {label:'Google Routes API x NHAI class',tier:'2',note:'Google gives the car rate; scaled to this vehicle class',
+     run:function(){
+       if(!(googleCarToll>0))return null;
+       return{amount:googleTollForClass(googleCarToll,vtype),plazas:[],exact:false};
+     }},
+    {label:'NHAI plaza rates',tier:'3',note:'NH Fee Rules 2008, all plazas on this route matched',
+     run:function(){
+       var nh=computeNhaiToll(ordered,vtype,isRound);
+       return (nh.covered&&nh.total>0)?{amount:nh.total,plazas:nh.plazas,exact:true}:null;
+     }},
+    {label:'NHAI plazas + estimate',tier:'4',note:'some legs matched real plazas, rest estimated',
+     run:function(){
+       var nh=computeNhaiToll(ordered,vtype,isRound);
+       return (nh.partial&&nh.total>0)?{amount:nh.total+Math.round(totalKm*perKm*0.4),plazas:nh.plazas,exact:false}:null;
+     }},
+    {label:'Per-km estimate',tier:'5',note:'no plaza match yet - please verify and correct',
+     run:function(){return{amount:Math.round(totalKm*perKm),plazas:[],exact:false};}}
+  ],null,function(v){return v&&v.amount>=0;});
+}
+/* -- CHAIN 4: STOP ORDER OPTIMISATION --
+   1. Google Route Optimization (optimizeWaypointOrder) on real roads
+   2. Local nearest-neighbour + 2-opt on the real OSRM road matrix
+   3. Local nearest-neighbour + 2-opt on straight-line distance */
+function optimizeChain(p,valid,D){
+  var n=valid.length;
+  return runChain('optimize',[
+    {label:'Google Route Optimization',tier:'1',note:'optimal stop order on real roads',
+     run:function(){
+       if(!GKEY||n<3||n>12)return null;
+       var pts=valid.map(function(v){return v.coord;});
+       if(p.isRet)pts=pts.concat([valid[0].coord]);
+       return withTimeout(googleFullRoute(pts,true),9000).then(function(g){
+         if(!g||!g.order||!g.order.length)return null;
+         var seq=[0].concat(g.order.map(function(idx){return idx+1;}));
+         if(seq.length!==n)return null;
+         return seq;
+       });
+     }},
+    {label:'2-opt on real road matrix',tier:'2',note:'computed in-app from OSRM distances',
+     run:function(){return D?solveOrder(D,n,!!p.isRet):null;}},
+    {label:'2-opt on straight-line',tier:'3',note:'computed in-app, refined once roads load',
+     run:function(){return optOrd(valid.map(function(v){return v.coord;}),!!p.isRet);}}
+  ],null,function(v){return v&&v.length===n;});
+}
+/* -- CHAIN 5: LANGUAGE UNDERSTANDING --
+   1. Gemini - handles phrasing no rule can anticipate, any language
+   2. Rule-based parser - separators, aliases, Devanagari, stop-words
+   The rule parser is not just a stopgap: it is deterministic and instant,
+   so it also guards the AI output (anything the model omits is filled in
+   from the rules). Tier 2 alone is enough to run the whole product. */
+function languageChain(text){
+  var rule=parseTrip(text);
+  return runChain('language',[
+    {label:'Gemini 1.5 Flash',tier:'1',note:'understands free-form Hindi, English and mixed text',
+     run:function(){return GKEY?withTimeout(geminiParseTrip(text),6000):null;}},
+    {label:'FleetHub rule parser',tier:'2',note:'built-in separators, aliases and Hindi place names',
+     run:function(){return (rule&&rule.cities&&rule.cities.length>=2)?rule:null;}}
+  ],null,function(v){return v&&v.cities&&v.cities.length>=2;}).then(function(res){
+    var p=res.value||rule;
+    if(p&&p._ai){
+      p.fuel=p.fuel||rule.fuel;
+      if(p.seats==null)p.seats=rule.seats;
+      if(p.ac==null)p.ac=rule.ac;
+      if(p.pax==null)p.pax=rule.pax;
+      if(p.days==null)p.days=rule.days;
+      if(!p.isRet&&rule.isRet)p.isRet=true;
+    }
+    return p;
+  });
 }
 var PLACE_OK={};
 try{PLACE_OK=JSON.parse(localStorage.getItem('fh_place_ok')||'{}');}catch(e){PLACE_OK={};}
@@ -3009,57 +3212,28 @@ try{
   }
 }catch(e){GEO_CACHE={};}
 function resolveCities(cities,done){
+  /* Coordinates come from the ranked places chain: verified table -> Google
+     Geocoding -> region-biased Nominatim. Anything already cached from a
+     previous session or an operator's disambiguation choice wins outright. */
   var resolved=cities.map(function(c){return{c:c,coord:CC[c]||GEO_CACHE[c]||null};});
   var toLookup=resolved.filter(function(x){return !x.coord;});
-  if(!toLookup.length){done(resolved,[]);return;}
+  if(!toLookup.length){recordSource('places','FleetHub verified places','1','already known or previously confirmed');done(resolved,[]);return;}
   var pending=toLookup.length, missing=[];
-  // Region bias: operators run trips across north/central India. Bias results to this box
-  // so a place-name matches the NEARBY town, not a far-away namesake in south India.
-  // viewbox = left,top,right,bottom (lng,lat) covering Rajasthan→UP→Uttarakhand→MP belt
-  var VIEWBOX='72.0,32.5,84.5,22.5';
-  // anchor to compute plausibility (Khurja) — reject matches absurdly far (>900km) unless no better
-  var ANCHOR=[28.25,77.85];
-  function distKm(a,b){var R=6371,x=(b[0]-a[0])*Math.PI/180,y=(b[1]-a[1])*Math.PI/180;var h=Math.sin(x/2)*Math.sin(x/2)+Math.cos(a[0]*Math.PI/180)*Math.cos(b[0]*Math.PI/180)*Math.sin(y/2)*Math.sin(y/2);return R*2*Math.atan2(Math.sqrt(h),Math.sqrt(1-h));}
   toLookup.forEach(function(item){
-    // GOOGLE geocoding first (exact) when key present, else region-biased Nominatim
-    googleGeocode(item.c).then(function(gcoord){
-      if(gcoord){
-        item.coord=gcoord;
-        GEO_CACHE[item.c]=gcoord;
+    geocodeChain(item.c).then(function(res){
+      if(res.value){
+        item.coord=res.value;
+        GEO_CACHE[item.c]=res.value;
         try{localStorage.setItem('fh_geocache',JSON.stringify(GEO_CACHE));}catch(e){}
-        audit('geocode',true,item.c+' (google)');
-        if(--pending===0)done(resolved,missing);
-        return;
+        audit('geocode',true,item.c+' via '+res.source);
+      }else{
+        missing.push(item.c);
+        audit('geocode',false,item.c+' not found by any source');
       }
-      // fallback: region-biased Nominatim
-      var q=encodeURIComponent(item.c);
-      fetch('https://nominatim.openstreetmap.org/search?format=json&limit=5&countrycodes=in&viewbox='+VIEWBOX+'&bounded=1&q='+q,{headers:{'Accept':'application/json'}})
-        .then(function(r){return r.json();})
-        .then(function(d){
-          if((!d||!d.length)){
-            return fetch('https://nominatim.openstreetmap.org/search?format=json&limit=5&countrycodes=in&viewbox='+VIEWBOX+'&q='+q,{headers:{'Accept':'application/json'}}).then(function(r){return r.json();});
-          }
-          return d;
-        })
-        .then(function(d){
-          if(d&&d.length&&d[0].lat){
-            var best=null,bestD=1e9;
-            d.forEach(function(x){
-              if(!x.lat)return;
-              var co=[parseFloat(x.lat),parseFloat(x.lon)];
-              var dd=distKm(ANCHOR,co);
-              if(dd<bestD){bestD=dd;best=co;}
-            });
-            if(best){
-              item.coord=best;
-              GEO_CACHE[item.c]=item.coord;
-              try{localStorage.setItem('fh_geocache',JSON.stringify(GEO_CACHE));}catch(e){}
-              audit('geocode',true,item.c+' @'+Math.round(bestD)+'km');
-            }else{missing.push(item.c);audit('geocode',false,item.c+' not found');}
-          }else{missing.push(item.c);audit('geocode',false,item.c+' not found');}
-        })
-        .catch(function(){missing.push(item.c);audit('geocode',false,item.c+' lookup failed');})
-        .finally(function(){if(--pending===0)done(resolved,missing);});
+      if(--pending===0)done(resolved,missing);
+    }).catch(function(){
+      missing.push(item.c);
+      if(--pending===0)done(resolved,missing);
     });
   });
 }
@@ -3155,24 +3329,25 @@ function refineWithRealRoads(p,valid){
          Round trips close the loop back to it, so the optimiser accounts for the
          return leg when choosing the order, not just the outbound legs. */
       var n=valid.length;
-      var seq=solveOrder(D,n,!!p.isRet);
-      var ordered=seq.map(function(i){return valid[i];});
-      var legs=[];
-      for(var k=0;k<seq.length-1;k++){legs.push(Math.round(D[seq[k]][seq[k+1]]/1000));}
-      var retKm=p.isRet?Math.round(D[seq[seq.length-1]][seq[0]]/1000):0;
-      var total=legs.reduce(function(a,b){return a+b;},0)+(p.isRet?retKm:0);
-      computeAndRender(p,ordered,true,legs,total,retKm);
-      audit('real_route',true,total+' km, '+n+' stops via OSRM');
-      /* Run the AI agent automatically in the background, once, on real numbers —
-         the operator does nothing to trigger this. It only ever re-ranks candidates
-         this app already computed; see AI_ROUTE_SYSTEM_PROMPT above for the contract. */
-      if(ordered.length>=3){
-        var vtypeNow=(document.getElementById('ed-vtype')||{}).value||detectVType(p,p.seats||45);
-        var cands=buildRouteCandidates(p,valid,D,vtypeNow);
-        aiRouteAgent(cands,function(verdict){
-          renderAltRoutes(p,cands,verdict);
-        });
-      }
+      /* Stop order also comes from a ranked chain: Google's optimizer first
+         when a key is present, then our own 2-opt on the real road matrix. */
+      optimizeChain(p,valid,D).then(function(ores){
+        var seq=ores.value||solveOrder(D,n,!!p.isRet);
+        var ordered=seq.map(function(i){return valid[i];});
+        var legs=[];
+        for(var k=0;k<seq.length-1;k++){legs.push(Math.round(D[seq[k]][seq[k+1]]/1000));}
+        var retKm=p.isRet?Math.round(D[seq[seq.length-1]][seq[0]]/1000):0;
+        var total=legs.reduce(function(a,b){return a+b;},0)+(p.isRet?retKm:0);
+        computeAndRender(p,ordered,true,legs,total,retKm);
+        audit('real_route',true,total+' km, '+n+' stops, order via '+ores.source);
+        if(ordered.length>=3){
+          var vtypeNow=(document.getElementById('ed-vtype')||{}).value||detectVType(p,p.seats||45);
+          var cands=buildRouteCandidates(p,valid,D,vtypeNow);
+          aiRouteAgent(cands,function(verdict){
+            renderAltRoutes(p,cands,verdict);
+          });
+        }
+      });
     })
     .catch(function(e){audit('real_route',false,'OSRM matrix unavailable — straight-line estimate shown');});
 }
@@ -3615,35 +3790,42 @@ function renderCalcResult(p,ordered,legs,retKm,total,c){
     var pts=ordered.filter(function(s){return s.coord;}).map(function(s){return s.coord;});
     if(p.isRet&&pts.length)pts.push(pts[0]);
     if(pts.length>=2){
-      var applyKm=function(realKm,src,realToll,realDur){
-        if(realKm>0){
-          liveTotal=realKm;
-          var dl=document.getElementById('distLabel');if(dl)dl.textContent=realKm+' km';
-          var ds=document.getElementById('distSrc');if(ds){ds.textContent=src==='google'?'· Google distance ✓':'· real road distance ✓';ds.style.color='var(--green)';}
-          c.distSource=(src==='google')?'google':'osrm';c.realRoads=true;
-          // Google returns a NON-COMMERCIAL (car) toll — scale it to the real vehicle class
-          if(realToll&&realToll>0){
-            var vtNow=(document.getElementById('ed-vtype')||{}).value||c.vtype;
-            var scaled=googleTollForClass(realToll,vtNow);
-            var et=document.getElementById('ed-toll');if(et){et.value=scaled;c.tollCost=scaled;c.tollSource='google';}
-            c.googleCarToll=realToll; // keep the raw figure so recalc can rescale on vehicle change
-            var tb=document.getElementById('tollBadge');if(tb){tb.textContent=vtNow==='cab'?'✓ Google':'✓ Google × NHAI class';tb.className='toll-badge nhai';}
-          }
-          if(realDur&&realDur>0)c.googleDurSec=realDur;
-          recalc();
-          audit('real_km',true,realKm+' km via '+src+(realToll?(' toll ₹'+realToll+' car-rate'):''));
+      /* Distance and toll now come from the ranked chains, so the fallback
+         order is declared in one place and the winning source is recorded
+         in PROVENANCE for the sources card. */
+      distanceChain(pts,total).then(function(dres){
+        var d=dres.value;
+        if(!d||!d.km){audit('real_km',false,'all distance sources unavailable');return;}
+        liveTotal=d.km;
+        var dl=document.getElementById('distLabel');if(dl)dl.textContent=d.km+' km';
+        var ds=document.getElementById('distSrc');
+        if(ds){
+          ds.textContent='· '+dres.source+(d.via==='estimate'?'':' ✓');
+          ds.style.color=(d.via==='estimate')?'var(--t3)':'var(--green)';
         }
-      };
-      // 1) Google full route (exact distance + traffic-aware time + toll) if key present
-      googleFullRoute(pts,false).then(function(g){
-        if(g&&g.km){applyKm(g.km,'google',g.tollINR,g.durSec);return;}
-        // 2) fallback OSRM (free) — toll stays as NHAI estimate
-        var coordStr=pts.map(function(pt){return pt[1]+','+pt[0];}).join(';');
-        fetch('https://router.project-osrm.org/route/v1/driving/'+coordStr+'?overview=false')
-          .then(function(r){return r.json();})
-          .then(function(d){
-            if(d&&d.routes&&d.routes[0]&&d.routes[0].distance){applyKm(Math.round(d.routes[0].distance/1000),'OSRM',0);}
-          }).catch(function(e){audit('real_km',false,'OSRM unavailable — using road estimate');});
+        c.distSource=d.via;c.realRoads=(d.via!=='estimate');
+        if(d.durSec>0)c.realDurSec=d.durSec;
+        if(d.carToll>0)c.googleCarToll=d.carToll;
+        // now resolve toll through its own chain, using whatever Google gave us
+        var vtNow=(document.getElementById('ed-vtype')||{}).value||c.vtype;
+        var isRoundNow=!!p.isRet||retKm>0;
+        tollChain(ordered,vtNow,isRoundNow,d.carToll||0,d.km).then(function(tres){
+          var t=tres.value;
+          if(t&&t.amount>=0){
+            var et=document.getElementById('ed-toll');
+            if(et){et.value=t.amount;c.tollCost=t.amount;}
+            c.tollSource=tres.tier==='1'?'learned':tres.tier==='2'?'google':tres.tier==='3'?'nhai':tres.tier==='4'?'mixed':'estimate';
+            if(t.plazas&&t.plazas.length)c.tollPlazaList=t.plazas;
+            var tb=document.getElementById('tollBadge');
+            if(tb){
+              tb.textContent=tres.tier==='1'?'★ your saved rate':tres.tier==='2'?(vtNow==='cab'?'✓ Google':'✓ Google × NHAI class'):tres.tier==='3'?'✓ NHAI':tres.tier==='4'?'NHAI+est':'est.';
+              tb.className='toll-badge '+(tres.tier==='5'?'est':tres.tier==='4'?'mixed':'nhai');
+            }
+          }
+          recalc();
+          renderSourcesCard(el,c,true);
+          audit('real_km',true,d.km+' km via '+dres.source+' · toll via '+tres.source);
+        });
       });
     }
   },120);
