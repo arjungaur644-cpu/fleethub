@@ -2819,6 +2819,7 @@ function renderSourcesCard(el,c){
     '</div></div>';
   el.appendChild(card);
 }
+/* Draws the "Other route options" card. Called once immediately with a
    straight-line estimate (isEstimate=true) so the operator sees something
    instantly, then called again with real road km/toll and the AI verdict
    once those finish computing — same DOM node, no flicker of missing content. */
