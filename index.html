@@ -2699,6 +2699,118 @@ function understandTrip(text,cb){
     finish(ai);
   }).catch(function(){finish(null);});
 }
+/* ── AI ROUTE AGENT ──
+   Design decision, written down so it doesn't get "fixed" back to something
+   worse later: an LLM must NEVER be asked to calculate distance, toll, or time
+   itself — models are unreliable at arithmetic and at recalling real-world toll
+   rates, and a wrong number here is a wrong quote to a customer. So the agent
+   is only ever shown numbers this app already computed for real (OSRM road
+   distance, the NHAI toll table, a speed-based time estimate) and is asked to
+   REASON over them — rank the candidates, and explain the trade-off in one
+   line each. It is explicitly forbidden from inventing or adjusting any figure.
+   This keeps the "AI" part honest: judgement, not arithmetic. */
+var AI_ROUTE_SYSTEM_PROMPT=
+  'You are a route-planning assistant for a North Indian bus and taxi operator. '+
+  'You will be given 2-4 CANDIDATE route orders for the same set of stops, each with its '+
+  'REAL computed distance (km), toll cost (₹), and estimated driving time (hours). '+
+  'These numbers are already correct and final — you must not change, recalculate, or '+
+  'second-guess any of them. Do not invent numbers, extra stops, or facts not given to you.\n\n'+
+  'Your job is only to reason over the candidates and answer strictly as JSON:\n'+
+  '{"best_overall":"<candidate name>","fastest":"<candidate name>","cheapest_toll":"<candidate name>",'+
+  '"notes":[{"candidate":"<name>","why":"<one short practical sentence>"}]}\n\n'+
+  'Practical sentence guidance: mention things like which candidate avoids doubling back through a '+
+  'city, which is better if the group wants to do the temple/darshan stop in daylight, or which is '+
+  'safer for a night drive through hill roads — but ONLY if genuinely relevant to the place names given. '+
+  'If two candidates are nearly identical, say so plainly instead of inventing a reason to prefer one. '+
+  'Return JSON only, no markdown, no extra text.';
+function aiRouteAgent(candidates,cb){
+  if(!GKEY||candidates.length<2){cb(null);return;}
+  var lines=candidates.map(function(c){
+    return c.name+': '+c.path.join(' → ')+' — '+c.km+' km, ₹'+c.toll+' toll, ~'+c.hours+' hr driving';
+  }).join('\n');
+  var body={contents:[{parts:[{text:AI_ROUTE_SYSTEM_PROMPT+'\n\nCANDIDATES:\n'+lines}]}],
+    generationConfig:{temperature:0,maxOutputTokens:400}};
+  var settled=false;
+  var finish=function(r){if(settled)return;settled=true;cb(r);};
+  setTimeout(function(){finish(null);},5000); // never block the quote on a slow model
+  fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key='+encodeURIComponent(GKEY),{
+    method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)
+  }).then(function(r){return r.json();}).then(function(d){
+    try{
+      var raw=d.candidates[0].content.parts[0].text.trim().replace(/```json/gi,'').replace(/```/g,'').trim();
+      finish(JSON.parse(raw));
+    }catch(e){finish(null);}
+  }).catch(function(){finish(null);});
+}
+/* Build the same candidate orders shown in the comparison card, but with
+   REAL road km (from the OSRM matrix) and real toll, so the agent above and the
+   card the operator sees are always reasoning over identical, correct numbers. */
+function buildRouteCandidates(p,valid,D,vtype){
+  var n=valid.length;
+  function kmOf(seq){
+    var t=0;
+    for(var i=0;i<seq.length-1;i++)t+=D?D[seq[i]][seq[i+1]]/1000:hav(valid[seq[i]].coord,valid[seq[i+1]].coord)*1.27;
+    if(p.isRet)t+=D?D[seq[seq.length-1]][seq[0]]/1000:hav(valid[seq[seq.length-1]].coord,valid[seq[0]].coord)*1.27;
+    return Math.round(t);
+  }
+  var AVG_SPEED={cab:52,suv:50,tempo:45,minibus:42,bus:40}; // km/h, Indian highway+city mix
+  function build(name,seq){
+    var ord=seq.map(function(i){return valid[i];});
+    var km=kmOf(seq);
+    var toll=computeNhaiToll(ord,vtype,!!p.isRet).total;
+    var hours=Math.round((km/(AVG_SPEED[vtype]||45)+seq.length*0.25)*10)/10; // +15min/stop
+    return{name:name,seq:seq,path:ord.map(function(o){return cap(o.c);}),km:km,toll:toll,hours:hours};
+  }
+  var matrix=D||(function(){
+    var M=[];for(var i=0;i<n;i++){M[i]=[];for(var j=0;j<n;j++){M[i][j]=(i===j)?0:hav(valid[i].coord,valid[j].coord)*1270;}}
+    return M;
+  })();
+  var baseSeq=solveOrder(matrix,n,!!p.isRet);
+  var out=[build('Shortest route',baseSeq)];
+  var rev=[0].concat(baseSeq.slice(1).reverse());
+  if(kmOf(rev)!==kmOf(baseSeq))out.push(build('Reverse direction',rev));
+  var far=[0].concat(baseSeq.slice(1).sort(function(a,b){
+    return hav(valid[0].coord,valid[b].coord)-hav(valid[0].coord,valid[a].coord);
+  }));
+  if(kmOf(far)!==kmOf(baseSeq))out.push(build('Farthest first',far));
+  return out;
+}
+function cap2(s){return s?String(s):'';}
+/* Draws the "Other route options" card. Called once immediately with a
+   straight-line estimate (isEstimate=true) so the operator sees something
+   instantly, then called again with real road km/toll and the AI verdict
+   once those finish computing — same DOM node, no flicker of missing content. */
+function renderAltRoutes(p,cands,verdict,isEstimate){
+  var host=document.getElementById('altRoutesHost');
+  if(!host)return;
+  var bestKm=Math.min.apply(null,cands.map(function(c){return c.km;}));
+  var vh='';
+  if(verdict&&verdict.notes){
+    vh='<div style="font-size:0.72rem;background:#EFEAFE;color:#6D28D9;font-weight:600;padding:0.5rem 0.6rem;border-radius:8px;margin-bottom:0.5rem;line-height:1.5">'+
+      '🤖 <b>AI recommendation:</b> '+cap2(verdict.best_overall)+' overall'+
+      (verdict.fastest&&verdict.fastest!==verdict.best_overall?' · '+cap2(verdict.fastest)+' is fastest':'')+
+      (verdict.cheapest_toll&&verdict.cheapest_toll!==verdict.best_overall?' · '+cap2(verdict.cheapest_toll)+' has the lowest toll':'')+
+      '</div>';
+  }
+  var oh='';
+  cands.forEach(function(o){
+    var diff=o.km-bestKm;
+    var noteMatch=verdict&&verdict.notes?verdict.notes.filter(function(n){return n.candidate===o.name;})[0]:null;
+    var note=noteMatch?noteMatch.why:'';
+    var isBest=verdict?o.name===verdict.best_overall:diff===0;
+    oh+='<div style="padding:0.55rem 0.5rem;border-bottom:1px solid var(--line);margin:0 -0.5rem'+(isBest?';background:var(--green-bg);border-radius:8px':'')+'">'+
+      '<div style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap">'+
+        '<b style="font-size:0.82rem">'+o.name+'</b>'+(isBest?' <span style="font-size:0.62rem;color:var(--green);font-weight:700">★ RECOMMENDED</span>':'')+
+        '<span style="font-size:0.72rem;font-weight:700;color:'+(diff===0?'var(--green)':'var(--t3)')+';margin-left:auto">'+o.km+' km'+(diff>0?' (+'+diff+')':'')+'</span>'+
+      '</div>'+
+      '<div style="font-size:0.68rem;color:var(--t3);margin:2px 0 3px">₹'+o.toll.toLocaleString()+' toll · ~'+o.hours+' hr driving'+(note?' · '+note:'')+'</div>'+
+      '<div style="font-size:0.72rem;line-height:1.45">'+o.path.join(' → ')+(p.isRet?' → '+o.path[0]:'')+'</div>'+
+    '</div>';
+  });
+  host.innerHTML='<div class="rescard"><div class="rc-h">🔀 Other route options'+(isEstimate?' <span style="font-size:0.58rem;color:var(--t3);font-weight:400;margin-left:auto">estimating…</span>':'')+'</div><div class="rc-b">'+
+    vh+
+    '<div style="font-size:0.66rem;color:var(--t3);margin-bottom:0.3rem">'+(isEstimate?'Straight-line estimate — refining with real road distance and toll…':'Real road distance and toll for each option.')+'</div>'+oh+'</div></div>';
+}
 var PLACE_OK={};
 try{PLACE_OK=JSON.parse(localStorage.getItem('fh_place_ok')||'{}');}catch(e){PLACE_OK={};}
 /* Stops the operator chose to leave out — excluded from every future route. */
@@ -2959,7 +3071,9 @@ function buildCostObj(p,ordered,legs,total,retKm,realRoads){
   var isRound=/round|return|wapas|واپس/i.test(document.getElementById('calcInp').value||'')|| (retKm>0);
   var nhai=computeNhaiToll(ordered,vtype,isRound);
   var tollCost, tollSource, tollPlazaList=[];
-  if(nhai.covered && nhai.total>0){
+  if(nhai.learned){
+    tollCost=nhai.total; tollSource='learned'; tollPlazaList=nhai.plazas;
+  }else if(nhai.covered && nhai.total>0){
     tollCost=nhai.total; tollSource='nhai'; tollPlazaList=nhai.plazas;
   }else if(nhai.partial && nhai.total>0){
     // partial: real plazas we know + estimate for uncovered km
@@ -3006,6 +3120,16 @@ function refineWithRealRoads(p,valid){
       var total=legs.reduce(function(a,b){return a+b;},0)+(p.isRet?retKm:0);
       computeAndRender(p,ordered,true,legs,total,retKm);
       audit('real_route',true,total+' km, '+n+' stops via OSRM');
+      /* Run the AI agent automatically in the background, once, on real numbers —
+         the operator does nothing to trigger this. It only ever re-ranks candidates
+         this app already computed; see AI_ROUTE_SYSTEM_PROMPT above for the contract. */
+      if(ordered.length>=3){
+        var vtypeNow=(document.getElementById('ed-vtype')||{}).value||detectVType(p,p.seats||45);
+        var cands=buildRouteCandidates(p,valid,D,vtypeNow);
+        aiRouteAgent(cands,function(verdict){
+          renderAltRoutes(p,cands,verdict);
+        });
+      }
     })
     .catch(function(e){audit('real_route',false,'OSRM matrix unavailable — straight-line estimate shown');});
 }
@@ -3070,7 +3194,30 @@ var LEG_PLAZAS={
   'jaipur-pushkar':['rj_kishangarh','rj_nasirabad']
 };
 // Compute real toll for a route from NHAI plaza data. Returns {total, plazas:[{name,amt}], covered:bool}
+/* ── LEARNED TOLL CACHE ──
+   This is the honest version of "auto-learning": every time an operator
+   corrects a toll figure, it is saved against that exact route + vehicle class
+   and reused first on every future quote for the same route. It is real,
+   persistent, and improves with use — it is NOT a retrained neural model,
+   and no single operator's corrections improve any other operator's app
+   (there is no shared backend). A true cross-operator learning system would
+   need a small server + database logging every (route, vehicle, corrected
+   toll) triple and serving the median back — worth building once FleetHub
+   has real usage volume to learn from. */
+var TOLL_LEARNED={};
+try{TOLL_LEARNED=JSON.parse(localStorage.getItem('fh_toll_learned')||'{}');}catch(e){TOLL_LEARNED={};}
+function tollLearnKey(ordered,vtype){
+  return ordered.map(function(o){return (o.c||'').toLowerCase().replace(/\s+/g,'');}).join('>')+'|'+vtype;
+}
+function saveLearnedToll(ordered,vtype,amount){
+  var k=tollLearnKey(ordered,vtype);
+  TOLL_LEARNED[k]=amount;
+  try{localStorage.setItem('fh_toll_learned',JSON.stringify(TOLL_LEARNED));}catch(e){}
+}
 function computeNhaiToll(ordered,vtype,isRound){
+  // An operator's own past correction for this exact route+vehicle beats any table or estimate.
+  var learned=TOLL_LEARNED[tollLearnKey(ordered,vtype)];
+  if(learned!=null)return{total:learned,plazas:[{name:'Your saved toll for this route',amt:learned}],covered:true,partial:false,learned:true};
   var cls=(vtype==='cab')?'car':(vtype==='suv')?'suv':(vtype==='tempo')?'tempo':(vtype==='minibus')?'minibus':(vtype==='bus')?'bus':'tempo';
   var seen={},plazas=[],total=0,legsMatched=0,legsTotal=0;
   for(var i=0;i<ordered.length-1;i++){
@@ -3236,44 +3383,14 @@ function renderCalcResult(p,ordered,legs,retKm,total,c){
   el.appendChild(ro);
   /* ── ALTERNATIVE ORDERS ──
      The shortest route is not always the one an operator wants: darshan timings,
-     overnight halts and customer preference matter. So show the realistic
-     alternatives with their true cost in km, and let the operator decide. */
+     overnight halts and customer preference matter. Show a straight-line estimate
+     immediately; renderAltRoutes() overwrites this with real road km, real toll,
+     and the AI agent's verdict as soon as those finish computing. */
   if(ordered.length>=3){
-    var alt=document.createElement('div');alt.className='rescard';
-    var coA=ordered.map(function(o){return o.coord;});
-    function pathKm(seq){
-      var t=0;
-      for(var i=0;i<seq.length-1;i++)t+=hav(coA[seq[i]],coA[seq[i+1]])*1.27;
-      if(p.isRet)t+=hav(coA[seq[seq.length-1]],coA[seq[0]])*1.27;
-      return Math.round(t);
-    }
-    var baseSeq=ordered.map(function(_,i){return i;});
-    var options=[{name:'Shortest route',seq:baseSeq,note:'least distance and fuel'}];
-    // reverse loop: same stops, opposite direction — often better for arrival timings
-    var rev=[0].concat(baseSeq.slice(1).reverse());
-    if(pathKm(rev)!==pathKm(baseSeq))options.push({name:'Reverse direction',seq:rev,note:'same stops, opposite way round'});
-    // farthest-first: get the long haul done on day one, short legs later
-    var far=[0].concat(baseSeq.slice(1).sort(function(a,b){
-      return hav(coA[0],coA[b])-hav(coA[0],coA[a]);
-    }));
-    options.push({name:'Farthest first',seq:far,note:'long drive on day 1, shorter legs after'});
-    var bestKm=Math.min.apply(null,options.map(function(o){return pathKm(o.seq);}));
-    var oh='';
-    options.forEach(function(o){
-      var km=pathKm(o.seq);
-      var diff=km-bestKm;
-      oh+='<div style="padding:0.55rem 0;border-bottom:1px solid var(--line)">'+
-        '<div style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap">'+
-          '<b style="font-size:0.82rem">'+o.name+'</b>'+
-          '<span style="font-size:0.72rem;font-weight:700;color:'+(diff===0?'var(--green)':'var(--t3)')+'">'+km+' km'+(diff>0?' (+'+diff+')':' ✓')+'</span>'+
-        '</div>'+
-        '<div style="font-size:0.68rem;color:var(--t3);margin:2px 0 3px">'+o.note+'</div>'+
-        '<div style="font-size:0.72rem;line-height:1.45">'+o.seq.map(function(i){return cap(ordered[i].c);}).join(' → ')+(p.isRet?' → '+cap(ordered[0].c):'')+'</div>'+
-      '</div>';
-    });
-    alt.innerHTML='<div class="rc-h">🔀 Other route options</div><div class="rc-b">'+
-      '<div style="font-size:0.68rem;color:var(--t3);margin-bottom:0.3rem">Distances are estimates for comparison. The quote above uses the shortest route.</div>'+oh+'</div>';
-    el.appendChild(alt);
+    var altHost=document.createElement('div');altHost.id='altRoutesHost';
+    el.appendChild(altHost);
+    var estCands=buildRouteCandidates(p,ordered,null,c.vtype);
+    renderAltRoutes(p,estCands,null,true);
   }
   // cost — TRANSPARENT & EDITABLE. Every input recalculates live.
   var co=document.createElement('div');co.className='rescard';
@@ -3292,7 +3409,7 @@ function renderCalcResult(p,ordered,legs,retKm,total,c){
       '<div class="cl-amt" id="amt-fuel">₹'+c.fuelCost.toLocaleString()+'</div></div>'+
     // TOLL — real NHAI plaza data when available, else per-km estimate
     '<div class="cost-line"><div class="cl-label">🪙 Toll tax'+
-      (c.tollSource==='google'?' <span class="toll-badge nhai" id="tollBadge">✓ Google</span>':(c.tollSource==='nhai'?' <span class="toll-badge nhai" id="tollBadge">✓ NHAI</span>':(c.tollSource==='mixed'?' <span class="toll-badge mixed" id="tollBadge">NHAI+est</span>':' <span class="toll-badge est" id="tollBadge">est.</span>')))+
+      (c.tollSource==='learned'?' <span class="toll-badge nhai" id="tollBadge">★ your saved rate</span>':(c.tollSource==='google'?' <span class="toll-badge nhai" id="tollBadge">✓ Google</span>':(c.tollSource==='nhai'?' <span class="toll-badge nhai" id="tollBadge">✓ NHAI</span>':(c.tollSource==='mixed'?' <span class="toll-badge mixed" id="tollBadge">NHAI+est</span>':' <span class="toll-badge est" id="tollBadge">est.</span>'))))+
       '</div>'+
       '<div class="cl-formula">'+
         (function(){
@@ -3392,6 +3509,19 @@ function renderCalcResult(p,ordered,legs,retKm,total,c){
   setTimeout(function(){
     ['ed-mileage','ed-fuel','ed-toll','ed-days','ed-driverday','ed-statetax','ed-parking','ed-misc','profitPct'].forEach(function(id){
       var el2=document.getElementById(id);if(el2){el2.addEventListener('input',recalc);el2.setAttribute('type','number');}
+    });
+    /* Remember a toll correction once the operator finishes editing it (on blur,
+       not every keystroke) so the exact route + vehicle gets this figure automatically
+       next time it is quoted, instead of the table estimate. */
+    var tollEl=document.getElementById('ed-toll');
+    if(tollEl)tollEl.addEventListener('blur',function(){
+      var v=+tollEl.value||0;
+      if(v>0&&v!==nhai.total){
+        var vtNow=(document.getElementById('ed-vtype')||{}).value||c.vtype;
+        saveLearnedToll(ordered,vtNow,v);
+        var tb=document.getElementById('tollBadge');if(tb){tb.textContent='★ your saved rate';tb.className='toll-badge nhai';}
+        showToast('✓ Toll saved — used automatically next time for this route');
+      }
     });
     var vt=document.getElementById('ed-vtype');
     if(vt)vt.addEventListener('change',function(){recalc(true);});
