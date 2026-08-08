@@ -2407,7 +2407,23 @@ var ALIAS={
   'goverdhan':'govardhan','goverdhan parikrama':'govardhan',
   'sikandarabad':'sikandrabad','gurugram':'gurgaon','new delhi':'delhi',
   'vrindavan dham':'vrindavan','banke bihari':'vrindavan','prem mandir':'vrindavan','iskcon vrindavan':'vrindavan',
-  'reengus':'ringas','vaishno devi':'katra','karni mata':'deshnok','jewar airport':'jewar'
+  'reengus':'ringas','vaishno devi':'katra','karni mata':'deshnok','jewar airport':'jewar',
+  /* Hindi speech input returns Devanagari. Without these the parser hands raw
+     Hindi text to the geocoder, which usually fails or matches the wrong place. */
+  'खुर्जा':'khurja','बुलंदशहर':'bulandshahr','जहांगीराबाद':'jahangirabad','जेवर':'jewar',
+  'अलीगढ़':'aligarh','अलीगढ':'aligarh','सिकंदराबाद':'sikandrabad','गुलावठी':'gulaothi',
+  'दिल्ली':'delhi','नोएडा':'noida','गाजियाबाद':'ghaziabad','मेरठ':'meerut','हापुड़':'hapur',
+  'आगरा':'agra','मथुरा':'mathura','वृंदावन':'vrindavan','गोवर्धन':'govardhan','बरसाना':'barsana',
+  'जयपुर':'jaipur','अजमेर':'ajmer','पुष्कर':'pushkar','जोधपुर':'jodhpur','उदयपुर':'udaipur',
+  'जैसलमेर':'jaisalmer','बीकानेर':'bikaner','सीकर':'sikar','अलवर':'alwar','भरतपुर':'bharatpur',
+  'खाटू श्याम':'khatu shyam','खाटूश्याम':'khatu shyam','खाटू':'khatu shyam',
+  'मेहंदीपुर बालाजी':'mehendipur balaji','मेहंदीपुर':'mehendipur balaji','सालासर':'salasar',
+  'हरिद्वार':'haridwar','ऋषिकेश':'rishikesh','देहरादून':'dehradun','मसूरी':'mussoorie',
+  'नैनीताल':'nainital','अल्मोड़ा':'almora','रानीखेत':'ranikhet','बागेश्वर':'bageshwar',
+  'बद्रीनाथ':'badrinath','केदारनाथ':'kedarnath','गंगोत्री':'gangotri','यमुनोत्री':'yamunotri',
+  'लखनऊ':'lucknow','कानपुर':'kanpur','वाराणसी':'varanasi','अयोध्या':'ayodhya',
+  'प्रयागराज':'prayagraj','चित्रकूट':'chitrakoot','बरेली':'bareilly','मुरादाबाद':'moradabad',
+  'शिमला':'shimla','मनाली':'manali','चंडीगढ़':'chandigarh','अमृतसर':'amritsar','कटरा':'katra'
 };
 /* Snap a typed name to a known place when it is clearly the same word.
    Returns the corrected name, or the original if no confident match. */
@@ -2501,13 +2517,15 @@ function parseTrip(text){
     s=s.replace(/[^a-zA-Z\u0900-\u097F\s]/g,'').trim().toLowerCase();
     if(s.length<2)return;
     // If the whole segment is a known place (incl. multi-word like "khatu shyam"), keep it
-    if(CC[s]){cities.push(s);return;}
+    if(CC[s]||ALIAS[s]){cities.push(s);return;}
     // Else split on spaces, but greedily keep known two-word places together
     var words=s.split(/\s+/);
     var i=0;
     while(i<words.length){
+      var three=(i+2<words.length)?(words[i]+' '+words[i+1]+' '+words[i+2]):null;
       var two=(i+1<words.length)?(words[i]+' '+words[i+1]):null;
-      if(two&&CC[two]){cities.push(two);i+=2;}
+      if(three&&(CC[three]||ALIAS[three])){cities.push(three);i+=3;}
+      else if(two&&(CC[two]||ALIAS[two])){cities.push(two);i+=2;}
       else{cities.push(words[i]);i+=1;}
     }
   });
@@ -2520,7 +2538,14 @@ function parseTrip(text){
   /* "back"/"wapas" are return INSTRUCTIONS, not destinations — they are detected
      separately as isRet below and must never be geocoded as a place. */
   var STOP={'ki':1,'ka':1,'ke':1,'se':1,'me':1,'aur':1,'wala':1,'wali':1,'ko':1,'ji':1,'the':1,'and':1,'for':1,'via':1,'trip':1,'day':1,'days':1,'seat':1,'seater':1,'ac':1,'bus':1,'tempo':1,'cab':1,'taxi':1,'traveller':1,'round':1,'one':1,'way':1,'return':1,
-    'back':1,'wapas':1,'wapis':1,'vapas':1,'vapis':1,'wapsi':1,'vapsi':1,'waapas':1,'returning':1,'again':1,'same':1,'start':1,'starting':1,'pickup':1,'pick':1,'drop':1,'point':1,'home':1,'origin':1,'end':1,'ending':1,'last':1,'first':1,'then':1,'phir':1,'fir':1,'hokar':1,'hote':1,'hue':1,'yatra':1,'tour':1,'darshan':1,'jana':1,'jaana':1,'aana':1,'chalna':1,'nikalna':1,'वापस':1,'वापसी':1,'फिर':1,'दर्शन':1,'यात्रा':1};
+    'back':1,'wapas':1,'wapis':1,'vapas':1,'vapis':1,'wapsi':1,'vapsi':1,'waapas':1,'returning':1,'again':1,'same':1,'start':1,'starting':1,'pickup':1,'pick':1,'drop':1,'point':1,'home':1,'origin':1,'end':1,'ending':1,'last':1,'first':1,'then':1,'phir':1,'fir':1,'hokar':1,'hote':1,'hue':1,'yatra':1,'tour':1,'darshan':1,'jana':1,'jaana':1,'aana':1,'chalna':1,'nikalna':1,'वापस':1,'वापसी':1,'फिर':1,'दर्शन':1,'यात्रा':1,
+    /* Spoken-sentence filler. People say "mujhe Khurja se Jaipur jana hai",
+       so these must never be mistaken for place names. */
+    'mujhe':1,'muje':1,'hai':1,'hain':1,'haye':1,'chahiye':1,'chahiye_':1,'karna':1,'karni':1,'lena':1,
+    'gadi':1,'gaadi':1,'bus':1,'chaiye':1,'booking':1,'book':1,'rate':1,'kitna':1,'kitne':1,'batao':1,
+    'kya':1,'koi':1,'ek':1,'do':1,'teen':1,'char':1,'liye':1,'sath':1,'saath':1,'raha':1,'rahe':1,
+    'मुझे':1,'है':1,'हैं':1,'चाहिए':1,'जाना':1,'आना':1,'गाड़ी':1,'बस':1,'को':1,'का':1,'की':1,'के':1,
+    'कितना':1,'कितने':1,'बताओ':1,'क्या':1,'एक':1,'लिए':1,'साथ':1,'रहा':1,'दिन':1,'सीट':1,'सवारी':1};
   out=out.filter(function(c){
     if(CC[c])return true;               // known place → always keep
     if(STOP[c])return false;            // junk word → drop
@@ -3385,15 +3410,42 @@ function fallbackCopy(text){
     showToast(ok?'✅ Quote copied!':'Long-press the quote to copy');
   }catch(e){showToast('Long-press the quote text to copy');}
 }
+/* Safety net for speech: collapse immediately-repeated words and phrases.
+   Even with indexed results, phone dictation sometimes stutters a phrase.
+   Only CONSECUTIVE repeats are removed, so "Khurja to Khurja" style real
+   round trips written apart in the sentence are left untouched. */
+function dedupeSpeech(s){
+  if(!s)return s;
+  var w=s.split(/\s+/),out=[];
+  for(var i=0;i<w.length;i++){
+    // drop a word identical to the one before it
+    if(out.length&&out[out.length-1].toLowerCase()===w[i].toLowerCase())continue;
+    out.push(w[i]);
+  }
+  // drop a 2-word or 3-word group identical to the group right before it
+  for(var n=3;n>=2;n--){
+    var changed=true;
+    while(changed){
+      changed=false;
+      for(var k=0;k+2*n<=out.length;k++){
+        var a=out.slice(k,k+n).join(' ').toLowerCase();
+        var b=out.slice(k+n,k+2*n).join(' ').toLowerCase();
+        if(a===b){out.splice(k+n,n);changed=true;break;}
+      }
+    }
+  }
+  return out.join(' ');
+}
 /* mic — smooth voice input like WhatsApp: continuous, appends, tap to stop */
-var rec=null,listening=false,voiceBase='';
+var rec=null,listening=false,voiceBase='',userStopped=false;
 document.getElementById('calcMic').addEventListener('click',function(){
   var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   if(!SR){showToast('🎤 Voice needs Chrome browser. Please type the trip instead.');return;}
   var mb=document.getElementById('calcMic');
   var inp=document.getElementById('calcInp');
   // tap again while listening -> stop (like WhatsApp send)
-  if(listening){try{rec.stop();}catch(e){}return;}
+  if(listening){userStopped=true;try{rec.stop();}catch(e){}return;}
+  userStopped=false;
   rec=new SR();
   rec.lang='hi-IN';            // recognizes Hindi + Indian-English place names
   rec.interimResults=true;     // live transcription
@@ -3401,21 +3453,29 @@ document.getElementById('calcMic').addEventListener('click',function(){
   rec.maxAlternatives=1;
   // preserve any text already typed, append new speech after it
   voiceBase=inp.value.trim();
-  var finalText=voiceBase;
+  /* Android Chrome re-delivers results that were already marked final. The old
+     code appended every delivery, which is why one phrase became "मुझे मुझे मुझे…".
+     Storing each final result AGAINST ITS INDEX makes re-delivery harmless:
+     the same index simply overwrites itself instead of stacking up. */
+  var finals={};
   rec.onstart=function(){
     listening=true;mb.classList.add('rec');mb.textContent='⏹';
     document.getElementById('calcClear').classList.remove('hidden');
     showToast('🎤 Listening… speak the trip, then tap ⏹ to stop');
   };
   rec.onresult=function(e){
-    var interim='';
-    for(var i=e.resultIndex;i<e.results.length;i++){
-      var tr=e.results[i][0].transcript;
-      if(e.results[i].isFinal){finalText=(finalText+' '+tr).trim();}
-      else{interim+=tr;}
+    for(var i=0;i<e.results.length;i++){
+      if(e.results[i].isFinal)finals[i]=e.results[i][0].transcript;
     }
-    // show committed text + live interim
-    inp.value=(finalText+' '+interim).trim();
+    var interim='';
+    for(var j=e.resultIndex;j<e.results.length;j++){
+      if(!e.results[j].isFinal)interim+=e.results[j][0].transcript;
+    }
+    var joined=Object.keys(finals)
+      .sort(function(a,b){return a-b;})
+      .map(function(k){return finals[k];})
+      .join(' ');
+    inp.value=dedupeSpeech((voiceBase+' '+joined+' '+interim).trim());
   };
   rec.onerror=function(ev){
     listening=false;mb.classList.remove('rec');mb.textContent='🎤';
@@ -3426,6 +3486,12 @@ document.getElementById('calcMic').addEventListener('click',function(){
     audit('voice_input',false,ev.error||'unknown');
   };
   rec.onend=function(){
+    /* Android Chrome ends the session on a short pause even with continuous=true.
+       If the operator has not tapped stop, resume listening rather than treating
+       a mid-sentence breath as the end of the trip description. */
+    if(!userStopped){
+      try{rec.start();return;}catch(e){/* fall through and finish */}
+    }
     listening=false;mb.classList.remove('rec');mb.textContent='🎤';
     var said=inp.value.trim();
     if(said&&said!==voiceBase){
@@ -3440,7 +3506,7 @@ document.getElementById('calcMic').addEventListener('click',function(){
 (function(){
   var cb=document.getElementById('calcClear');
   if(cb)cb.addEventListener('click',function(){
-    if(listening){try{rec.stop();}catch(e){}}
+    if(listening){userStopped=true;try{rec.stop();}catch(e){}}
     document.getElementById('calcInp').value='';
     cb.classList.add('hidden');
     document.getElementById('calcInp').focus();
