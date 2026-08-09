@@ -2890,7 +2890,7 @@ function cap2(s){return s?String(s):'';}
    estimate is visible rather than hidden. */
 var CHAIN_DEFS={
   language:{icon:'🗣️',title:'Understanding your text',tiers:['Gemini 1.5 Flash','FleetHub rule parser']},
-  places:{icon:'📍',title:'Place coordinates',tiers:['FleetHub verified places','Google Geocoding API','OpenStreetMap Nominatim']},
+  places:{icon:'📍',title:'Place coordinates',tiers:['Google Places knowledge base','FleetHub verified places','Google Geocoding API','OpenStreetMap Nominatim']},
   distance:{icon:'📏',title:'Distance & time',tiers:['Google Routes API','OSRM (OpenStreetMap)','Geometric estimate']},
   optimize:{icon:'🔀',title:'Stop order',tiers:['Google Route Optimization','2-opt on real road matrix','2-opt on straight-line']},
   toll:{icon:'🪙',title:'Toll',tiers:['Your saved rate','Google Routes API × NHAI class','NHAI plaza rates','NHAI plazas + estimate','Per-km estimate']}
@@ -2943,6 +2943,21 @@ function renderAuditCard(el,c,p,ordered,total){
   var unresolved=ordered.filter(function(o){return !o.coord;}).length;
   if(unresolved===0)add('pass','All '+ordered.length+' stops located','Each stop resolved to real coordinates before any distance was measured.');
   else add('fail',unresolved+' stop(s) could not be located','Those stops were left out, so the distance is short of the real trip.');
+
+  /* 2b. Which real place each stop became. This is the check that catches the
+     class of error where a name silently matched the wrong town in another state. */
+  var identified=ordered.filter(function(o){return PLACE_FACTS[o.c];});
+  if(identified.length){
+    var detail=identified.map(function(o){
+      var f=PLACE_FACTS[o.c];
+      var sub=[f.district,f.state].filter(Boolean).join(', ');
+      return cap(o.c)+' → '+f.name+(sub?' ('+sub+')':'');
+    }).join(' · ');
+    add(identified.length===ordered.length?'pass':'info','Stops identified by name and state',detail+
+      '. If any of these is the wrong town, tap it in the route list to change it.');
+  }else{
+    add('info','Stops matched from the built-in table','No knowledge-base lookup ran, so district and state could not be confirmed for each stop. Add a Google key in Accuracy settings for full verification.');
+  }
 
   // 3. Return leg consistency
   if(p.isRet)add('pass','Return leg included','Round trip detected, so the drive back to '+cap(ordered[0].c)+' is counted in both distance and toll.');
@@ -3135,6 +3150,56 @@ function withTimeout(promise,ms){
       .catch(function(){if(!done){done=true;resolve(null);}});
   });
 }
+/* -- PLACE KNOWLEDGE LAYER --
+   Google Places Text Search over ~200M places. This is the structural answer
+   to a whole class of bugs: the app previously resolved names against a
+   hand-written table of a few hundred places, so ANY place not on that list
+   ("wagha border", "amarnath", a new village) either failed or matched
+   something wrong -- and each one had to be added by hand, forever.
+
+   Places Text Search understands full names, misspellings, Hindi, landmarks
+   and POIs, and returns a canonical place with address components, so we can
+   show the operator the real state and district instead of guessing. The
+   hand-written table stays underneath as an instant offline fallback.
+
+   Uses the (New) API on places.googleapis.com, which supports browser CORS via
+   the X-Goog-Api-Key header. The legacy maps.googleapis.com/maps/api/place
+   endpoints do NOT support CORS, which is why they are not used here. */
+function googlePlacesText(query,maxResults){
+  if(!GKEY||!query)return Promise.resolve(null);
+  var body={
+    textQuery:query+', India',
+    regionCode:'IN',
+    languageCode:'en',
+    maxResultCount:maxResults||5,
+    locationBias:{circle:{center:{latitude:28.25,longitude:77.85},radius:600000}}
+  };
+  return fetch('https://places.googleapis.com/v1/places:searchText',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','X-Goog-Api-Key':GKEY,
+      'X-Goog-FieldMask':'places.id,places.displayName,places.formattedAddress,places.location,places.types,places.addressComponents'},
+    body:JSON.stringify(body)
+  }).then(function(r){return r.json();}).then(function(d){
+    if(!d||!d.places||!d.places.length)return null;
+    return d.places.map(function(pl){
+      var state='',district='';
+      (pl.addressComponents||[]).forEach(function(ac){
+        var ty=ac.types||[];
+        if(ty.indexOf('administrative_area_level_1')>=0)state=ac.longText||ac.shortText||'';
+        if(ty.indexOf('administrative_area_level_3')>=0||ty.indexOf('administrative_area_level_2')>=0){
+          if(!district)district=ac.longText||ac.shortText||'';
+        }
+      });
+      return{
+        name:(pl.displayName&&pl.displayName.text)||query,
+        addr:pl.formattedAddress||'',
+        state:state,district:district,
+        coord:pl.location?[pl.location.latitude,pl.location.longitude]:null,
+        id:pl.id||'',types:pl.types||[]
+      };
+    }).filter(function(x){return x.coord;});
+  }).catch(function(){return null;});
+}
 /* -- CHAIN 1: PLACE -> COORDINATES --
    1. Built-in verified table (instant, hand-checked for this region)
    2. Google Geocoding API (best coverage, needs key)
@@ -3162,14 +3227,28 @@ function geocodeChain(name){
      straight from the person who knows the trip. */
   var hint=PLACE_HINTS[name]?(name+', '+PLACE_HINTS[name]):name;
   return runChain('places',[
-    {label:'FleetHub verified places',tier:'1',note:'hand-checked local coordinates',
+    {label:'Google Places knowledge base',tier:'1',note:'200M+ places, understands landmarks, POIs and misspellings',
+     run:function(n){
+       if(!GKEY)return null;
+       return withTimeout(googlePlacesText(hint,3),6000).then(function(list){
+         if(!list||!list.length)return null;
+         var top=list[0];
+         // keep what Places knows about this stop for display and auditing
+         PLACE_FACTS[n]={name:top.name,addr:top.addr,state:top.state,district:top.district,id:top.id};
+         return top.coord;
+       });
+     }},
+    {label:'FleetHub verified places',tier:'2',note:'hand-checked local coordinates, works offline',
      run:function(n){return CC[n]||null;}},
-    {label:'Google Geocoding API',tier:'2',note:'region-biased to North India',
+    {label:'Google Geocoding API',tier:'3',note:'region-biased to North India',
      run:function(n){return GKEY?withTimeout(googleGeocode(hint),5000):null;}},
-    {label:'OpenStreetMap Nominatim',tier:'3',note:'free, region-biased',
+    {label:'OpenStreetMap Nominatim',tier:'4',note:'free, region-biased',
      run:function(n){return withTimeout(nominatimGeocode(hint),6000);}}
   ],name,function(v){return v&&v.length===2&&isFinite(v[0])&&isFinite(v[1]);});
 }
+/* What the knowledge layer actually resolved each stop to — shown to the
+   operator so a wrong match is visible immediately, not buried in a map pin. */
+var PLACE_FACTS={};
 /* -- CHAIN 2: ROUTE DISTANCE + DRIVING TIME --
    1. Google Routes API - real roads, traffic-aware duration
    2. OSRM on OpenStreetMap - real roads, free, no key
@@ -3301,6 +3380,26 @@ function markPlaceConfirmed(name){
    Bageshwar exists in Uttarakhand AND in Madhya Pradesh — silently picking the
    nearest one can put an 800 km error into the quote, so we ask instead. */
 function findCandidates(name){
+  /* Ask the knowledge layer first — it returns proper place names with state and
+     district, which is what makes "which Bageshwar?" answerable at a glance.
+     Nominatim remains the free fallback when there is no key. */
+  if(GKEY){
+    return withTimeout(googlePlacesText(name,6),6000).then(function(list){
+      if(list&&list.length){
+        var ANCHOR=[28.25,77.85],groups=[];
+        list.forEach(function(x){
+          for(var i=0;i<groups.length;i++){if(hav(groups[i].co,x.coord)<60)return;}
+          groups.push({co:x.coord,label:x.addr||x.name,title:x.name,
+                       state:x.state,district:x.district,km:Math.round(hav(ANCHOR,x.coord))});
+        });
+        return groups.sort(function(a,b){return a.km-b.km;});
+      }
+      return nominatimCandidates(name);
+    });
+  }
+  return nominatimCandidates(name);
+}
+function nominatimCandidates(name){
   return fetch('https://nominatim.openstreetmap.org/search?format=json&limit=8&countrycodes=in&q='+encodeURIComponent(name))
     .then(function(r){return r.json();})
     .then(function(d){
@@ -3309,9 +3408,11 @@ function findCandidates(name){
       d.forEach(function(x){
         if(!x.lat)return;
         var co=[parseFloat(x.lat),parseFloat(x.lon)];
-        // collapse results that are effectively the same place (<60 km apart)
         for(var i=0;i<groups.length;i++){if(hav(groups[i].co,co)<60)return;}
-        groups.push({co:co,label:x.display_name,km:Math.round(hav(ANCHOR,co))});
+        var parts=(x.display_name||'').split(',').map(function(t){return t.trim();});
+        groups.push({co:co,label:x.display_name,title:parts[0],
+                     state:parts.length>2?parts[parts.length-2]:'',district:parts[1]||'',
+                     km:Math.round(hav(ANCHOR,co))});
       });
       return groups.sort(function(a,b){return a.km-b.km;});
     })
@@ -3396,20 +3497,21 @@ function askPlaceChoice(name,preCands,onPicked){
     }
     box.innerHTML='';
     list.slice(0,5).forEach(function(it){
-      var parts=it.label.split(',').map(function(s){return s.trim();});
-      var town=parts[0];
-      var state=parts.length>2?parts[parts.length-2]:parts[parts.length-1];
+      var town=it.title||(it.label||'').split(',')[0];
+      var state=it.state||'';
+      var sub=[it.district,state].filter(Boolean).join(', ')||(it.label||'').split(',').slice(1,3).join(', ');
       var b=document.createElement('button');
       b.className='cbtn';
       b.style.cssText='text-align:left;width:100%;padding:0.6rem 0.7rem;font-size:0.8rem;line-height:1.4';
-      b.innerHTML='📍 <b>'+town+'</b> — <span style="color:var(--orange);font-weight:700">'+state+'</span>'+
-        '<br><span style="font-size:0.67rem;color:var(--t3)">'+parts.slice(1,4).join(', ')+' · about '+it.km+' km from Khurja</span>';
+      b.innerHTML='📍 <b>'+town+'</b>'+(state?' — <span style="color:var(--orange);font-weight:700">'+state+'</span>':'')+
+        '<br><span style="font-size:0.67rem;color:var(--t3)">'+sub+' · about '+it.km+' km from Khurja</span>';
       b.addEventListener('click',function(){
         GEO_CACHE[name]=it.co;
         try{localStorage.setItem('fh_geocache',JSON.stringify(GEO_CACHE));}catch(e){}
+        PLACE_FACTS[name]={name:town,addr:it.label,state:state,district:it.district||''};
         markPlaceConfirmed(name);
         card.remove();
-        showToast('✓ '+cap(name)+' set — recalculating…');
+        showToast('✓ '+town+(state?' ('+state+')':'')+' set — recalculating…');
         if(onPicked)onPicked();
       });
       box.appendChild(b);
@@ -3829,7 +3931,9 @@ function renderCalcResult(p,ordered,legs,retKm,total,c){
   ordered.forEach(function(s,i){
     var col=i===0?'#16A34A':(i===ordered.length-1?'#0F172A':'#2563EB');
     var role=i===0?'START / PICKUP':(i===ordered.length-1&&!p.isRet?'LAST STOP':'Stop '+i);
-    lh+='<div class="legi"><div class="legd" style="background:'+col+'">'+(i+1)+'</div><div><div style="font-weight:700;font-size:0.88rem">'+cap(s.c)+'</div><div style="font-size:0.62rem;color:var(--t3)">'+role+'</div></div></div>';
+    var fct=PLACE_FACTS[s.c];
+    var fsub=fct?[fct.district,fct.state].filter(Boolean).join(', '):'';
+    lh+='<div class="legi"><div class="legd" style="background:'+col+'">'+(i+1)+'</div><div><div style="font-weight:700;font-size:0.88rem">'+cap(s.c)+'</div><div style="font-size:0.62rem;color:var(--t3)">'+role+(fsub?' · <span style="color:var(--orange)">'+fsub+'</span>':'')+'</div></div></div>';
     if(i<ordered.length-1){cum+=legs[i];lh+='<div class="legl">↓ <b>'+legs[i]+' km</b> to next · running '+cum+' km</div>';}
   });
   if(p.isRet&&retKm){cum+=retKm;lh+='<div class="legl" style="color:#E8880A">↩ <b>'+retKm+' km</b> return to '+cap(ordered[0].c)+' · total '+cum+' km</div>';}
