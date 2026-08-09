@@ -3925,27 +3925,39 @@ function mergeTranscript(acc,next){
   }
   return acc+' '+next;
 }
-/* Safety net for speech: collapse immediately-repeated words and phrases.
-   Even with indexed results, phone dictation sometimes stutters a phrase.
-   Only CONSECUTIVE repeats are removed, so "Khurja to Khurja" style real
-   round trips written apart in the sentence are left untouched. */
+/* Safety net for speech: collapse repeated words and repeated PHRASES.
+   Phone dictation restarts stutter whole clauses, not just single words, and
+   often glues the copies together with a connector ("... दिल्ली और खुर्जा से
+   जयपुर ..."). So we scan every block length from long to short, and also
+   allow one connector word to sit between the two copies. */
+var SPEECH_JOINERS={'और':1,'फिर':1,'से':1,'aur':1,'and':1,'phir':1,'fir':1,'se':1,'to':1,'then':1,',':1};
 function dedupeSpeech(s){
   if(!s)return s;
-  var w=s.split(/\s+/),out=[];
+  var w=s.split(/\s+/).filter(function(x){return x.length;}),out=[];
   for(var i=0;i<w.length;i++){
     // drop a word identical to the one before it
     if(out.length&&out[out.length-1].toLowerCase()===w[i].toLowerCase())continue;
     out.push(w[i]);
   }
-  // drop a 2-word or 3-word group identical to the group right before it
-  for(var n=3;n>=2;n--){
-    var changed=true;
-    while(changed){
+  function eq(a,b){
+    if(a.length!==b.length)return false;
+    for(var z=0;z<a.length;z++){if(a[z].toLowerCase()!==b[z].toLowerCase())return false;}
+    return true;
+  }
+  /* Longest blocks first: a 9-word stutter must be caught as one repeat,
+     otherwise shorter passes chew it into fragments and leave debris. */
+  var maxN=Math.floor(out.length/2);
+  for(var n=maxN;n>=2;n--){
+    var changed=true,guard=0;
+    while(changed&&guard++<200){
       changed=false;
       for(var k=0;k+2*n<=out.length;k++){
-        var a=out.slice(k,k+n).join(' ').toLowerCase();
-        var b=out.slice(k+n,k+2*n).join(' ').toLowerCase();
-        if(a===b){out.splice(k+n,n);changed=true;break;}
+        var A=out.slice(k,k+n);
+        // copy immediately after
+        if(eq(A,out.slice(k+n,k+2*n))){out.splice(k+n,n);changed=true;break;}
+        // copy after a single connector word ("... दिल्ली  और  खुर्जा से ...")
+        if(k+2*n+1<=out.length&&SPEECH_JOINERS[(out[k+n]||'').toLowerCase()]&&
+           eq(A,out.slice(k+n+1,k+2*n+1))){out.splice(k+n,n+1);changed=true;break;}
       }
     }
   }
@@ -3973,12 +3985,18 @@ document.getElementById('calcMic').addEventListener('click',function(){
      Storing each final result AGAINST ITS INDEX makes re-delivery harmless:
      the same index simply overwrites itself instead of stacking up. */
   var finals={};
+  var sessionText='';      // transcript of the CURRENT recognition session
+  var voiceCommitted='';   // transcript of all completed sessions this recording
   rec.onstart=function(){
     listening=true;mb.classList.add('rec');mb.textContent='⏹';
     document.getElementById('calcClear').classList.remove('hidden');
     showToast('🎤 Listening… speak the trip, then tap ⏹ to stop');
   };
   rec.onresult=function(e){
+    /* Indices reset every time Android restarts the session after a pause, so
+       `finals` must belong to THIS session only. Text from earlier sessions is
+       already committed into `voiceCommitted`, which is never re-merged —
+       re-merging it was what let a whole clause reappear a second time. */
     for(var i=0;i<e.results.length;i++){
       if(e.results[i].isFinal)finals[i]=e.results[i][0].transcript;
     }
@@ -3990,8 +4008,10 @@ document.getElementById('calcMic').addEventListener('click',function(){
     Object.keys(finals)
       .sort(function(a,b){return a-b;})
       .forEach(function(k){joined=mergeTranscript(joined,finals[k]);});
-    var live=mergeTranscript(joined,interim);
-    inp.value=dedupeSpeech(mergeTranscript(voiceBase,live));
+    sessionText=mergeTranscript(joined,interim);
+    var whole=[voiceBase,voiceCommitted,sessionText]
+      .filter(function(x){return x&&x.trim();}).join(' ');
+    inp.value=dedupeSpeech(whole);
   };
   rec.onerror=function(ev){
     listening=false;mb.classList.remove('rec');mb.textContent='🎤';
@@ -4003,8 +4023,15 @@ document.getElementById('calcMic').addEventListener('click',function(){
   };
   rec.onend=function(){
     /* Android Chrome ends the session on a short pause even with continuous=true.
-       If the operator has not tapped stop, resume listening rather than treating
-       a mid-sentence breath as the end of the trip description. */
+       Commit what this session heard, clear the per-session index map, then
+       resume — so the next session starts from a clean slate at index 0 and
+       cannot overwrite or duplicate earlier text. */
+    if(sessionText&&sessionText.trim()){
+      voiceCommitted=[voiceCommitted,sessionText].filter(function(x){return x&&x.trim();}).join(' ');
+      voiceCommitted=dedupeSpeech(voiceCommitted);
+    }
+    sessionText='';
+    finals={};
     if(!userStopped){
       try{rec.start();return;}catch(e){/* fall through and finish */}
     }
