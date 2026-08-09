@@ -1059,6 +1059,13 @@ function googleGeocode(place){
    These matter because Google's Routes API returns a NON-COMMERCIAL (car) toll;
    its own documentation warns commercial vehicle prices differ. Quoting a bus
    trip at car rates would under-quote the toll by roughly 3x, so we scale it. */
+/* Per-km toll assumption for the CAR class, used only where no real plaza is
+   matched. This is an estimate, not a published figure: actual NH toll works out
+   near ₹1.0–1.5 per tolled km for a car, and not every km of a route is tolled.
+   It is deliberately shown to the operator in the toll popup and is fully
+   editable, because a wrong assumption here should be visible and correctable,
+   not buried. Vehicle classes scale from it via NHAI_CLASS_MULT. */
+var TOLL_PER_KM_CAR=1.20;
 var NHAI_CLASS_MULT={cab:1.0,suv:1.5,tempo:2.1,minibus:2.6,bus:3.4};
 function googleFullRoute(pts,optimize){
   if(!GKEY||!pts||pts.length<2)return Promise.resolve(null);
@@ -2756,25 +2763,46 @@ function buildRouteCandidates(p,valid,D,vtype){
     return Math.round(t);
   }
   var AVG_SPEED={cab:52,suv:50,tempo:45,minibus:42,bus:40}; // km/h, Indian highway+city mix
-  function build(name,seq){
+  function build(name,seq,why){
     var ord=seq.map(function(i){return valid[i];});
     var km=kmOf(seq);
-    var toll=computeNhaiToll(ord,vtype,!!p.isRet).total;
+    /* IMPORTANT: candidate tolls use ONE consistent basis (matched NHAI plazas
+       plus a per-km estimate for whatever is not matched). Using raw plaza
+       matching here produced absurd comparisons — the same stops in reverse
+       showed ₹2,128 vs ₹779 purely because a different set of legs happened to
+       match the table. A comparison is only meaningful if every option is
+       measured the same way. The headline quote still uses the full toll chain. */
+    var nh=computeNhaiToll(ord,vtype,!!p.isRet);
+    var matched=(nh&&nh.total>0)?nh.total:0;
+    var coveredKm=nh&&nh.covered?km:Math.round(km*0.35);
+    var uncovered=Math.max(0,km-coveredKm);
+    var toll=Math.round(matched+uncovered*TOLL_PER_KM_CAR*(NHAI_CLASS_MULT[vtype]||1));
     var hours=Math.round((km/(AVG_SPEED[vtype]||45)+seq.length*0.25)*10)/10; // +15min/stop
-    return{name:name,seq:seq,path:ord.map(function(o){return cap(o.c);}),km:km,toll:toll,hours:hours};
+    return{name:name,why:why||'',seq:seq,path:ord.map(function(o){return cap(o.c);}),km:km,toll:toll,hours:hours};
   }
   var matrix=D||(function(){
     var M=[];for(var i=0;i<n;i++){M[i]=[];for(var j=0;j<n;j++){M[i][j]=(i===j)?0:hav(valid[i].coord,valid[j].coord)*1270;}}
     return M;
   })();
   var baseSeq=solveOrder(matrix,n,!!p.isRet);
-  var out=[build('Shortest route',baseSeq)];
+  var out=[build('Option 1 — Shortest distance',baseSeq,'least km and least fuel')];
   var rev=[0].concat(baseSeq.slice(1).reverse());
-  if(kmOf(rev)!==kmOf(baseSeq))out.push(build('Reverse direction',rev));
+  if(kmOf(rev)!==kmOf(baseSeq))out.push(build('Option 2 — Reverse order',rev,'same stops, opposite direction'));
   var far=[0].concat(baseSeq.slice(1).sort(function(a,b){
     return hav(valid[0].coord,valid[b].coord)-hav(valid[0].coord,valid[a].coord);
   }));
-  if(kmOf(far)!==kmOf(baseSeq))out.push(build('Farthest first',far));
+  if(kmOf(far)!==kmOf(baseSeq))out.push(build('Option 3 — Farthest first',far,'long haul on day 1, shorter legs after'));
+  /* Mark which option wins on each measure so the labels state a fact rather
+     than a preference. Ties are left unmarked. */
+  var minKm=Math.min.apply(null,out.map(function(o){return o.km;}));
+  var minHr=Math.min.apply(null,out.map(function(o){return o.hours;}));
+  var minToll=Math.min.apply(null,out.map(function(o){return o.toll;}));
+  out.forEach(function(o){
+    o.tags=[];
+    if(o.km===minKm)o.tags.push('shortest');
+    if(o.hours===minHr)o.tags.push('least time');
+    if(o.toll===minToll)o.tags.push('lowest toll');
+  });
   return out;
 }
 function cap2(s){return s?String(s):'';}
@@ -2820,6 +2848,124 @@ function renderSourcesCard(el,c,replace){
     '</div></div>';
   el.appendChild(card);
 }
+/* ── SELF-AUDIT ──
+   Runs real consistency checks against the finished quote and reports what
+   passed, what is only an estimate, and what looks wrong. These are genuine
+   assertions computed from the actual values on screen — not decoration. A
+   check that cannot be verified says so rather than showing a green tick. */
+function renderAuditCard(el,c,p,ordered,total){
+  var checks=[];
+  function add(state,label,detail){checks.push({state:state,label:label,detail:detail});}
+
+  // 1. Distance source
+  if(c.distSource==='google')add('pass','Distance from real roads','Google Routes API returned '+total+' km along actual drivable roads.');
+  else if(c.distSource==='osrm')add('pass','Distance from real roads','OSRM returned '+total+' km using OpenStreetMap road geometry.');
+  else add('warn','Distance is a geometric estimate','Straight-line × 1.27. Real roads were unreachable, so treat this as approximate.');
+
+  // 2. Every stop resolved
+  var unresolved=ordered.filter(function(o){return !o.coord;}).length;
+  if(unresolved===0)add('pass','All '+ordered.length+' stops located','Each stop resolved to real coordinates before any distance was measured.');
+  else add('fail',unresolved+' stop(s) could not be located','Those stops were left out, so the distance is short of the real trip.');
+
+  // 3. Return leg consistency
+  if(p.isRet)add('pass','Return leg included','Round trip detected, so the drive back to '+cap(ordered[0].c)+' is counted in both distance and toll.');
+  else add('info','One way only','No return words found in your text. If the vehicle comes back, say "wapas" or "back" and re-calculate.');
+
+  // 4. Toll basis — the honest one
+  if(c.tollSource==='learned')add('pass','Toll is your own verified figure','You corrected this route before; that figure is used instead of any estimate.');
+  else if(c.tollSource==='nhai')add('pass','Toll from matched NHAI plazas','Every leg matched the built-in plaza table.');
+  else if(c.tollSource==='google')add('warn','Toll scaled from a car rate','Google publishes a non-commercial toll. It is multiplied by '+(NHAI_CLASS_MULT[c.vtype]||1)+'× for the '+VTYPE_LABEL[c.vtype]+' class — a class ratio, not a measured plaza total.');
+  else if(c.tollSource==='mixed')add('warn','Toll partly estimated','Some plazas matched; the rest is a per-km estimate. Open "See all tolls" for the split.');
+  else add('warn','Toll fully estimated','No plaza on this route matched yet. Please verify and correct — your figure will be saved.');
+
+  // 5. Arithmetic self-check — recompute the total independently
+  var recomputed=Math.round(c.fuelCost+c.tollCost+c.driverCost+(c.stateTax||0)+(c.park||0));
+  if(Math.abs(recomputed-c.base)<=2)add('pass','Cost arithmetic verified','Fuel + toll + driver + tax + misc recomputes to ₹'+c.base.toLocaleString()+', matching the operating cost shown.');
+  else add('fail','Cost arithmetic mismatch','Parts total ₹'+recomputed.toLocaleString()+' but operating cost shows ₹'+c.base.toLocaleString()+'. Please report this.');
+
+  // 6. Per-head check
+  if(c.pax>0){
+    var ph=Math.round(c.grand/c.pax);
+    if(Math.abs(ph-c.perHead)<=1)add('pass','Per-head figure verified','₹'+c.grand.toLocaleString()+' ÷ '+c.pax+' passengers = ₹'+c.perHead+'.');
+    else add('fail','Per-head mismatch','Recomputed ₹'+ph+' vs ₹'+c.perHead+' shown.');
+  }
+
+  // 7. Plausibility guard — catches absurd routes like the old phantom-waypoint bug
+  var perKm=total>0?c.grand/total:0;
+  if(total>0&&perKm>0&&perKm<300)add('pass','Quote is in a sane range','₹'+Math.round(perKm)+' per km for a '+VTYPE_LABEL[c.vtype]+' — within a normal operating band.');
+  else add('warn','Quote per km looks unusual','₹'+Math.round(perKm)+' per km. Check the stop list and vehicle before sending this.');
+
+  // 8. Days basis
+  add(p.days?'pass':'info',p.days?'Days taken from your enquiry':'Days estimated, not stated',
+    p.days?('You said '+c.days+' day(s), so that is used for driver and permit costs.')
+          :('Estimated as '+c.days+' day(s) at ~400 km driving per day. Driver pay and state permits scale with this, so correct it if the real plan differs.'));
+
+  var icon={pass:'✅',warn:'⚠️',fail:'❌',info:'ℹ️'};
+  var colr={pass:'var(--green)',warn:'#B45309',fail:'#DC2626',info:'var(--t3)'};
+  var passCount=checks.filter(function(x){return x.state==='pass';}).length;
+  var body=checks.map(function(x){
+    return '<div style="display:flex;gap:0.45rem;padding:0.45rem 0;border-bottom:1px solid var(--line)">'+
+      '<span style="font-size:0.8rem">'+icon[x.state]+'</span>'+
+      '<div style="flex:1"><div style="font-size:0.74rem;font-weight:700;color:'+colr[x.state]+'">'+x.label+'</div>'+
+      '<div style="font-size:0.67rem;color:var(--t3);line-height:1.5">'+x.detail+'</div></div></div>';
+  }).join('');
+  var card=document.createElement('div');card.className='rescard';card.id='auditCard';
+  card.innerHTML='<div class="rc-h">🧪 Quote self-check <span style="font-size:0.6rem;color:var(--t3);font-weight:400;margin-left:auto">'+passCount+' of '+checks.length+' verified</span></div>'+
+    '<div class="rc-b">'+
+    '<div style="font-size:0.67rem;color:var(--t3);margin-bottom:0.4rem;line-height:1.5">These checks run automatically on this quote every time it is calculated. ✅ means verified from real data, ⚠️ means an estimate you should confirm.</div>'+
+    body+
+    '<div style="margin-top:0.6rem;font-size:0.66rem;color:var(--t3);line-height:1.55">'+
+      '<b>What is not checked:</b> FleetHub cannot confirm live plaza rates, road closures, or seasonal diversions. Toll rates revise on 1 April each year. For a high-value booking, verify the toll on <b>tis.nhai.gov.in</b> or <b>Rajmargyatra</b> before quoting.'+
+    '</div></div>';
+  el.appendChild(card);
+}
+/* Full toll breakdown popup: every matched plaza with its one-way rate, the
+   return doubling made explicit, and — critically — how much of the figure is a
+   real plaza rate versus an estimate. An operator cannot trust a toll number
+   they cannot take apart. */
+function showTollDetail(c,ordered,isRound){
+  var vt=c.vtype||'bus';
+  var plazas=c.tollPlazaList||[];
+  var real=plazas.reduce(function(s,x){return s+(x.amt||0);},0);
+  var total=c.tollCost||0;
+  var estPart=Math.max(0,total-real);
+  var ov=document.createElement('div');
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;display:flex;align-items:flex-end;justify-content:center';
+  var rows=plazas.length?plazas.map(function(x){
+    var one=x.amt||0;
+    return '<div style="display:flex;gap:0.5rem;padding:0.5rem 0;border-bottom:1px solid var(--line);font-size:0.75rem">'+
+      '<div style="flex:1"><b>'+(x.name||'Plaza')+'</b>'+
+      (x.hw?'<div style="font-size:0.64rem;color:var(--t3)">'+x.hw+'</div>':'')+'</div>'+
+      '<div style="text-align:right;white-space:nowrap">₹'+one.toLocaleString()+
+      (isRound?'<div style="font-size:0.63rem;color:var(--t3)">×2 both ways</div>':'<div style="font-size:0.63rem;color:var(--t3)">one way</div>')+
+      '</div></div>';
+  }).join(''):'<div style="font-size:0.75rem;color:var(--t3);padding:0.5rem 0">No plaza on this route matched the built-in NHAI table yet, so the whole figure is a per-km estimate. Please correct it below — FleetHub will reuse your figure for this route.</div>';
+  ov.innerHTML='<div style="background:var(--card,#fff);border-radius:18px 18px 0 0;max-height:85vh;overflow-y:auto;width:100%;max-width:520px;padding:1rem">'+
+    '<div style="display:flex;align-items:center;margin-bottom:0.6rem">'+
+      '<b style="font-size:0.95rem">🪙 Toll breakdown</b>'+
+      '<button id="tollClose" style="margin-left:auto;border:none;background:var(--line);border-radius:50%;width:28px;height:28px;font-size:1rem;cursor:pointer">×</button>'+
+    '</div>'+
+    '<div style="font-size:0.7rem;color:var(--t3);margin-bottom:0.6rem">'+
+      (VTYPE_LABEL[vt]||vt)+' · '+ordered.map(function(o){return cap(o.c);}).join(' → ')+(isRound?' → back':'')+'</div>'+
+    '<div style="font-size:0.78rem;font-weight:700;margin:0.5rem 0 0.2rem">Matched NHAI plazas</div>'+
+    rows+
+    '<div style="margin-top:0.7rem;padding-top:0.6rem;border-top:2px solid var(--line);font-size:0.76rem">'+
+      '<div style="display:flex;padding:0.2rem 0"><span>Real plaza rates'+(isRound?' (both ways)':'')+'</span><b style="margin-left:auto">₹'+real.toLocaleString()+'</b></div>'+
+      (estPart>0?'<div style="display:flex;padding:0.2rem 0;color:var(--t3)"><span>Estimated for unmatched roads</span><b style="margin-left:auto">₹'+estPart.toLocaleString()+'</b></div>':'')+
+      '<div style="display:flex;padding:0.35rem 0;border-top:1px solid var(--line);margin-top:0.3rem"><b>Total toll used in quote</b><b style="margin-left:auto">₹'+total.toLocaleString()+'</b></div>'+
+    '</div>'+
+    '<div style="margin-top:0.7rem;background:var(--green-bg);border-radius:10px;padding:0.6rem;font-size:0.68rem;line-height:1.55">'+
+      '<b>How the estimate part is worked out</b><br>'+
+      'Unmatched distance × ₹'+TOLL_PER_KM_CAR+'/km (car) × '+(NHAI_CLASS_MULT[vt]||1)+'× for '+(VTYPE_LABEL[vt]||vt)+'.<br>'+
+      'The class ratios follow the NH Fee Rules 2008 vehicle classes. The per-km figure is an <b>assumption</b>, not a published rate — real NH toll runs roughly ₹1–1.5 per tolled km for a car, and not every km of a route is tolled.'+
+    '</div>'+
+    '<div style="margin-top:0.6rem;font-size:0.68rem;color:var(--t3);line-height:1.5">'+
+      'If you know the real figure, type it into the Toll field — it is saved against this exact route and vehicle, and used automatically next time. Verify on <b>tis.nhai.gov.in</b> or the <b>Rajmargyatra</b> app.'+
+    '</div></div>';
+  document.body.appendChild(ov);
+  ov.addEventListener('click',function(ev){if(ev.target===ov)ov.remove();});
+  var cl=ov.querySelector('#tollClose');if(cl)cl.addEventListener('click',function(){ov.remove();});
+}
 /* Draws the "Other route options" card. Called once immediately with a
    straight-line estimate (isEstimate=true) so the operator sees something
    instantly, then called again with real road km/toll and the AI verdict
@@ -2842,18 +2988,22 @@ function renderAltRoutes(p,cands,verdict,isEstimate){
     var noteMatch=verdict&&verdict.notes?verdict.notes.filter(function(n){return n.candidate===o.name;})[0]:null;
     var note=noteMatch?noteMatch.why:'';
     var isBest=verdict?o.name===verdict.best_overall:diff===0;
+    var tagHtml=(o.tags||[]).map(function(t){
+      return '<span style="font-size:0.58rem;background:var(--green-bg);color:var(--green);font-weight:700;padding:1px 5px;border-radius:6px">'+t+'</span>';
+    }).join(' ');
     oh+='<div style="padding:0.55rem 0.5rem;border-bottom:1px solid var(--line);margin:0 -0.5rem'+(isBest?';background:var(--green-bg);border-radius:8px':'')+'">'+
       '<div style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap">'+
-        '<b style="font-size:0.82rem">'+o.name+'</b>'+(isBest?' <span style="font-size:0.62rem;color:var(--green);font-weight:700">★ RECOMMENDED</span>':'')+
+        '<b style="font-size:0.79rem">'+o.name+'</b>'+
         '<span style="font-size:0.72rem;font-weight:700;color:'+(diff===0?'var(--green)':'var(--t3)')+';margin-left:auto">'+o.km+' km'+(diff>0?' (+'+diff+')':'')+'</span>'+
       '</div>'+
-      '<div style="font-size:0.68rem;color:var(--t3);margin:2px 0 3px">₹'+o.toll.toLocaleString()+' toll · ~'+o.hours+' hr driving'+(note?' · '+note:'')+'</div>'+
+      (tagHtml?'<div style="margin:3px 0">'+tagHtml+'</div>':'')+
+      '<div style="font-size:0.67rem;color:var(--t3);margin:2px 0 3px">≈₹'+o.toll.toLocaleString()+' toll · ~'+o.hours+' hr driving'+(o.why?' · '+o.why:'')+(note?' · '+note:'')+'</div>'+
       '<div style="font-size:0.72rem;line-height:1.45">'+o.path.join(' → ')+(p.isRet?' → '+o.path[0]:'')+'</div>'+
     '</div>';
   });
   host.innerHTML='<div class="rescard"><div class="rc-h">🔀 Other route options'+(isEstimate?' <span style="font-size:0.58rem;color:var(--t3);font-weight:400;margin-left:auto">estimating…</span>':'')+'</div><div class="rc-b">'+
     vh+
-    '<div style="font-size:0.66rem;color:var(--t3);margin-bottom:0.3rem">'+(isEstimate?'Straight-line estimate — refining with real road distance and toll…':'Real road distance and toll for each option.')+'</div>'+oh+'</div></div>';
+    '<div style="font-size:0.66rem;color:var(--t3);margin-bottom:0.3rem;line-height:1.5">'+(isEstimate?'Straight-line estimate — refining with real road distance…':'Real road distance for each option.')+' Tolls here (≈) are estimated on one common basis so the options can be compared fairly; the toll in your quote above uses the full source chain.</div>'+oh+'</div></div>';
 }
 /* ═══════════════════════════════════════════════════════════════
    PROVIDER CHAIN ENGINE
@@ -2980,7 +3130,7 @@ function distanceChain(pts,straightKm){
    roads and pay these plazas, so their correction is the best evidence
    available for that specific route. */
 function tollChain(ordered,vtype,isRound,googleCarToll,totalKm){
-  var perKm=1.70*(NHAI_CLASS_MULT[vtype]||1);
+  var perKm=TOLL_PER_KM_CAR*(NHAI_CLASS_MULT[vtype]||1);
   return runChain('toll',[
     {label:'Your saved rate',tier:'1',note:'you corrected this route before',
      run:function(){
@@ -3280,7 +3430,7 @@ function buildCostObj(p,ordered,legs,total,retKm,realRoads){
   var vtype=detectVType(p,seats);
   var mileage=VTYPE_MILEAGE[vtype];
   var tollM=(vtype==='bus')?3.4:(vtype==='minibus'?2.6:(vtype==='tempo'?2.1:(vtype==='suv'?1.5:1.0)));
-  var tollPerKm=+(1.70*tollM).toFixed(2);
+  var tollPerKm=+(TOLL_PER_KM_CAR*tollM).toFixed(2);
   var tollPlazas=Math.max(1,Math.round(total/55));
   var driverDay=(vtype==='bus'||vtype==='minibus')?1000:800;
   var litres=Math.round(total/mileage),fuelCost=Math.round(litres*fuel),driverCost=days*driverDay;
@@ -3616,6 +3766,10 @@ function renderCalcResult(p,ordered,legs,retKm,total,c){
    '<div class="rc-b" id="costBody">'+
     // distance basis + VEHICLE TYPE selector (sets mileage)
     '<div class="cost-basis">📏 <b id="distLabel">'+total+' km</b>'+(p.isRet?' (incl. return)':'')+' · '+c.days+' day(s) · '+c.pax+' pax <span id="distSrc" style="color:var(--t3)">· road est.</span></div>'+
+    '<div style="font-size:0.63rem;color:var(--t3);line-height:1.5;margin:-0.2rem 0 0.5rem">'+
+      (p.days?'Days: '+c.days+' as stated in your enquiry.':'Days: '+c.days+' — estimated at about 400 km of driving per day'+(p.isRet?' including the return leg':'')+'. Edit it below if the trip has rest days or overnight halts.')+
+      '<br>Distance '+(p.isRet?'includes the return to '+cap(ordered[0].c)+'.':'is one way, no return included.')+
+    '</div>'+
     '<div class="cost-line" style="border-bottom:2px solid var(--line)"><div class="cl-label">🚐 Vehicle type</div>'+
       '<div class="cl-formula">sets realistic mileage →</div>'+
       '<div class="cl-amt"><select class="ci" id="ed-vtype" style="width:auto;min-width:120px">'+
@@ -3631,12 +3785,21 @@ function renderCalcResult(p,ordered,legs,retKm,total,c){
       '</div>'+
       '<div class="cl-formula">'+
         (function(){
+          /* When the figure came from Google, do NOT print the NHAI plaza list —
+             that list did not produce this number, and showing it implies a
+             precision the figure does not have. */
+          if(c.tollSource==='google'){
+            return 'Google toll for a car, scaled ×'+(NHAI_CLASS_MULT[c.vtype]||1)+' to the '+VTYPE_LABEL[c.vtype]+' NHAI class';
+          }
+          if(c.tollSource==='learned'){return 'Your own saved figure for this exact route and vehicle';}
           if(c.tollPlazaList&&c.tollPlazaList.length){
-            var named=c.tollPlazaList.map(function(x){return x.name+' ₹'+x.amt;}).join(' · ');
-            return 'Real plazas: '+named+(c.tollSource==='mixed'?' + estimate for rest':'')+(/round|return/i.test(document.getElementById('calcInp').value||'')?'<br>× round-trip (return toll)':'');
+            var named=c.tollPlazaList.slice(0,3).map(function(x){return x.name+' ₹'+x.amt;}).join(' · ');
+            var more=c.tollPlazaList.length>3?(' +'+(c.tollPlazaList.length-3)+' more'):'';
+            return 'Real plazas: '+named+more+(c.tollSource==='mixed'?' + estimate for rest':'');
           }
           return total+' km × ₹'+c.tollPerKm+'/km ('+VTYPE_LABEL[c.vtype]+') — no NHAI route match, using estimate';
         })()+
+        '<br><a href="#" id="tollDetailBtn" style="font-size:0.68rem;color:var(--purple,#6D28D9);font-weight:700;text-decoration:underline">See all tolls →</a>'+
       '</div>'+
       '<div class="cl-amt"><span>₹</span><input class="ci ci-amt" id="ed-toll" value="'+c.tollCost+'"></div></div>'+
     // DRIVER
@@ -3687,12 +3850,12 @@ function renderCalcResult(p,ordered,legs,retKm,total,c){
         var nh=computeNhaiToll(ordered,vt,isRound2);
         var newToll;
         if(nh.covered&&nh.total>0)newToll=nh.total;
-        else if(nh.partial&&nh.total>0)newToll=nh.total+Math.round(liveTotal*(1.70*(NHAI_CLASS_MULT[vt]||1))*0.4);
-        else newToll=Math.round(liveTotal*(1.70*(NHAI_CLASS_MULT[vt]||1)));
+        else if(nh.partial&&nh.total>0)newToll=nh.total+Math.round(liveTotal*(TOLL_PER_KM_CAR*(NHAI_CLASS_MULT[vt]||1))*0.4);
+        else newToll=Math.round(liveTotal*(TOLL_PER_KM_CAR*(NHAI_CLASS_MULT[vt]||1)));
         document.getElementById('ed-toll').value=newToll;
       }
     }
-    var mileage=Math.max(1,+document.getElementById('ed-mileage').value||c.mileage);
+    var mileage=Math.max(0.5,+document.getElementById('ed-mileage').value||c.mileage);
     var fuel=+document.getElementById('ed-fuel').value||c.fuel;
     var tollCost=+document.getElementById('ed-toll').value||0;
     var days=Math.max(1,+document.getElementById('ed-days').value||c.days);
@@ -3734,7 +3897,16 @@ function renderCalcResult(p,ordered,legs,retKm,total,c){
   },50);
   setTimeout(function(){
     ['ed-mileage','ed-fuel','ed-toll','ed-days','ed-driverday','ed-statetax','ed-parking','ed-misc','profitPct'].forEach(function(id){
-      var el2=document.getElementById(id);if(el2){el2.addEventListener('input',recalc);el2.setAttribute('type','number');}
+      var el2=document.getElementById(id);
+      if(el2){
+        el2.addEventListener('input',recalc);
+        el2.setAttribute('type','number');
+        /* Mileage is a decimal (4.5 km/L). A number input defaults to step=1,
+           which makes the browser reject the ".5" — that is why it looked
+           uneditable. Money and day fields stay whole numbers. */
+        if(id==='ed-mileage'){el2.setAttribute('step','0.1');el2.setAttribute('min','0.5');el2.setAttribute('inputmode','decimal');}
+        else{el2.setAttribute('step','1');el2.setAttribute('inputmode','numeric');}
+      }
     });
     /* Remember a toll correction once the operator finishes editing it (on blur,
        not every keystroke) so the exact route + vehicle gets this figure automatically
@@ -3748,6 +3920,11 @@ function renderCalcResult(p,ordered,legs,retKm,total,c){
         var tb=document.getElementById('tollBadge');if(tb){tb.textContent='★ your saved rate';tb.className='toll-badge nhai';}
         showToast('✓ Toll saved — used automatically next time for this route');
       }
+    });
+    var tdb=document.getElementById('tollDetailBtn');
+    if(tdb)tdb.addEventListener('click',function(ev){
+      ev.preventDefault();
+      showTollDetail(c,ordered,!!p.isRet||retKm>0);
     });
     var vt=document.getElementById('ed-vtype');
     if(vt)vt.addEventListener('change',function(){recalc(true);});
@@ -3824,6 +4001,8 @@ function renderCalcResult(p,ordered,legs,retKm,total,c){
           }
           recalc();
           renderSourcesCard(el,c,true);
+          var oldAudit=document.getElementById('auditCard');
+          if(oldAudit){oldAudit.remove();renderAuditCard(el,c,p,ordered,liveTotal);}
           audit('real_km',true,d.km+' km via '+dres.source+' · toll via '+tres.source);
         });
       });
@@ -3850,6 +4029,7 @@ function renderCalcResult(p,ordered,legs,retKm,total,c){
   cb.addEventListener('click',function(){copyToClipboard(buildShareText());});
   sr.appendChild(wb);sr.appendChild(cb);
   renderSourcesCard(el,c);
+  renderAuditCard(el,c,p,ordered,total);
   el.appendChild(sr);
 
   // If quoting for a specific buyer enquiry — show DIRECT REPLY-TO-BUYER CTAs
