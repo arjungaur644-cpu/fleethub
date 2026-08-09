@@ -2400,7 +2400,17 @@ var CC_EXTRA={
   'vrindavan dham':[27.5650,77.6593],'banke bihari':[27.5750,77.7000],'prem mandir':[27.5730,77.6720],
   'iskcon vrindavan':[27.5750,77.6600],'goverdhan parikrama':[27.4969,77.4636],
   'hapur':[28.7300,77.7800],'pilkhuwa':[28.7120,77.6540],'dadri':[28.5520,77.5530],
-  'sikandarabad':[28.4500,77.7000],'jewar airport':[28.1200,77.5600],'jhajjar':[28.6060,76.6560]
+  'sikandarabad':[28.4500,77.7000],'jewar airport':[28.1200,77.5600],'jhajjar':[28.6060,76.6560],
+  /* Border crossings and pilgrimage sites operators actually quote. Several are
+     two-word names whose second word ("border", "sahib", "devi") is a QUALIFIER,
+     not a separate destination — see QUALIFIER_WORDS for the general fix. */
+  'wagah border':[31.6047,74.5730],'wagah':[31.6047,74.5730],'attari border':[31.6047,74.5730],
+  'amarnath':[34.2150,75.5010],'baltal':[34.2670,75.4670],'pahalgam':[34.0159,75.3150],
+  'gulmarg':[34.0484,74.3805],'sonmarg':[34.3000,75.2900],'patnitop':[33.0870,75.3300],
+  'golden temple':[31.6200,74.8765],'anandpur sahib':[31.2390,76.5030],
+  'hemkund sahib':[30.7080,79.6090],'chintpurni':[31.5800,76.1300],
+  'jwala ji':[31.8750,76.3200],'naina devi':[31.3200,76.5300],'mansa devi':[29.9600,78.1500],
+  'chandi devi':[29.9400,78.1800],'neelkanth':[30.1300,78.4200],'triveni ghat':[30.1050,78.2900]
 };
 for(var _k in CC_EXTRA){if(!CC[_k])CC[_k]=CC_EXTRA[_k];}
 var CN=Object.keys(CC);
@@ -2431,6 +2441,13 @@ var ALIAS={
   'sikandarabad':'sikandrabad','gurugram':'gurgaon','new delhi':'delhi',
   'vrindavan dham':'vrindavan','banke bihari':'vrindavan','prem mandir':'vrindavan','iskcon vrindavan':'vrindavan',
   'reengus':'ringas','vaishno devi':'katra','karni mata':'deshnok','jewar airport':'jewar',
+  'wagha':'wagah border','wagha border':'wagah border','waga border':'wagah border',
+  'wagah':'wagah border','attari':'wagah border','attari border':'wagah border',
+  'wagah attari':'wagah border','india pakistan border':'wagah border',
+  'mata vaishno devi':'katra','vaishno devi mata':'katra','vaishnodevi':'katra',
+  'amarnath ji':'amarnath','amarnath cave':'amarnath','shri amarnath':'amarnath',
+  'harmandir sahib':'golden temple','darbar sahib':'golden temple',
+  'वाघा बॉर्डर':'wagah border','अमरनाथ':'amarnath','वैष्णो देवी':'katra','स्वर्ण मंदिर':'golden temple',
   /* Hindi speech input returns Devanagari. Without these the parser hands raw
      Hindi text to the geocoder, which usually fails or matches the wrong place. */
   'खुर्जा':'khurja','बुलंदशहर':'bulandshahr','जहांगीराबाद':'jahangirabad','जेवर':'jewar',
@@ -2465,6 +2482,28 @@ function snapToKnown(name){
   if(best&&bestD<=allow)return ALIAS[best]||best;
   return name;
 }
+/* Words that QUALIFY the place before them rather than naming a new one.
+   "wagha border" is one destination, not "wagha" plus "border" — the old parser
+   split it and sent a bare "border" to the geocoder, which matched a random
+   place. Any of these appearing alone gets attached to the preceding stop. */
+var QUALIFIER_WORDS={'border':1,'sahib':1,'dham':1,'mandir':1,'temple':1,'ji':1,'tirth':1,
+  'darbar':1,'ghat':1,'fort':1,'palace':1,'airport':1,'station':1,'bypass':1,'city':1,
+  'devi':1,'mata':1,'baba':1,'wale':1,'shyam':1,'balaji':1,'parikrama':1,'darshan':1,
+  'बॉर्डर':1,'साहिब':1,'धाम':1,'मंदिर':1,'जी':1,'देवी':1,'माता':1,'घाट':1};
+/* State names an operator may append to disambiguate ("wagha border punjab").
+   When present, the state is used as a geocoding hint and the place is treated
+   as already confirmed — the operator has told us which one they mean. */
+var STATE_HINTS={'punjab':'Punjab','haryana':'Haryana','rajasthan':'Rajasthan',
+  'up':'Uttar Pradesh','uttar pradesh':'Uttar Pradesh','uttarakhand':'Uttarakhand',
+  'uk':'Uttarakhand','mp':'Madhya Pradesh','madhya pradesh':'Madhya Pradesh',
+  'himachal':'Himachal Pradesh','himachal pradesh':'Himachal Pradesh','hp':'Himachal Pradesh',
+  'jammu':'Jammu and Kashmir','kashmir':'Jammu and Kashmir','j&k':'Jammu and Kashmir',
+  'gujarat':'Gujarat','maharashtra':'Maharashtra','bihar':'Bihar','delhi':'Delhi',
+  'jharkhand':'Jharkhand','chhattisgarh':'Chhattisgarh','odisha':'Odisha','bengal':'West Bengal',
+  'पंजाब':'Punjab','हरियाणा':'Haryana','राजस्थान':'Rajasthan','उत्तराखंड':'Uttarakhand',
+  'हिमाचल':'Himachal Pradesh','कश्मीर':'Jammu and Kashmir','गुजरात':'Gujarat'};
+/* Place → state hint captured from this enquiry, used by the geocoder. */
+var PLACE_HINTS={};
 function hav(a,b){var R=6371,x=(b[0]-a[0])*Math.PI/180,y=(b[1]-a[1])*Math.PI/180;var h=Math.sin(x/2)*Math.sin(x/2)+Math.cos(a[0]*Math.PI/180)*Math.cos(b[0]*Math.PI/180)*Math.sin(y/2)*Math.sin(y/2);return R*2*Math.atan2(Math.sqrt(h),Math.sqrt(1-h));}
 /* ── TOUR OPTIMISER ──
    Generic solver used for both straight-line and real-road matrices.
@@ -2565,7 +2604,36 @@ function parseTrip(text){
   });
   /* Auto-correct phonetic spellings to a known place BEFORE de-duping, so that
      "jahangirabad ... back to jhangirabad" collapses to one stop instead of two. */
-  cities=cities.map(function(c){return snapToKnown(c);});
+  /* Re-join qualifier words to the place they belong to, and pull out any state
+     the operator named. Both run BEFORE snapping so "wagha border punjab" becomes
+     one stop ("wagah border") with a Punjab hint, instead of three stops. */
+  PLACE_HINTS={};
+  var merged=[];
+  for(var ci=0;ci<cities.length;ci++){
+    var tok=cities[ci];
+    // a state name attaches to the previous stop as a disambiguation hint
+    if(STATE_HINTS[tok]&&merged.length){
+      PLACE_HINTS[merged[merged.length-1]]=STATE_HINTS[tok];
+      continue;
+    }
+    // a bare qualifier attaches to the previous stop, making one multi-word place
+    if(QUALIFIER_WORDS[tok]&&merged.length&&!CC[tok]){
+      var joined=merged[merged.length-1]+' '+tok;
+      merged[merged.length-1]=joined;
+      continue;
+    }
+    merged.push(tok);
+  }
+  cities=merged;
+  /* Carry any hint across the snap so it stays attached to the corrected name. */
+  var snapped=[],hintsAfter={};
+  cities.forEach(function(c){
+    var s=snapToKnown(c);
+    if(PLACE_HINTS[c])hintsAfter[s]=PLACE_HINTS[c];
+    snapped.push(s);
+  });
+  PLACE_HINTS=hintsAfter;
+  cities=snapped;
   // de-dupe, preserve order
   var seen={},out=[];cities.forEach(function(c){if(!seen[c]){seen[c]=1;out.push(c);}});
   // Drop obvious junk fragments: very short unknown words, and common non-place words
@@ -2587,6 +2655,13 @@ function parseTrip(text){
     return true;                        // unknown but plausible → keep (will geocode)
   });
   var sm=t.match(/(\d+)\s*[- ]?\s*(?:seat|seater|sitar)/);var seats=sm?+sm[1]:null;
+  /* Operators often drop the word "seater" entirely: "56 ac bus", "26 tempo".
+     Accept a bare number sitting just before a vehicle word, within the range
+     a passenger vehicle can plausibly have. */
+  if(seats==null){
+    var sm2=t.match(/\b(\d{1,2})\s*(?:ac|non[- ]?ac)?\s*(?:seater\s*)?(?:bus|coach|tempo|traveller|traveler|minibus|mini\s*bus|gadi|gaadi)\b/);
+    if(sm2){var n2=+sm2[1];if(n2>=5&&n2<=80)seats=n2;}
+  }
   var ac=/non[- ]?ac|nonac|bina ac/.test(t)?false:(/\bac\b|a\.c/.test(t)?true:null);
   var pm=t.match(/(\d+)\s*(passenger|people|pax|person|log|sawari|yatri)/);var pax=pm?+pm[1]:null;
   var dm=t.match(/(\d+)\s*(day|din)/);var days=dm?+dm[1]:null;
@@ -2668,7 +2743,9 @@ function geminiParseTrip(text){
     '- Transliterate all place names to English (मथुरा->Mathura, खाटू श्याम->Khatu Shyam, बालाजी->Mehendipur Balaji).\n'+
     '- Words like back, wapas, वापस, return, round trip mean returnsToStart=true. They are NOT places.\n'+
     '- Ignore filler such as mujhe, jana hai, chahiye, gadi, batao, kitna.\n'+
-    '- "56 seater bus" means vehicle="bus", seats=56. Tempo traveller means "tempo". Innova means "suv".\n'+
+    '- "56 seater bus" means vehicle="bus", seats=56. "56 ac bus" also means seats=56. Tempo traveller means "tempo". Innova means "suv".\n'+
+    '- Keep multi-word place names WHOLE. "wagha border" is ONE place (Wagah Border, Punjab) — never split it into "wagha" and "border". Same for "golden temple", "vaishno devi", "anandpur sahib", "mehendipur balaji", "khatu shyam".\n'+
+    '- If a state is named after a place ("wagha border punjab", "bageshwar uttarakhand"), keep the state with that place name so it can be located correctly.\n'+
     '- Use null for anything not stated. Never invent places that were not mentioned.\n\n'+
     'Enquiry: '+text;
   var body={contents:[{parts:[{text:prompt}]}],generationConfig:{temperature:0,maxOutputTokens:600}};
@@ -3080,13 +3157,17 @@ function nominatimGeocode(name){
   }).catch(function(){return null;});
 }
 function geocodeChain(name){
+  /* If the operator named a state ("wagha border punjab"), append it to every
+     lookup — that is the strongest disambiguation signal available and it comes
+     straight from the person who knows the trip. */
+  var hint=PLACE_HINTS[name]?(name+', '+PLACE_HINTS[name]):name;
   return runChain('places',[
     {label:'FleetHub verified places',tier:'1',note:'hand-checked local coordinates',
      run:function(n){return CC[n]||null;}},
     {label:'Google Geocoding API',tier:'2',note:'region-biased to North India',
-     run:function(n){return GKEY?withTimeout(googleGeocode(n),5000):null;}},
+     run:function(n){return GKEY?withTimeout(googleGeocode(hint),5000):null;}},
     {label:'OpenStreetMap Nominatim',tier:'3',note:'free, region-biased',
-     run:function(n){return withTimeout(nominatimGeocode(n),6000);}}
+     run:function(n){return withTimeout(nominatimGeocode(hint),6000);}}
   ],name,function(v){return v&&v.length===2&&isFinite(v[0])&&isFinite(v[1]);});
 }
 /* -- CHAIN 2: ROUTE DISTANCE + DRIVING TIME --
@@ -3247,6 +3328,7 @@ var AMBIG_NAMES={'bageshwar':1,'aurangabad':1,'bilaspur':1,'hamirpur':1,'pratapg
 function checkAmbiguous(names,cb){
   var toCheck=names.filter(function(n){
     if(PLACE_OK[n])return false;              // operator already decided
+    if(PLACE_HINTS[n])return false;           // operator named the state — that IS the answer
     if(AMBIG_NAMES[n])return true;            // known multi-state name → always ask
     return !CC[n];                            // otherwise only unknown places
   });
@@ -3343,6 +3425,34 @@ function askPlaceChoice(name,preCands,onPicked){
       if(onPicked)onPicked();
     });
     box.appendChild(skip);
+    /* None of the listed options may be right — let the operator add detail
+       (district, state, nearest big town) and search again, rather than forcing
+       a wrong choice or dropping the stop. */
+    var moreWrap=document.createElement('div');
+    moreWrap.style.cssText='margin-top:0.6rem;padding-top:0.6rem;border-top:1px solid var(--line)';
+    moreWrap.innerHTML='<div style="font-size:0.7rem;font-weight:700;margin-bottom:0.3rem">Not in the list? Add more detail</div>'+
+      '<div style="font-size:0.65rem;color:var(--t3);margin-bottom:0.35rem">Add the district, state, or a big town nearby — e.g. "'+cap(name)+', Punjab" or "'+cap(name)+' near Amritsar"</div>'+
+      '<div style="display:flex;gap:0.35rem">'+
+        '<input class="ci" id="pcMore" placeholder="'+cap(name)+', ..." style="flex:1;font-size:0.78rem">'+
+        '<button class="cbtn" id="pcMoreGo" style="font-size:0.76rem;white-space:nowrap">Search</button>'+
+      '</div>';
+    box.appendChild(moreWrap);
+    var goBtn=moreWrap.querySelector('#pcMoreGo');
+    var moreInp=moreWrap.querySelector('#pcMore');
+    var doSearch=function(){
+      var extra=(moreInp.value||'').trim();
+      if(!extra){showToast('Type a district, state, or nearby town first');return;}
+      goBtn.textContent='…';
+      findCandidates(extra).then(function(g){
+        goBtn.textContent='Search';
+        if(!g||!g.length){showToast('Still no match — try a bigger nearby town');return;}
+        // remember what the operator typed so the same stop resolves next time
+        PLACE_HINTS[name]=extra;
+        render(g);
+      });
+    };
+    if(goBtn)goBtn.addEventListener('click',doSearch);
+    if(moreInp)moreInp.addEventListener('keydown',function(ev){if(ev.key==='Enter')doSearch();});
   }
   if(preCands&&preCands.length){render(preCands);return;}
   findCandidates(name).then(render);
