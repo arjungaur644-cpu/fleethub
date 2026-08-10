@@ -692,6 +692,15 @@ body{font-family:var(--body);background:var(--cream);color:var(--ink);font-size:
                 <button id="gkeySave" style="background:var(--saffron);color:var(--navy);border:none;border-radius:8px;padding:0.45rem 0.8rem;font-size:0.72rem;font-weight:700;cursor:pointer">Save</button>
               </div>
               <div id="gkeyStatus" style="font-size:0.62rem;margin-top:0.35rem;color:var(--t3)"></div>
+              <div style="margin-top:0.7rem;border-top:1px dashed var(--line);padding-top:0.55rem">
+                <div style="font-size:0.7rem;font-weight:700;margin-bottom:0.2rem">🪙 Accurate toll (optional)</div>
+                <div style="font-size:0.66rem;color:var(--t2);margin-bottom:0.35rem">Without a toll key, FleetHub estimates toll from a per-km assumption — which can be well off on long routes. A TollGuru key gives real plaza-by-plaza rates for your actual vehicle class. Free tier available at tollguru.com.</div>
+                <div style="display:flex;gap:0.4rem">
+                  <input id="tgkeyInput" placeholder="TollGuru API key (optional)" style="flex:1;border:1px solid var(--line);border-radius:8px;padding:0.45rem;font-size:0.72rem;outline:none"/>
+                  <button id="tgkeySave" style="background:var(--saffron);color:var(--navy);border:none;border-radius:8px;padding:0.45rem 0.8rem;font-size:0.72rem;font-weight:700;cursor:pointer">Save</button>
+                </div>
+                <div id="tgkeyStatus" style="font-size:0.62rem;margin-top:0.35rem;color:var(--t3)"></div>
+              </div>
             </div>
           </div>
         </div>
@@ -1014,6 +1023,40 @@ try{FH_API=localStorage.getItem('fh_api')||'';}catch(e){}
 var GKEY='';
 try{GKEY=localStorage.getItem('fh_gkey')||'';}catch(e){}
 function saveGKey(k){GKEY=(k||'').trim();try{localStorage.setItem('fh_gkey',GKEY);}catch(e){}}
+/* Optional TollGuru key. TollGuru is a commercial toll-rate service with real
+   Indian plaza data and proper commercial vehicle classes — the one source that
+   removes the guesswork from toll figures. FleetHub works without it (falling
+   back to Google's car rate and the NHAI table), but with it the toll stops
+   being an assumption. */
+var TGKEY='';
+try{TGKEY=localStorage.getItem('fh_tgkey')||'';}catch(e){}
+function saveTGKey(k){TGKEY=(k||'').trim();try{localStorage.setItem('fh_tgkey',TGKEY);}catch(e){}}
+/* TollGuru vehicle type codes matched to FleetHub's classes. */
+var TG_VEHICLE={cab:'2AxlesAuto',suv:'2AxlesAuto',tempo:'2AxlesTruck',minibus:'2AxlesBus',bus:'3AxlesBus'};
+function tollGuruRoute(pts,vtype){
+  if(!TGKEY||!pts||pts.length<2)return Promise.resolve(null);
+  var body={
+    from:{lat:pts[0][0],lng:pts[0][1]},
+    to:{lat:pts[pts.length-1][0],lng:pts[pts.length-1][1]},
+    waypoints:pts.slice(1,-1).map(function(p){return{lat:p[0],lng:p[1]};}),
+    vehicle:{type:TG_VEHICLE[vtype]||'2AxlesBus'},
+    serviceProvider:'here'
+  };
+  return fetch('https://apis.tollguru.com/toll/v2/origin-destination-waypoints',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','x-api-key':TGKEY},
+    body:JSON.stringify(body)
+  }).then(function(r){return r.json();}).then(function(d){
+    if(!d||!d.routes||!d.routes[0])return null;
+    var rt=d.routes[0];
+    var cost=rt.costs&&(rt.costs.tag!=null?rt.costs.tag:rt.costs.cash);
+    if(cost==null)return null;
+    var plazas=(rt.tolls||[]).map(function(t){
+      return{name:t.name||'Toll plaza',amt:Math.round(t.tagCost!=null?t.tagCost:(t.cashCost||0)),hw:t.road||''};
+    });
+    return{amount:Math.round(cost),plazas:plazas,exact:true};
+  }).catch(function(){return null;});
+}
 // Get exact road distance (metres) via Google Routes API for an ordered list of [lat,lng] points.
 // Returns a Promise resolving to {km, source} or null on failure (caller falls back to OSRM).
 function googleRouteKm(pts){
@@ -2893,7 +2936,7 @@ var CHAIN_DEFS={
   places:{icon:'📍',title:'Place coordinates',tiers:['Google Places knowledge base','FleetHub verified places','Google Geocoding API','OpenStreetMap Nominatim']},
   distance:{icon:'📏',title:'Distance & time',tiers:['Google Routes API','OSRM (OpenStreetMap)','Geometric estimate']},
   optimize:{icon:'🔀',title:'Stop order',tiers:['Google Route Optimization','2-opt on real road matrix','2-opt on straight-line']},
-  toll:{icon:'🪙',title:'Toll',tiers:['Your saved rate','Google Routes API × NHAI class','NHAI plaza rates','NHAI plazas + estimate','Per-km estimate']}
+  toll:{icon:'🪙',title:'Toll',tiers:['Your saved rate','TollGuru plaza data','Google Routes API x NHAI class','NHAI plaza rates','NHAI plazas + estimate','Per-km estimate']}
 };
 function renderSourcesCard(el,c,replace){
   var existing=document.getElementById('sourcesCard');
@@ -2965,10 +3008,11 @@ function renderAuditCard(el,c,p,ordered,total){
 
   // 4. Toll basis — the honest one
   if(c.tollSource==='learned')add('pass','Toll is your own verified figure','You corrected this route before; that figure is used instead of any estimate.');
+  else if(c.tollSource==='tollguru')add('pass','Toll from real plaza data','TollGuru returned plaza-by-plaza rates for the '+VTYPE_LABEL[c.vtype]+' class on this exact route.');
   else if(c.tollSource==='nhai')add('pass','Toll from matched NHAI plazas','Every leg matched the built-in plaza table.');
   else if(c.tollSource==='google')add('warn','Toll scaled from a car rate','Google publishes a non-commercial toll. It is multiplied by '+(NHAI_CLASS_MULT[c.vtype]||1)+'× for the '+VTYPE_LABEL[c.vtype]+' class — a class ratio, not a measured plaza total.');
   else if(c.tollSource==='mixed')add('warn','Toll partly estimated','Some plazas matched; the rest is a per-km estimate. Open "See all tolls" for the split.');
-  else add('warn','Toll fully estimated','No plaza on this route matched yet. Please verify and correct — your figure will be saved.');
+  else add('fail','Toll is an assumption, not data','No plaza data matched this route, so the toll is '+total+' km × an assumed rate. On a long route this can be off by thousands. Verify on tis.nhai.gov.in, or add a TollGuru key in Accuracy settings for real plaza rates.');
 
   // 5. Arithmetic self-check — recompute the total independently
   var recomputed=Math.round(c.fuelCost+c.tollCost+c.driverCost+(c.stateTax||0)+(c.park||0));
@@ -3015,7 +3059,7 @@ function renderAuditCard(el,c,p,ordered,total){
    return doubling made explicit, and — critically — how much of the figure is a
    real plaza rate versus an estimate. An operator cannot trust a toll number
    they cannot take apart. */
-function showTollDetail(c,ordered,isRound){
+function showTollDetail(c,ordered,isRound,kmUsed){
   var vt=c.vtype||'bus';
   var plazas=c.tollPlazaList||[];
   var real=plazas.reduce(function(s,x){return s+(x.amt||0);},0);
@@ -3048,8 +3092,14 @@ function showTollDetail(c,ordered,isRound){
     '</div>'+
     '<div style="margin-top:0.7rem;background:var(--green-bg);border-radius:10px;padding:0.6rem;font-size:0.68rem;line-height:1.55">'+
       '<b>How the estimate part is worked out</b><br>'+
-      'Unmatched distance × ₹'+TOLL_PER_KM_CAR+'/km (car) × '+(NHAI_CLASS_MULT[vt]||1)+'× for '+(VTYPE_LABEL[vt]||vt)+'.<br>'+
-      'The class ratios follow the NH Fee Rules 2008 vehicle classes. The per-km figure is an <b>assumption</b>, not a published rate — real NH toll runs roughly ₹1–1.5 per tolled km for a car, and not every km of a route is tolled.'+
+      (kmUsed>0?('Distance used: <b>'+kmUsed+' km</b>'+(isRound?' (includes the return leg)':' (one way)')+'<br>'+
+                 kmUsed+' km × ₹'+TOLL_PER_KM_CAR+'/km (car) × '+(NHAI_CLASS_MULT[vt]||1)+'× for '+(VTYPE_LABEL[vt]||vt)+
+                 ' = <b>₹'+Math.round(kmUsed*TOLL_PER_KM_CAR*(NHAI_CLASS_MULT[vt]||1)).toLocaleString()+'</b><br>')
+               :('Unmatched distance × ₹'+TOLL_PER_KM_CAR+'/km (car) × '+(NHAI_CLASS_MULT[vt]||1)+'× for '+(VTYPE_LABEL[vt]||vt)+'.<br>'))+
+      'The class ratios follow the NH Fee Rules 2008 vehicle classes. The per-km figure is an <b>assumption</b>, not a published rate — real NH toll runs roughly ₹1–1.5 per tolled km for a car, and not every km of a route is tolled, so this figure tends to run high on routes with long untolled stretches.'+
+    '</div>'+
+    '<div style="margin-top:0.6rem;background:#FEF3C7;border-radius:10px;padding:0.6rem;font-size:0.68rem;line-height:1.55;color:#78350F">'+
+      '<b>⚠️ Check this figure before quoting.</b> With no plaza matched, this is arithmetic on an assumed rate — not a measured toll. For a long route like this the real total can differ substantially. Enter the correct amount below and FleetHub will use it for this route from then on.'+
     '</div>'+
     '<div style="margin-top:0.6rem;font-size:0.68rem;color:var(--t3);line-height:1.5">'+
       'If you know the real figure, type it into the Toll field — it is saved against this exact route and vehicle, and used automatically next time. Verify on <b>tis.nhai.gov.in</b> or the <b>Rajmargyatra</b> app.'+
@@ -3291,28 +3341,32 @@ function distanceChain(pts,straightKm){
    available for that specific route. */
 function tollChain(ordered,vtype,isRound,googleCarToll,totalKm){
   var perKm=TOLL_PER_KM_CAR*(NHAI_CLASS_MULT[vtype]||1);
+  var pts=ordered.map(function(o){return o.coord;});
+  if(isRound&&pts.length>1)pts=pts.concat([ordered[0].coord]);
   return runChain('toll',[
     {label:'Your saved rate',tier:'1',note:'you corrected this route before',
      run:function(){
        var v=TOLL_LEARNED[tollLearnKey(ordered,vtype)];
        return (v!=null&&v>0)?{amount:v,plazas:[{name:'Your saved toll for this route',amt:v}],exact:true}:null;
      }},
-    {label:'Google Routes API x NHAI class',tier:'2',note:'Google gives the car rate; scaled to this vehicle class',
+    {label:'TollGuru plaza data',tier:'2',note:'real plaza-by-plaza rates for this vehicle class',
+     run:function(){return TGKEY?withTimeout(tollGuruRoute(pts,vtype),9000):null;}},
+    {label:'Google Routes API x NHAI class',tier:'3',note:'Google gives the car rate; scaled to this vehicle class',
      run:function(){
        if(!(googleCarToll>0))return null;
        return{amount:googleTollForClass(googleCarToll,vtype),plazas:[],exact:false};
      }},
-    {label:'NHAI plaza rates',tier:'3',note:'NH Fee Rules 2008, all plazas on this route matched',
+    {label:'NHAI plaza rates',tier:'4',note:'NH Fee Rules 2008, all plazas on this route matched',
      run:function(){
        var nh=computeNhaiToll(ordered,vtype,isRound);
        return (nh.covered&&nh.total>0)?{amount:nh.total,plazas:nh.plazas,exact:true}:null;
      }},
-    {label:'NHAI plazas + estimate',tier:'4',note:'some legs matched real plazas, rest estimated',
+    {label:'NHAI plazas + estimate',tier:'5',note:'some legs matched real plazas, rest estimated',
      run:function(){
        var nh=computeNhaiToll(ordered,vtype,isRound);
        return (nh.partial&&nh.total>0)?{amount:nh.total+Math.round(totalKm*perKm*0.4),plazas:nh.plazas,exact:false}:null;
      }},
-    {label:'Per-km estimate',tier:'5',note:'no plaza match yet - please verify and correct',
+    {label:'Per-km estimate',tier:'6',note:'no plaza data for this route - assumption only, verify before quoting',
      run:function(){return{amount:Math.round(totalKm*perKm),plazas:[],exact:false};}}
   ],null,function(v){return v&&v.amount>=0;});
 }
@@ -4138,7 +4192,7 @@ function renderCalcResult(p,ordered,legs,retKm,total,c){
     var tdb=document.getElementById('tollDetailBtn');
     if(tdb)tdb.addEventListener('click',function(ev){
       ev.preventDefault();
-      showTollDetail(c,ordered,!!p.isRet||retKm>0);
+      showTollDetail(c,ordered,!!p.isRet||retKm>0,liveTotal||total);
     });
     var vt=document.getElementById('ed-vtype');
     if(vt)vt.addEventListener('change',function(){recalc(true);});
@@ -4205,12 +4259,12 @@ function renderCalcResult(p,ordered,legs,retKm,total,c){
           if(t&&t.amount>=0){
             var et=document.getElementById('ed-toll');
             if(et){et.value=t.amount;c.tollCost=t.amount;}
-            c.tollSource=tres.tier==='1'?'learned':tres.tier==='2'?'google':tres.tier==='3'?'nhai':tres.tier==='4'?'mixed':'estimate';
+            c.tollSource=tres.tier==='1'?'learned':tres.tier==='2'?'tollguru':tres.tier==='3'?'google':tres.tier==='4'?'nhai':tres.tier==='5'?'mixed':'estimate';
             if(t.plazas&&t.plazas.length)c.tollPlazaList=t.plazas;
             var tb=document.getElementById('tollBadge');
             if(tb){
-              tb.textContent=tres.tier==='1'?'★ your saved rate':tres.tier==='2'?(vtNow==='cab'?'✓ Google':'✓ Google × NHAI class'):tres.tier==='3'?'✓ NHAI':tres.tier==='4'?'NHAI+est':'est.';
-              tb.className='toll-badge '+(tres.tier==='5'?'est':tres.tier==='4'?'mixed':'nhai');
+              tb.textContent=tres.tier==='1'?'★ your saved rate':tres.tier==='2'?'✓ TollGuru plazas':tres.tier==='3'?(vtNow==='cab'?'✓ Google':'✓ Google × NHAI class'):tres.tier==='4'?'✓ NHAI':tres.tier==='5'?'NHAI+est':'⚠ estimate only';
+              tb.className='toll-badge '+(tres.tier==='6'?'est':tres.tier==='5'?'mixed':'nhai');
             }
           }
           recalc();
@@ -4463,11 +4517,27 @@ document.getElementById('calcMic').addEventListener('click',function(){
     if(GKEY){st.innerHTML='✅ Google distance active (key saved). <a href="#" id="gkeyClear" style="color:var(--red)">Remove</a>';var cl=document.getElementById('gkeyClear');if(cl)cl.addEventListener('click',function(e){e.preventDefault();saveGKey('');inp.value='';refreshStatus();showToast('Google key removed — using free road distance');});}
     else{st.textContent='No key set — using free OpenStreetMap road distance (~90% accurate).';}
   }
-  tog.addEventListener('click',function(){box.style.display=box.style.display==='none'?'block':'none';if(box.style.display==='block'){inp.value=GKEY;refreshStatus();}});
+  tog.addEventListener('click',function(){box.style.display=box.style.display==='none'?'block':'none';if(box.style.display==='block'){inp.value=GKEY;refreshStatus();refreshTg();}});
   save.addEventListener('click',function(){
     var k=inp.value.trim();
     if(k&&!/^AIza/.test(k)){showToast('That doesn\u2019t look like a Google key (starts with AIza)');return;}
     saveGKey(k);refreshStatus();showToast(k?'Google key saved — distances now exact':'Key cleared');
+  });
+  var tgInp=document.getElementById('tgkeyInput'),tgSave=document.getElementById('tgkeySave'),tgSt=document.getElementById('tgkeyStatus');
+  function refreshTg(){
+    if(!tgSt)return;
+    if(tgInp)tgInp.value=TGKEY;
+    if(TGKEY){
+      tgSt.innerHTML='✅ Real plaza rates active. <a href="#" id="tgClear" style="color:var(--red)">Remove</a>';
+      var tc=document.getElementById('tgClear');
+      if(tc)tc.addEventListener('click',function(e){e.preventDefault();saveTGKey('');tgInp.value='';refreshTg();showToast('Toll key removed — back to estimates');});
+    }else{
+      tgSt.textContent='No toll key — toll is an estimate on long routes. Always verify before quoting.';
+    }
+  }
+  if(tgSave)tgSave.addEventListener('click',function(){
+    saveTGKey(tgInp.value.trim());refreshTg();
+    showToast(TGKEY?'Toll key saved — real plaza rates will be used':'Toll key cleared');
   });
 })();
 (function(){
