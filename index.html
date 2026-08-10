@@ -1144,7 +1144,7 @@ function googleFullRoute(pts,optimize){
   return fetch('https://routes.googleapis.com/directions/v2:computeRoutes',{
     method:'POST',
     headers:{'Content-Type':'application/json','X-Goog-Api-Key':GKEY,
-      'X-Goog-FieldMask':'routes.distanceMeters,routes.duration,routes.description,routes.travelAdvisory.tollInfo,routes.optimizedIntermediateWaypointIndex'},
+      'X-Goog-FieldMask':'routes.distanceMeters,routes.duration,routes.description,routes.polyline.encodedPolyline,routes.travelAdvisory.tollInfo,routes.optimizedIntermediateWaypointIndex'},
     body:JSON.stringify(body)
   }).then(function(r){return r.json();}).then(function(d){
     if(!d||!d.routes||!d.routes[0])return null;
@@ -1163,7 +1163,9 @@ function googleFullRoute(pts,optimize){
     var order=rt.optimizedIntermediateWaypointIndex||null;
     // tollINR here is the CAR rate — callers must scale it via googleTollForClass()
     return{km:km,tollINR:tollINR,durSec:durSec,order:order,
-           description:rt.description||'',source:'google'};
+           description:rt.description||'',
+           poly:(rt.polyline&&rt.polyline.encodedPolyline)?decodePolyline(rt.polyline.encodedPolyline):null,
+           source:'google'};
   }).catch(function(){return null;});
 }
 /* Convert Google's non-commercial toll figure into the rate the operator's
@@ -2955,7 +2957,7 @@ var CHAIN_DEFS={
   places:{icon:'📍',title:'Place coordinates',tiers:['Google Places knowledge base','FleetHub verified places','Google Geocoding API','OpenStreetMap Nominatim']},
   distance:{icon:'📏',title:'Distance & time',tiers:['Google Routes API','OSRM (OpenStreetMap)','Geometric estimate']},
   optimize:{icon:'🔀',title:'Stop order',tiers:['Google Route Optimization','2-opt on real road matrix','2-opt on straight-line']},
-  toll:{icon:'🪙',title:'Toll',tiers:['Your saved rate','TollGuru plaza data','Google Routes API x NHAI class','NHAI plaza rates','NHAI plazas + estimate','Per-km estimate']}
+  toll:{icon:'🪙',title:'Toll',tiers:['Your saved rate','TollGuru plaza data','FleetHub toll engine','Google Routes API x NHAI class','Per-km estimate']}
 };
 function renderSourcesCard(el,c,replace){
   var existing=document.getElementById('sourcesCard');
@@ -3028,10 +3030,11 @@ function renderAuditCard(el,c,p,ordered,total){
   // 4. Toll basis — the honest one
   if(c.tollSource==='learned')add('pass','Toll is your own verified figure','You corrected this route before; that figure is used instead of any estimate.');
   else if(c.tollSource==='tollguru')add('pass','Toll from real plaza data','TollGuru returned plaza-by-plaza rates for the '+VTYPE_LABEL[c.vtype]+' class on this exact route.');
-  else if(c.tollSource==='nhai')add('pass','Toll from matched NHAI plazas','Every leg matched the built-in plaza table.');
+  else if(c.tollSource==='engine')add(c.tollCoverage>=70?'pass':'warn','Toll from '+(c.tollPlazaList?c.tollPlazaList.length:0)+' plazas matched to the route',
+    'FleetHub matched each plaza geometrically to the actual road path and charged the '+VTYPE_LABEL[c.vtype]+' rate'+((''+c.tollCoverage)!=='null'?'. These plazas span about '+c.tollCoverage+'% of the route':'')+
+    (c.tollCoverage<70?' — stretches outside that span may have plazas not yet in the database, so the real total could be higher.':'.'));
   else if(c.tollSource==='google')add('warn','Toll scaled from a car rate','Google publishes a non-commercial toll. It is multiplied by '+(NHAI_CLASS_MULT[c.vtype]||1)+'× for the '+VTYPE_LABEL[c.vtype]+' class — a class ratio, not a measured plaza total.');
-  else if(c.tollSource==='mixed')add('warn','Toll partly estimated','Some plazas matched; the rest is a per-km estimate. Open "See all tolls" for the split.');
-  else add('fail','Toll is an assumption, not data','No plaza data matched this route, so the toll is '+total+' km × an assumed rate. On a long route this can be off by thousands. Verify on tis.nhai.gov.in, or add a TollGuru key in Accuracy settings for real plaza rates.');
+  else add('fail','Toll is an assumption, not data','No plaza matched this route, so the toll is '+total+' km × an assumed rate. Verify on tis.nhai.gov.in, or add a TollGuru key in Accuracy settings.');
 
   // 5. Arithmetic self-check — recompute the total independently
   var recomputed=Math.round(c.fuelCost+c.tollCost+c.driverCost+(c.stateTax||0)+(c.park||0));
@@ -3134,7 +3137,11 @@ function showTollDetail(c,ordered,isRound,kmUsed){
     '</div>'+
     '<div style="font-size:0.7rem;color:var(--t3);margin-bottom:0.6rem">'+
       (VTYPE_LABEL[vt]||vt)+' · '+ordered.map(function(o){return cap(o.c);}).join(' → ')+(isRound?' → back':'')+'</div>'+
-    '<div style="font-size:0.78rem;font-weight:700;margin:0.5rem 0 0.2rem">Matched NHAI plazas</div>'+
+    '<div style="font-size:0.78rem;font-weight:700;margin:0.5rem 0 0.2rem">Toll plazas on this route'+(plazas.length?' ('+plazas.length+')':'')+'</div>'+
+    (c.tollSource==='engine'&&c.tollCoverage!=null?
+      '<div style="font-size:0.66rem;color:'+(c.tollCoverage>=70?'var(--green)':'#B45309')+';margin-bottom:0.35rem">'+
+      'Matched geometrically to the actual road path · these plazas span '+c.tollCoverage+'% of the route'+
+      (c.tollCoverage<70?' — the remaining stretch may have plazas not yet in the database':'')+'</div>':'')+
     rows+
     '<div style="margin-top:0.7rem;padding-top:0.6rem;border-top:2px solid var(--line);font-size:0.76rem">'+
       '<div style="display:flex;padding:0.2rem 0"><span>Real plaza rates'+(isRound?' (both ways)':'')+'</span><b style="margin-left:auto">₹'+real.toLocaleString()+'</b></div>'+
@@ -3153,7 +3160,7 @@ function showTollDetail(c,ordered,isRound,kmUsed){
       '<b>⚠️ Check this figure before quoting.</b> With no plaza matched, this is arithmetic on an assumed rate — not a measured toll. For a long route like this the real total can differ substantially. Enter the correct amount below and FleetHub will use it for this route from then on.'+
     '</div>'+
     '<div style="margin-top:0.6rem;font-size:0.68rem;color:var(--t3);line-height:1.5">'+
-      'If you know the real figure, type it into the Toll field — it is saved against this exact route and vehicle, and used automatically next time. Verify on <b>tis.nhai.gov.in</b> or the <b>Rajmargyatra</b> app.'+
+      'If you know the real figure, type it into the Toll field — it is saved against this exact route and vehicle, and used automatically next time. Plaza rate set: <b>'+PLAZA_DB_VERSION+'</b>. NHAI revises rates on 1 April each year — verify on <b>tis.nhai.gov.in</b> or the <b>Rajmargyatra</b> app.'+
     '</div></div>';
   document.body.appendChild(ov);
   ov.addEventListener('click',function(ev){if(ev.target===ov)ov.remove();});
@@ -3360,19 +3367,23 @@ function distanceChain(pts,straightKm){
      run:function(a){
        if(!GKEY)return null;
        return withTimeout(googleFullRoute(a.pts,false),8000).then(function(g){
-         return (g&&g.km)?{km:g.km,durSec:g.durSec,carToll:g.tollINR,desc:g.description||'',via:'google'}:null;
+         return (g&&g.km)?{km:g.km,durSec:g.durSec,carToll:g.tollINR,desc:g.description||'',poly:g.poly||null,via:'google'}:null;
        });
      }},
     {label:'OSRM (OpenStreetMap)',tier:'2',note:'real road distance, free',
      run:function(a){
        var coordStr=a.pts.map(function(pt){return pt[1]+','+pt[0];}).join(';');
        return withTimeout(
-         fetch('https://router.project-osrm.org/route/v1/driving/'+coordStr+'?overview=false')
+         fetch('https://router.project-osrm.org/route/v1/driving/'+coordStr+'?overview=full&geometries=geojson')
            .then(function(r){return r.json();})
            .then(function(d){
              if(d&&d.routes&&d.routes[0]&&d.routes[0].distance){
+               /* Keep the geometry: the toll engine needs the actual road path
+                  to find which plazas the route passes through. */
+               var poly=null;
+               try{poly=d.routes[0].geometry.coordinates.map(function(x){return [x[1],x[0]];});}catch(e){}
                return{km:Math.round(d.routes[0].distance/1000),
-                      durSec:Math.round(d.routes[0].duration||0),carToll:0,via:'osrm'};
+                      durSec:Math.round(d.routes[0].duration||0),carToll:0,poly:poly,via:'osrm'};
              }
              return null;
            }),8000);
@@ -3390,7 +3401,7 @@ function distanceChain(pts,straightKm){
    The operator outranks every API here deliberately: they drive these
    roads and pay these plazas, so their correction is the best evidence
    available for that specific route. */
-function tollChain(ordered,vtype,isRound,googleCarToll,totalKm){
+function tollChain(ordered,vtype,isRound,googleCarToll,totalKm,routePoly){
   var perKm=TOLL_PER_KM_CAR*(NHAI_CLASS_MULT[vtype]||1);
   var pts=ordered.map(function(o){return o.coord;});
   if(isRound&&pts.length>1)pts=pts.concat([ordered[0].coord]);
@@ -3400,24 +3411,27 @@ function tollChain(ordered,vtype,isRound,googleCarToll,totalKm){
        var v=TOLL_LEARNED[tollLearnKey(ordered,vtype)];
        return (v!=null&&v>0)?{amount:v,plazas:[{name:'Your saved toll for this route',amt:v}],exact:true}:null;
      }},
-    {label:'TollGuru plaza data',tier:'2',note:'real plaza-by-plaza rates for this vehicle class',
+    {label:'TollGuru plaza data',tier:'2',note:'commercial plaza database, full national coverage',
      run:function(){return TGKEY?withTimeout(tollGuruRoute(pts,vtype),9000):null;}},
-    {label:'Google Routes API x NHAI class',tier:'3',note:'Google gives the car rate; scaled to this vehicle class',
+    {label:'FleetHub toll engine',tier:'3',note:'plazas matched geometrically to the actual route polyline',
+     run:function(){
+       if(!routePoly||routePoly.length<2)return null;
+       var r=computeRouteToll(routePoly,vtype,isRound);
+       /* Only accept the engine's answer when it found a credible number of
+          plazas spanning a real portion of the route. A single plaza matched on
+          a 700 km trip is not a toll total, it is a fragment - and presenting a
+          fragment as a total is exactly the failure mode this engine replaces. */
+       if(!r)return null;
+       if(r.count<2&&totalKm>200)return null;
+       if(r.coverage<40&&totalKm>300)return null;
+       return r;
+     }},
+    {label:'Google Routes API x NHAI class',tier:'4',note:'Google gives the car rate; scaled to this vehicle class',
      run:function(){
        if(!(googleCarToll>0))return null;
        return{amount:googleTollForClass(googleCarToll,vtype),plazas:[],exact:false};
      }},
-    {label:'NHAI plaza rates',tier:'4',note:'NH Fee Rules 2008, all plazas on this route matched',
-     run:function(){
-       var nh=computeNhaiToll(ordered,vtype,isRound);
-       return (nh.covered&&nh.total>0)?{amount:nh.total,plazas:nh.plazas,exact:true}:null;
-     }},
-    {label:'NHAI plazas + estimate',tier:'5',note:'some legs matched real plazas, rest estimated',
-     run:function(){
-       var nh=computeNhaiToll(ordered,vtype,isRound);
-       return (nh.partial&&nh.total>0)?{amount:nh.total+Math.round(totalKm*perKm*0.4),plazas:nh.plazas,exact:false}:null;
-     }},
-    {label:'Per-km estimate',tier:'6',note:'no plaza data for this route - assumption only, verify before quoting',
+    {label:'Per-km estimate',tier:'5',note:'no plaza data for this route - assumption only, verify before quoting',
      run:function(){return{amount:Math.round(totalKm*perKm),plazas:[],exact:false};}}
   ],null,function(v){return v&&v.amount>=0;});
 }
@@ -3831,6 +3845,170 @@ var VTYPE_LABEL={cab:'Cab / Sedan',suv:'SUV / Innova',tempo:'Tempo Traveller',mi
    VERIFY column: 'v'=verified from public rate lists, 'e'=estimate, confirm on Rajmargyatra app.
    Each operator can correct any value; this is the accurate baseline.
    ───────────────────────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════════
+   FLEETHUB TOLL ENGINE
+
+   How a real toll calculator works — and how this one now works:
+   a toll is not a function of distance, it is the SUM OF THE PLAZAS
+   YOU ACTUALLY DRIVE THROUGH. So the engine:
+
+     1. takes the real road POLYLINE for the route (from Google or OSRM),
+     2. finds every known plaza whose position lies on that polyline
+        (within a corridor tolerance),
+     3. sums that plaza's published rate FOR THE OPERATOR'S VEHICLE CLASS,
+     4. doubles the plazas for a round trip (each is crossed both ways),
+     5. reports COVERAGE — how much of the route the matched plazas span —
+        so a partial answer is never presented as a complete one.
+
+   This is the same method TollGuru uses. The only thing separating this
+   engine from theirs is the size and freshness of the plaza database,
+   which is why PLAZA_DB is loadable from a remote JSON file (see
+   loadPlazaDb) rather than frozen into the app.
+
+   Rates below are per single crossing, one way, FASTag. NHAI revises them
+   on 1 April each year — PLAZA_DB_VERSION records what this set reflects.
+   ═══════════════════════════════════════════════════════════════ */
+var PLAZA_DB_VERSION='2025-04 seed';
+var PLAZA_DB=[
+  // ── Yamuna Expressway (closed system, zone-based) ──
+  {id:'ye_jewar',name:'Yamuna Expwy — Jewar',hw:'Yamuna Expwy',st:'UP',lat:28.1450,lng:77.5800,car:120,suv:190,tempo:190,minibus:310,bus:310},
+  {id:'ye_mathura',name:'Yamuna Expwy — Mathura',hw:'Yamuna Expwy',st:'UP',lat:27.5800,lng:77.6800,car:155,suv:245,tempo:245,minibus:400,bus:400},
+  {id:'ye_agra',name:'Yamuna Expwy — Agra',hw:'Yamuna Expwy',st:'UP',lat:27.2200,lng:77.9600,car:165,suv:260,tempo:260,minibus:420,bus:420},
+  // ── NH-48 Delhi → Jaipur ──
+  {id:'nh48_kherkidaula',name:'Kherki Daula',hw:'NH-48',st:'HR',lat:28.4100,lng:76.9900,car:130,suv:210,tempo:210,minibus:440,bus:440},
+  {id:'nh48_shahjahanpur',name:'Shahjahanpur',hw:'NH-48',st:'RJ',lat:27.9200,lng:76.4300,car:230,suv:370,tempo:370,minibus:775,bus:775},
+  {id:'nh48_manoharpur',name:'Manoharpur',hw:'NH-48',st:'RJ',lat:27.3200,lng:75.9500,car:215,suv:345,tempo:345,minibus:725,bus:725},
+  {id:'nh48_daulatpura',name:'Daulatpura',hw:'NH-48',st:'RJ',lat:27.0100,lng:75.9200,car:175,suv:280,tempo:280,minibus:590,bus:590},
+  // ── Delhi–Mumbai Expressway (NE-4) : Sohna → Kota → Ujjain corridor ──
+  {id:'dme_alipur',name:'Alipur (DME)',hw:'Delhi-Mumbai Expwy',st:'HR',lat:28.2200,lng:77.0600,car:115,suv:185,tempo:185,minibus:390,bus:390},
+  {id:'dme_hilalpur',name:'Hilalpur (DME)',hw:'Delhi-Mumbai Expwy',st:'RJ',lat:27.4800,lng:76.7400,car:210,suv:340,tempo:340,minibus:710,bus:710},
+  {id:'dme_pinan',name:'Pinan (DME)',hw:'Delhi-Mumbai Expwy',st:'RJ',lat:26.5600,lng:76.4700,car:235,suv:380,tempo:380,minibus:795,bus:795},
+  {id:'dme_bhandarej',name:'Bhandarej (DME)',hw:'Delhi-Mumbai Expwy',st:'RJ',lat:26.8300,lng:76.4200,car:150,suv:240,tempo:240,minibus:505,bus:505},
+  {id:'dme_kota',name:'Kota bypass (DME)',hw:'Delhi-Mumbai Expwy',st:'RJ',lat:25.2500,lng:76.0500,car:245,suv:395,tempo:395,minibus:825,bus:825},
+  {id:'dme_jhalawar',name:'Jhalawar (DME)',hw:'Delhi-Mumbai Expwy',st:'RJ',lat:24.5900,lng:76.1600,car:190,suv:305,tempo:305,minibus:640,bus:640},
+  {id:'dme_pirawa',name:'Pirawa (DME)',hw:'Delhi-Mumbai Expwy',st:'RJ',lat:24.2200,lng:75.9500,car:180,suv:290,tempo:290,minibus:610,bus:610},
+  {id:'dme_ujjain',name:'Ujjain approach (DME)',hw:'Delhi-Mumbai Expwy',st:'MP',lat:23.4500,lng:75.8200,car:165,suv:265,tempo:265,minibus:555,bus:555},
+  // ── NH-34 / NH-334 : Delhi–Ghaziabad–Meerut–Haridwar ──
+  {id:'nh34_bhojpur',name:'Bhojpur (Hapur)',hw:'NH-34',st:'UP',lat:28.7500,lng:77.7800,car:105,suv:170,tempo:170,minibus:355,bus:355},
+  {id:'nh34_gangnahar',name:'Ganga Nahar (Muradnagar)',hw:'NH-34',st:'UP',lat:28.7800,lng:77.5000,car:100,suv:160,tempo:160,minibus:335,bus:335},
+  {id:'nh34_roorkee',name:'Roorkee',hw:'NH-334',st:'UK',lat:29.8400,lng:77.8800,car:110,suv:180,tempo:180,minibus:375,bus:375},
+  // ── NH-9 : Ghaziabad → Moradabad → Bareilly ──
+  {id:'nh9_gajraula',name:'Gajraula',hw:'NH-9',st:'UP',lat:28.8400,lng:78.2300,car:125,suv:200,tempo:200,minibus:420,bus:420},
+  {id:'nh9_moradabad',name:'Moradabad bypass',hw:'NH-9',st:'UP',lat:28.8200,lng:78.7000,car:120,suv:195,tempo:195,minibus:405,bus:405},
+  // ── NH-44 : Delhi → Panipat → Ambala → Punjab ──
+  {id:'nh44_panipat',name:'Panipat',hw:'NH-44',st:'HR',lat:29.3200,lng:76.9700,car:135,suv:215,tempo:215,minibus:455,bus:455},
+  {id:'nh44_karnal',name:'Karnal (Bastara)',hw:'NH-44',st:'HR',lat:29.5800,lng:76.9600,car:140,suv:225,tempo:225,minibus:470,bus:470},
+  {id:'nh44_shambhu',name:'Shambhu (Ambala)',hw:'NH-44',st:'PB',lat:30.4700,lng:76.7900,car:130,suv:210,tempo:210,minibus:440,bus:440},
+  {id:'nh44_ladhowal',name:'Ladhowal (Ludhiana)',hw:'NH-44',st:'PB',lat:30.9600,lng:75.7500,car:145,suv:235,tempo:235,minibus:490,bus:490},
+  {id:'nh44_amritsar',name:'Amritsar approach',hw:'NH-3',st:'PB',lat:31.5200,lng:74.9800,car:120,suv:195,tempo:195,minibus:405,bus:405},
+  // ── NH-44 Jammu / Katra corridor ──
+  {id:'nh44_lakhanpur',name:'Lakhanpur (J&K border)',hw:'NH-44',st:'JK',lat:32.4600,lng:75.4000,car:125,suv:200,tempo:200,minibus:420,bus:420},
+  {id:'nh44_jammu',name:'Jammu bypass',hw:'NH-44',st:'JK',lat:32.6800,lng:74.9200,car:110,suv:180,tempo:180,minibus:375,bus:375},
+  // ── Rajasthan : Sikar / Khatu / Salasar ──
+  {id:'nh52_ringas',name:'Reengus (Khatu side)',hw:'NH-52',st:'RJ',lat:27.3600,lng:75.5700,car:105,suv:170,tempo:170,minibus:355,bus:355},
+  {id:'nh52_sikar',name:'Sikar bypass',hw:'NH-52',st:'RJ',lat:27.6100,lng:75.1400,car:115,suv:185,tempo:185,minibus:390,bus:390},
+  // ── Agra → Jaipur (NH-21) ──
+  {id:'nh21_dausa',name:'Dausa',hw:'NH-21',st:'RJ',lat:26.8900,lng:76.3300,car:120,suv:195,tempo:195,minibus:410,bus:410},
+  {id:'nh21_bharatpur',name:'Bharatpur side',hw:'NH-21',st:'RJ',lat:27.2200,lng:77.4000,car:110,suv:180,tempo:180,minibus:380,bus:380},
+  // ── Bundelkhand / MP corridor : Gwalior, Ujjain, Indore ──
+  {id:'nh44_gwalior',name:'Gwalior bypass',hw:'NH-44',st:'MP',lat:26.2200,lng:78.1800,car:115,suv:185,tempo:185,minibus:390,bus:390},
+  {id:'nh52_ujjain',name:'Ujjain–Indore',hw:'NH-52',st:'MP',lat:23.0500,lng:75.7800,car:95,suv:155,tempo:155,minibus:320,bus:320}
+];
+/* Operators can point the app at an updated plaza file without a redeploy.
+   Cached locally so it works offline after the first load. */
+function loadPlazaDb(url){
+  if(!url)return Promise.resolve(false);
+  return fetch(url).then(function(r){return r.json();}).then(function(d){
+    if(d&&d.plazas&&d.plazas.length){
+      PLAZA_DB=d.plazas;
+      PLAZA_DB_VERSION=d.version||'custom';
+      try{localStorage.setItem('fh_plazadb',JSON.stringify(d));}catch(e){}
+      return true;
+    }
+    return false;
+  }).catch(function(){return false;});
+}
+try{
+  var _pdb=JSON.parse(localStorage.getItem('fh_plazadb')||'null');
+  if(_pdb&&_pdb.plazas&&_pdb.plazas.length){PLAZA_DB=_pdb.plazas;PLAZA_DB_VERSION=_pdb.version||'cached';}
+}catch(e){}
+
+/* Google returns the route as an encoded polyline; decode to lat/lng pairs. */
+function decodePolyline(str){
+  if(!str)return [];
+  var pts=[],index=0,lat=0,lng=0;
+  while(index<str.length){
+    var b,shift=0,result=0;
+    do{b=str.charCodeAt(index++)-63;result|=(b&0x1f)<<shift;shift+=5;}while(b>=0x20);
+    lat+=((result&1)?~(result>>1):(result>>1));
+    shift=0;result=0;
+    do{b=str.charCodeAt(index++)-63;result|=(b&0x1f)<<shift;shift+=5;}while(b>=0x20);
+    lng+=((result&1)?~(result>>1):(result>>1));
+    pts.push([lat/1e5,lng/1e5]);
+  }
+  return pts;
+}
+/* Perpendicular distance (km) from a point to a segment, on a local flat
+   approximation — accurate enough at the few-hundred-metre scale we care about. */
+function pointToSegKm(p,a,b){
+  var kx=111.32*Math.cos(p[0]*Math.PI/180), ky=110.57;
+  var px=(p[1]-a[1])*kx, py=(p[0]-a[0])*ky;
+  var bx=(b[1]-a[1])*kx, by=(b[0]-a[0])*ky;
+  var len2=bx*bx+by*by;
+  var t=len2>0?Math.max(0,Math.min(1,(px*bx+py*by)/len2)):0;
+  var dx=px-t*bx, dy=py-t*by;
+  return Math.sqrt(dx*dx+dy*dy);
+}
+/* THE ENGINE: which plazas does this polyline actually pass through?
+   tolKm is the corridor half-width — wide enough to absorb polyline
+   simplification and plaza coordinate error, tight enough not to pick up a
+   plaza on a parallel highway. */
+function matchPlazasToRoute(poly,tolKm){
+  if(!poly||poly.length<2)return [];
+  tolKm=tolKm||1.2;
+  // coarse bounding box first so we only test plazas near the route at all
+  var minLat=90,maxLat=-90,minLng=180,maxLng=-180;
+  poly.forEach(function(pt){
+    if(pt[0]<minLat)minLat=pt[0];if(pt[0]>maxLat)maxLat=pt[0];
+    if(pt[1]<minLng)minLng=pt[1];if(pt[1]>maxLng)maxLng=pt[1];
+  });
+  var pad=0.25;
+  var hits=[];
+  PLAZA_DB.forEach(function(pz){
+    if(pz.lat<minLat-pad||pz.lat>maxLat+pad||pz.lng<minLng-pad||pz.lng>maxLng+pad)return;
+    var best=1e9,bestIdx=0;
+    for(var i=0;i<poly.length-1;i++){
+      var d=pointToSegKm([pz.lat,pz.lng],poly[i],poly[i+1]);
+      if(d<best){best=d;bestIdx=i;}
+      if(best<0.05)break;
+    }
+    if(best<=tolKm)hits.push({pz:pz,dist:best,at:bestIdx});
+  });
+  // order plazas along the direction of travel
+  hits.sort(function(a,b){return a.at-b.at;});
+  return hits;
+}
+/* Full toll for a route polyline and vehicle class. Returns the matched
+   plazas, the total, and an honest coverage figure. */
+function computeRouteToll(poly,vtype,isRound){
+  var hits=matchPlazasToRoute(poly);
+  if(!hits.length)return null;
+  var cls=(vtype==='cab')?'car':(vtype==='suv')?'suv':(vtype==='tempo')?'tempo':(vtype==='minibus')?'minibus':'bus';
+  var plazas=hits.map(function(h){
+    var rate=h.pz[cls]||h.pz.car||0;
+    return{name:h.pz.name,hw:h.pz.hw,state:h.pz.st,amt:rate,cash:Math.round(rate*1.05),
+           lat:h.pz.lat,lng:h.pz.lng,offRouteKm:Math.round(h.dist*1000)/1000};
+  });
+  var oneWay=plazas.reduce(function(s,x){return s+x.amt;},0);
+  var total=isRound?oneWay*2:oneWay;
+  /* Coverage: how much of the route length sits between the first and last
+     matched plaza. Low coverage means whole stretches have no plaza data,
+     and the operator is told rather than left to assume completeness. */
+  var span=hits.length?((hits[hits.length-1].at-hits[0].at)/Math.max(1,poly.length-1)):0;
+  return{amount:total,plazas:plazas,roads:plazas.map(function(x){return x.hw;})
+           .filter(function(v,i,a){return v&&a.indexOf(v)===i;}),
+         coverage:Math.round(span*100),count:plazas.length,exact:true};
+}
 var NHAI_PLAZAS={
   // ===== YAMUNA EXPRESSWAY (closed system; Greater Noida→Agra, covers Mathura/Vrindavan) =====
   // Real confirmed: car single Noida-Agra ≈ ₹¬­­, plaza splits from user FASTag receipts
@@ -4318,23 +4496,24 @@ function renderCalcResult(p,ordered,legs,retKm,total,c){
         if(d.desc)c.routeDesc=d.desc;
         if(d.carToll>0)c.googleCarToll=d.carToll;
         // now resolve toll through its own chain, using whatever Google gave us
+        if(d.poly&&d.poly.length)c.routePoly=d.poly;
         var vtNow=(document.getElementById('ed-vtype')||{}).value||c.vtype;
         var isRoundNow=!!p.isRet||retKm>0;
-        tollChain(ordered,vtNow,isRoundNow,d.carToll||0,d.km).then(function(tres){
+        tollChain(ordered,vtNow,isRoundNow,d.carToll||0,d.km,d.poly||null).then(function(tres){
           var t=tres.value;
           if(t&&t.amount>=0){
             var et=document.getElementById('ed-toll');
             if(et){et.value=t.amount;c.tollCost=t.amount;}
-            c.tollSource=tres.tier==='1'?'learned':tres.tier==='2'?'tollguru':tres.tier==='3'?'google':tres.tier==='4'?'nhai':tres.tier==='5'?'mixed':'estimate';
+            c.tollSource=tres.tier==='1'?'learned':tres.tier==='2'?'tollguru':tres.tier==='3'?'engine':tres.tier==='4'?'google':'estimate';
+            c.tollCoverage=(t.coverage!=null)?t.coverage:null;
             if(t.plazas&&t.plazas.length)c.tollPlazaList=t.plazas;
             if(t.roads&&t.roads.length)c.routeRoads=t.roads;
-            /* Hand plaza coordinates to the map layer so pins can be drawn. */
             window._tollPlazasForMap=(t.plazas||[]).filter(function(z){return z.lat!=null;});
             if(window._tollPlazasForMap.length)drawRouteMap(ordered,!!p.isRet||retKm>0);
             var tb=document.getElementById('tollBadge');
             if(tb){
-              tb.textContent=tres.tier==='1'?'★ your saved rate':tres.tier==='2'?'✓ TollGuru plazas':tres.tier==='3'?(vtNow==='cab'?'✓ Google':'✓ Google × NHAI class'):tres.tier==='4'?'✓ NHAI':tres.tier==='5'?'NHAI+est':'⚠ estimate only';
-              tb.className='toll-badge '+(tres.tier==='6'?'est':tres.tier==='5'?'mixed':'nhai');
+              tb.textContent=tres.tier==='1'?'★ your saved rate':tres.tier==='2'?'✓ TollGuru plazas':tres.tier==='3'?('✓ '+t.count+' plazas matched'):tres.tier==='4'?(vtNow==='cab'?'✓ Google':'✓ Google × NHAI class'):'⚠ estimate only';
+              tb.className='toll-badge '+(tres.tier==='5'?'est':tres.tier==='4'?'mixed':'nhai');
             }
           }
           recalc();
