@@ -1,0 +1,13 @@
+{
+  "name": "fleethub-toll-api",
+  "version": "1.0.0",
+  "description": "Plaza-level toll calculation for Indian commercial vehicles",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "ingest": "node scripts/ingest.js",
+    "test": "node scripts/test.js"
+  },
+  "engines": { "node": ">=18" },
+  "license": "UNLICENSED"
+}
