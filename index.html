@@ -702,8 +702,8 @@ body{font-family:var(--body);background:var(--cream);color:var(--ink);font-size:
                 <div id="tgkeyStatus" style="font-size:0.62rem;margin-top:0.35rem;color:var(--t3)"></div>
               </div>
               <div style="margin-top:0.7rem;border-top:1px dashed var(--line);padding-top:0.55rem">
-                <div style="font-size:0.7rem;font-weight:700;margin-bottom:0.2rem">🛠️ FleetHub Toll Engine (self-hosted, optional)</div>
-                <div style="font-size:0.66rem;color:var(--t2);margin-bottom:0.35rem">Your own toll service — 570+ NHAI plazas nationwide, cross-validated, auto-updated weekly. Deploy it (Railway/Render/Fly), paste its URL here. Outranks TollGuru when both are set.</div>
+                <div style="font-size:0.7rem;font-weight:700;margin-bottom:0.2rem">🛠️ FleetHub Toll Engine</div>
+                <div style="font-size:0.66rem;color:var(--t2);margin-bottom:0.35rem">Connected by default — 570+ NHAI plazas nationwide, cross-validated, auto-updated weekly, hosted on Google Cloud Run. Only change this if you deploy your own copy of the service.</div>
                 <div style="display:flex;gap:0.4rem">
                   <input id="tapiUrlInput" placeholder="https://your-toll-api.up.railway.app" style="flex:1;border:1px solid var(--line);border-radius:8px;padding:0.45rem;font-size:0.72rem;outline:none"/>
                   <button id="tapiUrlSave" style="background:var(--saffron);color:var(--navy);border:none;border-radius:8px;padding:0.45rem 0.8rem;font-size:0.72rem;font-weight:700;cursor:pointer">Save</button>
@@ -1039,9 +1039,19 @@ function saveGKey(k){GKEY=(k||'').trim();try{localStorage.setItem('fh_gkey',GKEY
    Outranks TollGuru in the toll chain when configured, because it carries
    confidence scoring (confirmed/single-source/conflict) that TollGuru's
    response does not expose. */
-var TAPI_URL='';
-try{TAPI_URL=localStorage.getItem('fh_tapi_url')||'';}catch(e){}
+/* Default to the deployed FleetHub Toll API — deployed to Google Cloud Run
+   asia-south1 on 2026-08-15. An operator's own localStorage override (if they
+   ever paste a different URL in settings) always wins over this default. */
+var TAPI_URL_DEFAULT='https://fleethub-toll-api-460851483135.asia-south1.run.app';
+var TAPI_URL=TAPI_URL_DEFAULT;
+try{
+  var _savedTapi=localStorage.getItem('fh_tapi_url');
+  // A saved empty string means "explicitly cleared" — respect it as off.
+  // No saved value at all means "never touched" — keep the built-in default.
+  if(_savedTapi!==null)TAPI_URL=_savedTapi;
+}catch(e){}
 function saveTapiUrl(u){TAPI_URL=(u||'').trim().replace(/\/+$/,'');try{localStorage.setItem('fh_tapi_url',TAPI_URL);}catch(e){}}
+function resetTapiUrlToDefault(){TAPI_URL=TAPI_URL_DEFAULT;try{localStorage.removeItem('fh_tapi_url');}catch(e){}}
 var TAPI_KEY='';
 try{TAPI_KEY=localStorage.getItem('fh_tapi_key')||'';}catch(e){}
 function saveTapiKey(k){TAPI_KEY=(k||'').trim();try{localStorage.setItem('fh_tapi_key',TAPI_KEY);}catch(e){}}
@@ -4860,19 +4870,25 @@ document.getElementById('calcMic').addEventListener('click',function(){
     if(!tuSt)return;
     if(tuInp)tuInp.value=TAPI_URL;
     if(tuKeyInp)tuKeyInp.value=TAPI_KEY;
+    var isDefault=(TAPI_URL===TAPI_URL_DEFAULT);
     if(TAPI_URL){
       tuSt.innerHTML='🔍 Checking…';
       fetch(TAPI_URL+'/v1/health').then(function(r){return r.json();}).then(function(h){
         var n=(h.rateSets&&h.rateSets[0]&&h.rateSets[0].plazaCount)||0;
-        tuSt.innerHTML='✅ Connected — '+n+' plazas, version '+((h.rateSets&&h.rateSets[0]&&h.rateSets[0].version)||'?')+
-          '. <a href="#" id="tuClear" style="color:var(--red)">Remove</a>';
+        tuSt.innerHTML='✅ Connected'+(isDefault?' (default)':' (custom)')+' — '+n+' plazas, version '+((h.rateSets&&h.rateSets[0]&&h.rateSets[0].version)||'?')+
+          (isDefault?'':' . <a href="#" id="tuClear" style="color:var(--red)">Reset to default</a>');
         var tc=document.getElementById('tuClear');
-        if(tc)tc.addEventListener('click',function(e){e.preventDefault();saveTapiUrl('');tuInp.value='';refreshTapi();showToast('Toll API disconnected — falling back to TollGuru/estimate');});
+        if(tc)tc.addEventListener('click',function(e){e.preventDefault();resetTapiUrlToDefault();refreshTapi();showToast('Reset to the built-in FleetHub Toll Engine');});
       }).catch(function(){
-        tuSt.innerHTML='⚠️ Saved, but could not reach it just now. Check the URL and that the server is running.';
+        tuSt.innerHTML='⚠️ Saved, but could not reach it just now. Check the URL and that the server is running.'+
+          (isDefault?'':' <a href="#" id="tuClear" style="color:var(--red)">Reset to default</a>');
+        var tc=document.getElementById('tuClear');
+        if(tc)tc.addEventListener('click',function(e){e.preventDefault();resetTapiUrlToDefault();refreshTapi();showToast('Reset to the built-in FleetHub Toll Engine');});
       });
     }else{
-      tuSt.textContent='Not connected — using TollGuru or the in-browser engine instead.';
+      tuSt.innerHTML='Disconnected — using TollGuru or the in-browser engine instead. <a href="#" id="tuClear" style="color:var(--saffron)">Reconnect default</a>';
+      var tc2=document.getElementById('tuClear');
+      if(tc2)tc2.addEventListener('click',function(e){e.preventDefault();resetTapiUrlToDefault();refreshTapi();});
     }
   }
   if(tuSave)tuSave.addEventListener('click',function(){
