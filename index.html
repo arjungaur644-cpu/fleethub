@@ -3082,6 +3082,16 @@ function renderAuditCard(el,c,p,ordered,total){
   else if(c.distSource==='osrm')add('pass','Distance from real roads','OSRM returned '+total+' km using OpenStreetMap road geometry.');
   else add('warn','Distance is a geometric estimate','Straight-line × 1.27. Real roads were unreachable, so treat this as approximate.');
 
+  /* 1b. Operator feedback on this exact route. This is the self-learning loop:
+     confirmations raise confidence, reports lower it — both are shown, not
+     just used silently, so the operator sees the same signal the system does. */
+  try{
+    var _sig=routeSignature(ordered,total,c.distSource||'estimate');
+    var _hist=feedbackHistoryFor(_sig);
+    if(_hist.confirms>0)add('pass',_hist.confirms+' operator'+(_hist.confirms>1?'s have':' has')+' confirmed this route before','Direct feedback from a past quote on this exact route, source, and distance band.');
+    if(_hist.issues.length>0)add('warn',_hist.issues.length+' issue'+(_hist.issues.length>1?'s':'')+' reported on this route before','Reasons given: '+_hist.issues.map(function(i){return i.reason;}).join(', ')+'. Worth a manual check before quoting.');
+  }catch(e){}
+
   // 2. Every stop resolved
   var unresolved=ordered.filter(function(o){return !o.coord;}).length;
   if(unresolved===0)add('pass','All '+ordered.length+' stops located','Each stop resolved to real coordinates before any distance was measured.');
@@ -4413,6 +4423,90 @@ function drawRouteMap(ordered,isRet){
    matrix-based legs) and again once the ONE authoritative distance fetch
    resolves with Google's or OSRM's real per-leg breakdown — same function,
    so the two renders can never drift into inconsistent formatting. */
+/* ═══════════════════════════════════════════════════════════════
+   DISTANCE & ROUTE FEEDBACK LOOP
+
+   Every quote ends with a plain question: does this look right? The answer
+   is stored — locally for now, but in the exact shape a backend "learning"
+   endpoint would want (route signature, source, reported issue, correction) —
+   so this can be wired to a shared server later without changing the schema.
+
+   What it actually DOES today, honestly:
+     - "Looks correct" confirmations raise confidence for that exact route +
+       source combination — shown back to the operator next time as "N drivers
+       have confirmed this before."
+     - "Report an issue" records WHAT was wrong (too high/low, wrong order,
+       wrong place, other) and any corrected figure. A route with 2+ reports
+       is flagged the next time it is quoted, the same way a plaza conflict is
+       flagged in the toll engine — surfaced, never silently averaged away.
+   This is not yet auto-retraining anything — it is the honest first half of
+   that: a structured, growing record of ground truth to build that on. */
+var ROUTE_FEEDBACK=[];
+try{ROUTE_FEEDBACK=JSON.parse(localStorage.getItem('fh_route_feedback')||'[]');}catch(e){ROUTE_FEEDBACK=[];}
+function saveRouteFeedback(rec){
+  ROUTE_FEEDBACK.push(rec);
+  try{localStorage.setItem('fh_route_feedback',JSON.stringify(ROUTE_FEEDBACK.slice(-500)));}catch(e){}
+}
+function routeSignature(ordered,total,source){
+  return ordered.map(function(o){return (o.c||'').toLowerCase();}).join('>')+'|'+source+'|~'+Math.round(total/10)*10;
+}
+function feedbackHistoryFor(sig){
+  var rows=ROUTE_FEEDBACK.filter(function(r){return r.sig===sig;});
+  return{confirms:rows.filter(function(r){return r.type==='confirm';}).length,
+         issues:rows.filter(function(r){return r.type==='issue';})};
+}
+function renderDistanceFeedback(el,p,ordered,total,c){
+  var sig=routeSignature(ordered,total,c.distSource||'estimate');
+  var hist=feedbackHistoryFor(sig);
+  var card=document.createElement('div');card.className='rescard';card.id='feedbackCard';
+  var histLine='';
+  if(hist.confirms>0)histLine='<div style="font-size:0.66rem;color:var(--green);margin-bottom:0.4rem">✓ '+hist.confirms+' operator'+(hist.confirms>1?'s have':' has')+' confirmed this exact route before</div>';
+  if(hist.issues.length>0)histLine+='<div style="font-size:0.66rem;color:#B45309;margin-bottom:0.4rem">⚠ '+hist.issues.length+' issue'+(hist.issues.length>1?'s':'')+' reported on this route before — worth double-checking</div>';
+  card.innerHTML='<div class="rc-h">🧭 Is this distance and route right?</div><div class="rc-b">'+
+    histLine+
+    '<div style="font-size:0.7rem;color:var(--t3);margin-bottom:0.5rem">Your answer helps FleetHub get more accurate on routes you actually drive.</div>'+
+    '<div style="display:flex;gap:0.5rem" id="fbButtons">'+
+      '<button class="cbtn" id="fbGood" style="flex:1;font-size:0.78rem;font-weight:700;color:var(--green)">👍 Looks correct</button>'+
+      '<button class="cbtn" id="fbBad" style="flex:1;font-size:0.78rem;font-weight:700;color:#B45309">⚠️ Report an issue</button>'+
+    '</div><div id="fbForm"></div></div>';
+  el.appendChild(card);
+  var goodBtn=card.querySelector('#fbGood'),badBtn=card.querySelector('#fbBad'),form=card.querySelector('#fbForm');
+  goodBtn.addEventListener('click',function(){
+    saveRouteFeedback({type:'confirm',sig:sig,km:total,source:c.distSource||'estimate',
+      route:ordered.map(function(o){return o.c;}),vtype:c.vtype,at:new Date().toISOString()});
+    card.querySelector('#fbButtons').innerHTML='<div style="font-size:0.78rem;color:var(--green);font-weight:700">✓ Thanks — saved. This route\'s accuracy record just got a bit stronger.</div>';
+  });
+  badBtn.addEventListener('click',function(){
+    if(form.dataset.open)return;
+    form.dataset.open='1';
+    form.innerHTML='<div style="margin-top:0.6rem;border-top:1px solid var(--line);padding-top:0.6rem">'+
+      '<div style="font-size:0.72rem;font-weight:700;margin-bottom:0.4rem">What looks wrong?</div>'+
+      '<div id="fbReasons" style="display:flex;flex-wrap:wrap;gap:0.35rem;margin-bottom:0.5rem">'+
+        ['Distance too high','Distance too low','Wrong stop order','Wrong place matched','Toll wrong','Other'].map(function(r){
+          return '<button type="button" class="cbtn fbReason" style="font-size:0.72rem;padding:0.35rem 0.6rem">'+r+'</button>';
+        }).join('')+
+      '</div>'+
+      '<input id="fbCorrectKm" placeholder="Correct km, if you know it (optional)" style="width:100%;border:1px solid var(--line);border-radius:8px;padding:0.5rem;font-size:0.76rem;margin-bottom:0.5rem" inputmode="numeric">'+
+      '<button class="cbtn" id="fbSubmit" style="width:100%;font-weight:700;font-size:0.78rem;background:var(--saffron);color:var(--navy);border:none">Submit feedback</button>'+
+    '</div>';
+    var chosen=null;
+    form.querySelectorAll('.fbReason').forEach(function(b){
+      b.addEventListener('click',function(){
+        form.querySelectorAll('.fbReason').forEach(function(x){x.style.background='';x.style.color='';});
+        b.style.background='var(--saffron)';b.style.color='var(--navy)';
+        chosen=b.textContent;
+      });
+    });
+    form.querySelector('#fbSubmit').addEventListener('click',function(){
+      if(!chosen){showToast('Pick what looks wrong first');return;}
+      var correctedKm=+((form.querySelector('#fbCorrectKm')||{}).value)||null;
+      saveRouteFeedback({type:'issue',sig:sig,km:total,correctedKm:correctedKm,reason:chosen,source:c.distSource||'estimate',
+        route:ordered.map(function(o){return o.c;}),vtype:c.vtype,at:new Date().toISOString()});
+      form.innerHTML='<div style="font-size:0.78rem;color:#B45309;font-weight:700;margin-top:0.5rem">✓ Reported — thank you. This route will be flagged for extra care next time.</div>';
+      showToast('Feedback saved');
+    });
+  });
+}
 function buildTourPlanHTML(p,ordered,legs,retKm,c){
   var lh='';var cum=0;
   ordered.forEach(function(s,i){
@@ -4494,6 +4588,7 @@ function renderCalcResult(p,ordered,legs,retKm,total,c){
   var ro=document.createElement('div');ro.className='rescard';ro.id='tourPlanCard';
   ro.innerHTML=buildTourPlanHTML(p,ordered,legs,retKm,c);
   el.appendChild(ro);
+  renderDistanceFeedback(el,p,ordered,total,c);
   /* ── ALTERNATIVE ORDERS ──
      The shortest route is not always the one an operator wants: darshan timings,
      overnight halts and customer preference matter. Show a straight-line estimate
