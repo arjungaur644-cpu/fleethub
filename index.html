@@ -4672,7 +4672,17 @@ function renderCalcResult(p,ordered,legs,retKm,total,c){
       p.ac=(exAc.value==='1');
       recalc();
     });
-    // Fetch REAL road distance + toll: Google first (if key set), else OSRM + NHAI estimate
+    /* Fetch the ONE authoritative real-road distance + toll for this quote.
+       renderCalcResult runs TWICE per calculation — once instantly with a
+       straight-line estimate (c.realRoads=false), once again once the
+       optimizer has picked the real stop order (c.realRoads=true). Both
+       calls used to independently trigger this fetch, which meant: (1) the
+       first fetch ran against the WRONG, pre-optimization order and got
+       silently discarded, and (2) the operator could watch the total number
+       flip twice for the same trip. Gating on c.realRoads means this fetch
+       runs exactly once, against the correct final order, and the number
+       shown only ever changes once — from estimate straight to authoritative. */
+    if(c.realRoads){
     var pts=ordered.filter(function(s){return s.coord;}).map(function(s){return s.coord;});
     if(p.isRet&&pts.length)pts.push(pts[0]);
     if(pts.length>=2){
@@ -4682,12 +4692,26 @@ function renderCalcResult(p,ordered,legs,retKm,total,c){
       distanceChain(pts,total).then(function(dres){
         var d=dres.value;
         if(!d||!d.km){audit('real_km',false,'all distance sources unavailable');return;}
+        var prevTotal=total,diffKm=d.km-prevTotal;
         liveTotal=d.km;
         var dl=document.getElementById('distLabel');if(dl)dl.textContent=d.km+' km';
         var ds=document.getElementById('distSrc');
         if(ds){
           ds.textContent='· '+dres.source+(d.via==='estimate'?'':' ✓');
           ds.style.color=(d.via==='estimate')?'var(--t3)':'var(--green)';
+        }
+        /* Be upfront when this refinement actually moves the number, rather
+           than letting it change silently under the operator's eyes. Small
+           differences (route-matrix sum vs one continuous route) are normal
+           and not worth a note; anything over ~2% is worth explaining. */
+        if(Math.abs(diffKm)>Math.max(5,prevTotal*0.02)&&dl){
+          var noteEl=document.getElementById('distRefineNote');
+          if(!noteEl){
+            noteEl=document.createElement('div');noteEl.id='distRefineNote';
+            noteEl.style.cssText='font-size:0.62rem;color:var(--t3);margin-top:1px';
+            dl.parentNode.appendChild(noteEl);
+          }
+          noteEl.textContent='Refined from '+prevTotal+' km ('+dres.source+' gives a single continuous route vs. the leg-by-leg matrix used for ordering)';
         }
         c.distSource=d.via;c.realRoads=(d.via!=='estimate');
         if(d.durSec>0)c.realDurSec=d.durSec;
@@ -4724,6 +4748,7 @@ function renderCalcResult(p,ordered,legs,retKm,total,c){
           audit('real_km',true,d.km+' km via '+dres.source+' · toll via '+tres.source);
         });
       });
+    }
     }
   },120);
   function buildShareText(){
