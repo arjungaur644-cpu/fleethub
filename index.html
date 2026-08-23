@@ -3004,6 +3004,30 @@ function buildRouteCandidates(p,valid,D,vtype){
     var M=[];for(var i=0;i<n;i++){M[i]=[];for(var j=0;j<n;j++){M[i][j]=(i===j)?0:hav(valid[i].coord,valid[j].coord)*1270;}}
     return M;
   })();
+  /* When the exhaustive search ran for THIS exact stop set, use its real,
+     provably-distinct top routes instead of the old Shortest/Reverse/
+     Farthest-first heuristics — those were reasonable guesses at variety,
+     this is every combination actually checked and ranked. */
+  var exh=window._exhaustiveAlts;
+  var sameStops=exh&&exh.valid&&exh.valid.length===n&&exh.valid.every(function(v,i){return v.c===valid[i].c;});
+  if(exh&&sameStops&&exh.results&&exh.results.length){
+    var labels=['Option 1 — Best possible route','Option 2 — Next best route','Option 3 — Third best route'];
+    var out2=exh.results.map(function(r,i){
+      return build(labels[i]||('Option '+(i+1)),r.seq,
+        i===0?'every possible order checked — this is the provably shortest':'next-shortest of all combinations checked');
+    });
+    var minKm2=Math.min.apply(null,out2.map(function(o){return o.km;}));
+    var minHr2=Math.min.apply(null,out2.map(function(o){return o.hours;}));
+    var minToll2=Math.min.apply(null,out2.map(function(o){return o.toll;}));
+    out2.forEach(function(o){
+      o.tags=[];
+      if(o.km===minKm2)o.tags.push('shortest');
+      if(o.hours===minHr2)o.tags.push('least time');
+      if(o.toll===minToll2)o.tags.push('lowest toll');
+    });
+    out2.exhaustive=true;
+    return out2;
+  }
   var baseSeq=solveOrder(matrix,n,!!p.isRet);
   var out=[build('Option 1 — Shortest distance',baseSeq,'least km and least fuel')];
   var rev=[0].concat(baseSeq.slice(1).reverse());
@@ -3292,9 +3316,13 @@ function renderAltRoutes(p,cands,verdict,isEstimate){
       '<div style="font-size:0.72rem;line-height:1.45">'+o.path.join(' → ')+(p.isRet?' → '+o.path[0]:'')+'</div>'+
     '</div>';
   });
-  host.innerHTML='<div class="rescard"><div class="rc-h">🔀 Other route options'+(isEstimate?' <span style="font-size:0.58rem;color:var(--t3);font-weight:400;margin-left:auto">estimating…</span>':'')+'</div><div class="rc-b">'+
+  host.innerHTML='<div class="rescard"><div class="rc-h">'+(cands.exhaustive?'🔍 All possible routes checked':'🔀 Other route options')+(isEstimate?' <span style="font-size:0.58rem;color:var(--t3);font-weight:400;margin-left:auto">estimating…</span>':'')+'</div><div class="rc-b">'+
     vh+
-    '<div style="font-size:0.66rem;color:var(--t3);margin-bottom:0.3rem;line-height:1.5">'+(isEstimate?'Straight-line estimate — refining with real road distance…':'Real road distance for each option.')+' Tolls here (≈) are estimated on one common basis so the options can be compared fairly; the toll in your quote above uses the full source chain.</div>'+oh+'</div></div>';
+    '<div style="font-size:0.66rem;color:var(--t3);margin-bottom:0.3rem;line-height:1.5">'+
+      (cands.exhaustive
+        ?'Every possible visiting order for these stops was calculated — this is not a guess, it is the genuine best and next-best options out of all combinations.'
+        :(isEstimate?'Straight-line estimate — refining with real road distance…':'Real road distance for each option.'))+
+      ' Tolls here (≈) are estimated on one common basis so the options can be compared fairly; the toll in your quote above uses the full source chain.</div>'+oh+'</div></div>';
 }
 /* ═══════════════════════════════════════════════════════════════
    PROVIDER CHAIN ENGINE
@@ -3551,10 +3579,71 @@ function tollChain(ordered,vtype,isRound,googleCarToll,totalKm,routePoly){
    1. Google Route Optimization (optimizeWaypointOrder) on real roads
    2. Local nearest-neighbour + 2-opt on the real OSRM road matrix
    3. Local nearest-neighbour + 2-opt on straight-line distance */
+/* ═══════════════════════════════════════════════════════════════
+   EXHAUSTIVE ROUTE SEARCH (permutation agent)
+
+   2-opt is a heuristic — it un-crosses a good guess until no single swap
+   helps, which is fast but not GUARANTEED to find the true shortest order.
+   For a small trip (up to 8 stops after the fixed start, i.e. 9 total),
+   checking every possible order is cheap enough to just do it properly:
+   8! = 40,320 permutations, each a handful of array lookups — well under a
+   second even on a phone.
+
+   Start is always fixed (the first place named). For a round trip, the tour
+   closes back to start; for one-way, the end is whatever the best order
+   puts there. Returns not just the winner but the top few DISTINCT orders,
+   so the operator can see there is a real choice, not just one number. */
+function factorial(n){var r=1;for(var i=2;i<=n;i++)r*=i;return r;}
+function permutations(arr){
+  if(arr.length<=1)return[arr];
+  var out=[];
+  for(var i=0;i<arr.length;i++){
+    var rest=arr.slice(0,i).concat(arr.slice(i+1));
+    permutations(rest).forEach(function(p){out.push([arr[i]].concat(p));});
+  }
+  return out;
+}
+function exhaustiveRoutes(D,n,isRet,topK){
+  topK=topK||3;
+  if(n<3)return[{seq:Array.from({length:n},function(_,i){return i;}),km:0}];
+  var rest=[];for(var i=1;i<n;i++)rest.push(i);
+  function tourLen(seq){
+    var t=0;
+    for(var k=0;k<seq.length-1;k++)t+=D[seq[k]][seq[k+1]];
+    if(isRet)t+=D[seq[seq.length-1]][seq[0]];
+    return t;
+  }
+  var all=permutations(rest).map(function(p){
+    var seq=[0].concat(p);
+    return{seq:seq,km:tourLen(seq)};
+  });
+  all.sort(function(a,b){return a.km-b.km;});
+  // de-dupe by distance so "top 3" are genuinely different routes, not the
+  // same route walked in a direction that happens to score identically
+  var out=[],seenKm={};
+  for(var j=0;j<all.length&&out.length<topK;j++){
+    var key=Math.round(all[j].km);
+    if(seenKm[key])continue;
+    seenKm[key]=1;out.push(all[j]);
+  }
+  return out;
+}
+/* Practical cap: beyond 8 intermediate stops the factorial search gets slow
+   enough to matter on a phone, so the chain falls back to Google's optimizer
+   or 2-opt instead — both still good, just not exhaustively provable. */
+var EXHAUSTIVE_MAX_STOPS=9;
 function optimizeChain(p,valid,D){
   var n=valid.length;
   return runChain('optimize',[
-    {label:'Google Route Optimization',tier:'1',note:'optimal stop order on real roads',
+    {label:'Exhaustive search (all combinations)',tier:'1',note:'every possible order checked — guaranteed shortest, not a heuristic guess',
+     run:function(){
+       if(!D||n<4||n>EXHAUSTIVE_MAX_STOPS)return null; // below 4 stops the other tiers are already exact
+       var results=exhaustiveRoutes(D,n,!!p.isRet,3);
+       if(!results.length)return null;
+       window._exhaustiveAlts={valid:valid,isRet:!!p.isRet,results:results};
+       return results[0].seq;
+     }},
+    {label:'Google Route Optimization',tier:'2',note:'optimal stop order on real roads',
      run:function(){
        if(!GKEY||n<3||n>12)return null;
        var pts=valid.map(function(v){return v.coord;});
@@ -3566,9 +3655,9 @@ function optimizeChain(p,valid,D){
          return seq;
        });
      }},
-    {label:'2-opt on real road matrix',tier:'2',note:'computed in-app from OSRM distances',
+    {label:'2-opt on real road matrix',tier:'3',note:'computed in-app from OSRM distances',
      run:function(){return D?solveOrder(D,n,!!p.isRet):null;}},
-    {label:'2-opt on straight-line',tier:'3',note:'computed in-app, refined once roads load',
+    {label:'2-opt on straight-line',tier:'4',note:'computed in-app, refined once roads load',
      run:function(){return optOrd(valid.map(function(v){return v.coord;}),!!p.isRet);}}
   ],null,function(v){return v&&v.length===n;});
 }
