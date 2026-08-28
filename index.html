@@ -3085,6 +3085,7 @@ function buildRouteCandidates(p,valid,D,vtype){
       if(o.toll===minToll2)o.tags.push('lowest toll');
     });
     out2.exhaustive=true;
+    out2.valid=valid;out2.D=D;out2.vtype=vtype;
     return out2;
   }
   var baseSeq=solveOrder(matrix,n,!!p.isRet);
@@ -3106,6 +3107,7 @@ function buildRouteCandidates(p,valid,D,vtype){
     if(o.hours===minHr)o.tags.push('least time');
     if(o.toll===minToll)o.tags.push('lowest toll');
   });
+  out.valid=valid;out.D=D;out.vtype=vtype;
   return out;
 }
 function cap2(s){return s?String(s):'';}
@@ -3357,7 +3359,7 @@ function renderAltRoutes(p,cands,verdict,isEstimate){
       '</div>';
   }
   var oh='';
-  cands.forEach(function(o){
+  cands.forEach(function(o,oi){
     var diff=o.km-bestKm;
     var noteMatch=verdict&&verdict.notes?verdict.notes.filter(function(n){return n.candidate===o.name;})[0]:null;
     var note=noteMatch?noteMatch.why:'';
@@ -3373,6 +3375,7 @@ function renderAltRoutes(p,cands,verdict,isEstimate){
       (tagHtml?'<div style="margin:3px 0">'+tagHtml+'</div>':'')+
       '<div style="font-size:0.67rem;color:var(--t3);margin:2px 0 3px">≈₹'+o.toll.toLocaleString()+' toll · ~'+o.hours+' hr driving'+(o.why?' · '+o.why:'')+(note?' · '+note:'')+'</div>'+
       '<div style="font-size:0.72rem;line-height:1.45">'+o.path.join(' → ')+(p.isRet?' → '+o.path[0]:'')+'</div>'+
+      (!isEstimate&&!isBest?'<button class="cbtn useOptBtn" data-oi="'+oi+'" style="margin-top:0.4rem;font-size:0.7rem;font-weight:700;width:100%">Use this route — verify distance &amp; toll for real</button>':'')+
     '</div>';
   });
   host.innerHTML='<div class="rescard"><div class="rc-h">'+(cands.exhaustive?'🔍 All possible routes checked':'🔀 Other route options')+(isEstimate?' <span style="font-size:0.58rem;color:var(--t3);font-weight:400;margin-left:auto">estimating…</span>':'')+'</div><div class="rc-b">'+
@@ -3381,7 +3384,38 @@ function renderAltRoutes(p,cands,verdict,isEstimate){
       (cands.exhaustive
         ?'Every possible visiting order for these stops was calculated — this is not a guess, it is the genuine best and next-best options out of all combinations.'
         :(isEstimate?'Straight-line estimate — refining with real road distance…':'Real road distance for each option.'))+
-      ' Tolls here (≈) are estimated on one common basis so the options can be compared fairly; the toll in your quote above uses the full source chain.</div>'+oh+'</div></div>';
+      ' Tolls here (≈) are estimated on one common basis so the options can be compared fairly; the quote above already uses the full source chain for its own route — tap "Use this route" on any option to re-run that same full verification for THAT route instead.</div>'+oh+'</div></div>';
+  host.querySelectorAll('.useOptBtn').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      var oi=+btn.getAttribute('data-oi');
+      selectRouteOption(p,cands,oi);
+    });
+  });
+}
+/* Re-runs the FULL pipeline — the same single authoritative distance fetch
+   and the same full toll chain (saved rate -> Toll API -> TollGuru -> plaza
+   engine -> Google x class -> estimate) — for whichever alternative route the
+   operator picks, instead of leaving it on the approximate comparison numbers
+   shown in the options list. This works by simply re-rendering the whole
+   quote from scratch with the new stop order: renderCalcResult already
+   contains the "fetch exactly once, on the real order" logic, so calling it
+   again for a different order gets the SAME rigor as the very first render,
+   not a shortcut. */
+function selectRouteOption(p,cands,oi){
+  var picked=cands[oi];
+  var valid=cands.valid,D=cands.D;
+  if(!picked||!valid){showToast('Could not switch to that route — try recalculating');return;}
+  var seq=picked.seq;
+  var ordered=seq.map(function(i){return valid[i];});
+  var legs=[];
+  for(var k=0;k<seq.length-1;k++){
+    legs.push(D?Math.round(D[seq[k]][seq[k+1]]/1000):Math.round(hav(valid[seq[k]].coord,valid[seq[k+1]].coord)*1.27));
+  }
+  var retKm=p.isRet?(D?Math.round(D[seq[seq.length-1]][seq[0]]/1000):Math.round(hav(valid[seq[seq.length-1]].coord,valid[seq[0]].coord)*1.27)):0;
+  var total=legs.reduce(function(a,b){return a+b;},0)+(p.isRet?retKm:0);
+  showToast('🔍 Switching route — verifying real distance and toll…');
+  computeAndRender(p,ordered,true,legs,total,retKm);
+  audit('route_switch',true,'operator selected "'+picked.name+'" — re-verifying with full pipeline');
 }
 /* ═══════════════════════════════════════════════════════════════
    PROVIDER CHAIN ENGINE
