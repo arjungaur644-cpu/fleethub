@@ -1269,7 +1269,10 @@ function googleRouteAlternatives(fromCoord,toCoord){
   return fetch('https://routes.googleapis.com/directions/v2:computeRoutes',{
     method:'POST',
     headers:{'Content-Type':'application/json','X-Goog-Api-Key':GKEY,
-      'X-Goog-FieldMask':'routes.distanceMeters,routes.duration,routes.travelAdvisory.tollInfo,routes.routeLabels'},
+      /* routes.description is what makes this readable — Google's own
+         localised summary of the route, e.g. "via NH 48" or "via Alwar" —
+         the same phrase you would see written under a route on Google Maps. */
+      'X-Goog-FieldMask':'routes.distanceMeters,routes.duration,routes.travelAdvisory.tollInfo,routes.routeLabels,routes.description'},
     body:JSON.stringify(body)
   }).then(function(r){return r.json();}).then(function(d){
     if(!d||!d.routes||!d.routes.length)return null;
@@ -1281,7 +1284,7 @@ function googleRouteAlternatives(fromCoord,toCoord){
         var tp=rt.travelAdvisory.tollInfo.estimatedPrice;
         if(tp&&tp.length){var inr=tp.filter(function(x){return x.currencyCode==='INR';})[0]||tp[0];tollINR=Math.round(parseFloat(inr.units||0)+(inr.nanos?inr.nanos/1e9:0));}
       }catch(e){}
-      return{km:km,durSec:durSec,tollINR:tollINR,isDefault:(rt.routeLabels||[]).indexOf('DEFAULT_ROUTE')>=0};
+      return{km:km,durSec:durSec,tollINR:tollINR,desc:rt.description||'',isDefault:(rt.routeLabels||[]).indexOf('DEFAULT_ROUTE')>=0};
     });
   }).catch(function(){return null;});
 }
@@ -4652,6 +4655,71 @@ function renderDistanceFeedback(el,p,ordered,total,c){
     });
   });
 }
+/* Wires up every "view route options ▾" toggle in a freshly-rendered Tour
+   Plan card. Fetches happen lazily — only when the operator actually taps to
+   look — so a trip is never paying for alternate-route API calls it never
+   asked for. Picking a sub-route updates that one leg, recomputes the whole
+   trip's total, redraws the Tour Plan in place, and re-wires itself so the
+   toggles keep working after the redraw. */
+function wireLegOptions(container,p,ordered,legs,retKm,c,onTotalChanged){
+  var toggles=container.querySelectorAll('.legOptToggle');
+  toggles.forEach(function(btn){
+    btn.addEventListener('click',function(e){
+      e.preventDefault();
+      var legKey=btn.getAttribute('data-leg');
+      var box=document.getElementById('legOpt'+legKey);
+      if(!box)return;
+      if(box.dataset.loaded){
+        box.style.display=(box.style.display==='none')?'block':'none';
+        return;
+      }
+      box.dataset.loaded='1';
+      box.innerHTML='<div style="font-size:0.68rem;color:var(--t3);padding:0.3rem 0">🔍 Checking real alternate routes from Google…</div>';
+      var isRetLeg=(legKey==='ret');
+      var i=isRetLeg?ordered.length-1:parseInt(legKey,10);
+      var fromCoord=isRetLeg?ordered[ordered.length-1].coord:ordered[i].coord;
+      var toCoord=isRetLeg?ordered[0].coord:ordered[i+1].coord;
+      googleRouteAlternatives(fromCoord,toCoord).then(function(routes){
+        var classified=classifySubRoutes(routes);
+        if(!classified||classified.length<2){
+          box.innerHTML='<div style="font-size:0.68rem;color:var(--t3);padding:0.3rem 0">Only one sensible route between these two stops — nothing to compare.</div>';
+          return;
+        }
+        box.innerHTML='<div style="font-size:0.65rem;color:var(--t3);margin:0.3rem 0 0.2rem">'+classified.length+' real routes found for '+cap(isRetLeg?ordered[ordered.length-1].c:ordered[i].c)+' → '+cap(isRetLeg?ordered[0].c:ordered[i+1].c)+':</div>'+
+          classified.map(function(r,ri){
+            var h=Math.floor(r.durSec/3600),m=Math.round((r.durSec%3600)/60);
+            var viaText=r.desc?r.desc:('Route option '+(ri+1));
+            var tagHtml=r.tags.map(function(t){
+              return '<span style="background:var(--green-bg);color:var(--green);padding:1px 5px;border-radius:6px;margin-right:3px;font-weight:700;font-size:0.6rem">'+t+'</span>';
+            }).join('');
+            return '<div style="border:1px solid var(--line);border-radius:8px;padding:0.5rem 0.6rem;margin:0.3rem 0;display:flex;justify-content:space-between;align-items:center;gap:0.5rem">'+
+              '<div style="flex:1;min-width:0">'+
+                '<div style="font-size:0.72rem;font-weight:700">'+viaText+'</div>'+
+                '<div style="font-size:0.63rem;color:var(--t3);margin-top:2px">'+tagHtml+' '+r.km+' km · '+h+'h '+m+'m'+(r.tollINR>0?' · ~₹'+r.tollINR+' toll (car rate)':' · no toll')+'</div>'+
+              '</div>'+
+              '<button class="cbtn legOptUse" data-km="'+r.km+'" data-legkey="'+legKey+'" style="font-size:0.7rem;white-space:nowrap;font-weight:700">Use this</button>'+
+            '</div>';
+          }).join('');
+        box.querySelectorAll('.legOptUse').forEach(function(useBtn){
+          useBtn.addEventListener('click',function(){
+            var newKm=+useBtn.getAttribute('data-km');
+            var lk=useBtn.getAttribute('data-legkey');
+            if(lk==='ret')retKm=newKm; else legs[parseInt(lk,10)]=newKm;
+            var newTotal=legs.reduce(function(a,b){return a+b;},0)+(p.isRet?retKm:0);
+            container.innerHTML=buildTourPlanHTML(p,ordered,legs,retKm,c);
+            wireLegOptions(container,p,ordered,legs,retKm,c,onTotalChanged);
+            var dl=document.getElementById('distLabel');if(dl)dl.textContent=newTotal+' km';
+            var ds=document.getElementById('distSrc');if(ds){ds.textContent='· your chosen route ✓';ds.style.color='var(--green)';}
+            if(onTotalChanged)onTotalChanged(newTotal);
+            showToast('✓ Route updated — cost recalculated for this leg');
+          });
+        });
+      }).catch(function(){
+        box.innerHTML='<div style="font-size:0.68rem;color:var(--t3);padding:0.3rem 0">Could not check alternate routes right now.</div>';
+      });
+    });
+  });
+}
 function buildTourPlanHTML(p,ordered,legs,retKm,c){
   var lh='';var cum=0;
   ordered.forEach(function(s,i){
@@ -4660,9 +4728,20 @@ function buildTourPlanHTML(p,ordered,legs,retKm,c){
     var fct=PLACE_FACTS[s.c];
     var fsub=fct?[fct.district,fct.state].filter(Boolean).join(', '):'';
     lh+='<div class="legi"><div class="legd" style="background:'+col+'">'+(i+1)+'</div><div><div style="font-weight:700;font-size:0.88rem">'+cap(s.c)+'</div><div style="font-size:0.62rem;color:var(--t3)">'+role+(fsub?' · <span style="color:var(--orange)">'+fsub+'</span>':'')+'</div></div></div>';
-    if(i<ordered.length-1){cum+=legs[i];lh+='<div class="legl">↓ <b>'+legs[i]+' km</b> to next · running '+cum+' km</div>';}
+    if(i<ordered.length-1){
+      cum+=legs[i];
+      lh+='<div class="legl">↓ <b>'+legs[i]+' km</b> to next · running '+cum+' km'+
+        (GKEY?' <a href="#" class="legOptToggle" data-leg="'+i+'" style="font-size:0.66rem;color:var(--purple,#6D28D9);font-weight:700;margin-left:6px">view route options ▾</a>':'')+
+        '</div><div id="legOpt'+i+'" class="legOptBox"></div>';
+    }
   });
-  if(p.isRet&&retKm){cum+=retKm;lh+='<div class="legl" style="color:#E8880A">↩ <b>'+retKm+' km</b> return to '+cap(ordered[0].c)+' · total '+cum+' km</div>';}
+  if(p.isRet&&retKm){
+    var retIdx=ordered.length-1;
+    cum+=retKm;
+    lh+='<div class="legl" style="color:#E8880A">↩ <b>'+retKm+' km</b> return to '+cap(ordered[0].c)+' · total '+cum+' km'+
+      (GKEY?' <a href="#" class="legOptToggle" data-leg="ret" style="font-size:0.66rem;color:var(--purple,#6D28D9);font-weight:700;margin-left:6px">view route options ▾</a>':'')+
+      '</div><div id="legOptret" class="legOptBox"></div>';
+  }
   var srcBadge=c.realRoads?'<span style="font-size:0.6rem;background:var(--green-bg);color:var(--green);padding:1px 7px;border-radius:10px;font-weight:700">✓ real road km</span>':'<span style="font-size:0.6rem;background:var(--cream2);color:var(--t3);padding:1px 7px;border-radius:10px">estimating…</span>';
   /* Compare the optimised order against the order the operator typed, so the
      value of reordering is visible instead of implied. */
@@ -4733,6 +4812,7 @@ function renderCalcResult(p,ordered,legs,retKm,total,c){
   var ro=document.createElement('div');ro.className='rescard';ro.id='tourPlanCard';
   ro.innerHTML=buildTourPlanHTML(p,ordered,legs,retKm,c);
   el.appendChild(ro);
+  wireLegOptions(ro,p,ordered,legs,retKm,c,function(newTotal){liveTotal=newTotal;recalc();});
   renderDistanceFeedback(el,p,ordered,total,c);
   /* ── ALTERNATIVE ORDERS ──
      The shortest route is not always the one an operator wants: darshan timings,
@@ -5006,7 +5086,7 @@ function renderCalcResult(p,ordered,legs,retKm,total,c){
             legs=d.legs.slice(0,ordered.length-1).map(function(lg){return lg.km;});
             if(p.isRet)retKm=d.legs[d.legs.length-1].km;
             var tpCard=document.getElementById('tourPlanCard');
-            if(tpCard)tpCard.innerHTML=buildTourPlanHTML(p,ordered,legs,retKm,c);
+            if(tpCard){tpCard.innerHTML=buildTourPlanHTML(p,ordered,legs,retKm,c);wireLegOptions(tpCard,p,ordered,legs,retKm,c,function(nt){liveTotal=nt;recalc();});}
           }
         }
         // now resolve toll through its own chain, using whatever Google gave us
