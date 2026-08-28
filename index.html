@@ -1247,6 +1247,62 @@ function googleFullRoute(pts,optimize){
            source:'google'};
   }).catch(function(){return null;});
 }
+/* ── PER-LEG SUB-ROUTES ──
+   Google's computeAlternativeRoutes only works for a plain origin→destination
+   request — it does NOT return alternatives when intermediate waypoints are
+   present. That is exactly why the multi-stop trip above asks for one best
+   route per leg, and THIS function is called separately, per leg, to get the
+   real fastest-vs-shortest-vs-no-toll choice for that one drive — the same
+   thing you see when Google Maps shows two coloured lines for a single A→B
+   search, never for a multi-stop trip. */
+function googleRouteAlternatives(fromCoord,toCoord){
+  if(!GKEY)return Promise.resolve(null);
+  var body={
+    origin:{location:{latLng:{latitude:fromCoord[0],longitude:fromCoord[1]}}},
+    destination:{location:{latLng:{latitude:toCoord[0],longitude:toCoord[1]}}},
+    travelMode:'DRIVE',
+    routingPreference:'TRAFFIC_AWARE',
+    computeAlternativeRoutes:true,
+    extraComputations:['TOLLS'],
+    routeModifiers:{vehicleInfo:{emissionType:'DIESEL'}}
+  };
+  return fetch('https://routes.googleapis.com/directions/v2:computeRoutes',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','X-Goog-Api-Key':GKEY,
+      'X-Goog-FieldMask':'routes.distanceMeters,routes.duration,routes.travelAdvisory.tollInfo,routes.routeLabels'},
+    body:JSON.stringify(body)
+  }).then(function(r){return r.json();}).then(function(d){
+    if(!d||!d.routes||!d.routes.length)return null;
+    return d.routes.map(function(rt){
+      var km=rt.distanceMeters?Math.round(rt.distanceMeters/1000):0;
+      var durSec=rt.duration?parseInt(String(rt.duration).replace('s',''),10):0;
+      var tollINR=0;
+      try{
+        var tp=rt.travelAdvisory.tollInfo.estimatedPrice;
+        if(tp&&tp.length){var inr=tp.filter(function(x){return x.currencyCode==='INR';})[0]||tp[0];tollINR=Math.round(parseFloat(inr.units||0)+(inr.nanos?inr.nanos/1e9:0));}
+      }catch(e){}
+      return{km:km,durSec:durSec,tollINR:tollINR,isDefault:(rt.routeLabels||[]).indexOf('DEFAULT_ROUTE')>=0};
+    });
+  }).catch(function(){return null;});
+}
+/* Turns 2-3 raw alternative routes into the standard trade-off labels an
+   operator actually thinks in: Fastest, Shortest, No toll. A route can earn
+   more than one tag (a route can be both shortest AND no-toll); if a route
+   earns none of them, it is a middling option and just says "Alternative". */
+function classifySubRoutes(routes){
+  if(!routes||routes.length<2)return routes||[];
+  var minDur=Math.min.apply(null,routes.map(function(r){return r.durSec;}));
+  var minKm=Math.min.apply(null,routes.map(function(r){return r.km;}));
+  return routes.map(function(r){
+    var tags=[];
+    if(r.durSec===minDur)tags.push('Fastest');
+    if(r.km===minKm)tags.push('Shortest');
+    if(r.tollINR===0)tags.push('No toll');
+    if(!tags.length)tags.push('Alternative');
+    r.tags=tags;
+    return r;
+  }).sort(function(a,b){return a.durSec-b.durSec;});
+}
 /* Convert Google's non-commercial toll figure into the rate the operator's
    actual vehicle will be charged at NHAI plazas. */
 function googleTollForClass(carToll,vtype){
