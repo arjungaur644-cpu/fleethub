@@ -3286,6 +3286,54 @@ function renderAuditCard(el,c,p,ordered,total){
 /* Trip summary strip in the style operators already recognise from TollGuru:
    the road actually used, then time / distance / fuel / tolls / total in one row.
    An operator scanning a quote wants these five numbers before anything else. */
+/* ═══════════════════════════════════════════════════════════════
+   SINGLE SOURCE OF TRUTH FOR DISPLAYED DISTANCE
+
+   The 819-vs-909 bug happened because trip distance is shown in FOUR places
+   (hero card, cost-basis line, trip summary, tour plan) and was updated by
+   TWO separate code paths — so it only took one path forgetting one element
+   for the screen to contradict itself.
+
+   Every update now goes through this one function. Adding a new place that
+   shows distance means adding it HERE, once, instead of remembering to patch
+   every call site. That is what stops this CLASS of bug recurring, rather
+   than fixing each instance after someone spots it. */
+function setTripDistance(km,sourceLabel,isEstimate){
+  var hero=document.getElementById('heroTotalKm');
+  if(hero)hero.textContent=Number(km).toLocaleString();
+  var dl=document.getElementById('distLabel');
+  if(dl)dl.textContent=km+' km';
+  var ds=document.getElementById('distSrc');
+  if(ds&&sourceLabel){
+    ds.textContent='· '+sourceLabel+(isEstimate?'':' ✓');
+    ds.style.color=isEstimate?'var(--t3)':'var(--green)';
+  }
+  var sumKm=document.getElementById('tripSummaryKm');
+  if(sumKm)sumKm.textContent=km+' km';
+  window._displayedTripKm=km;
+  auditDistanceConsistency();
+}
+/* Runtime guard: checks every distance display on screen agrees. If they ever
+   diverge it logs loudly AND records an audit entry, so a regression surfaces
+   during testing instead of in front of an operator mid-quote. */
+function auditDistanceConsistency(){
+  try{
+    var vals=[];
+    var hero=document.getElementById('heroTotalKm');
+    if(hero)vals.push(['hero',parseInt(String(hero.textContent).replace(/[^0-9]/g,''),10)]);
+    var dl=document.getElementById('distLabel');
+    if(dl)vals.push(['costBasis',parseInt(String(dl.textContent).replace(/[^0-9]/g,''),10)]);
+    var sumKm=document.getElementById('tripSummaryKm');
+    if(sumKm)vals.push(['tripSummary',parseInt(String(sumKm.textContent).replace(/[^0-9]/g,''),10)]);
+    var nums=vals.map(function(v){return v[1];}).filter(function(n){return !isNaN(n);});
+    if(nums.length>1&&Math.max.apply(null,nums)-Math.min.apply(null,nums)>1){
+      console.error('[FleetHub] DISTANCE MISMATCH on screen:',vals);
+      if(typeof audit==='function')audit('distance_mismatch',false,JSON.stringify(vals));
+      return false;
+    }
+  }catch(e){}
+  return true;
+}
 function renderTripSummary(el,c,p,ordered,total){
   var host=document.getElementById('tripSummaryHost');
   if(!host){
@@ -3306,7 +3354,7 @@ function renderTripSummary(el,c,p,ordered,total){
     (roadLine?'<div style="font-size:0.74rem;margin-bottom:0.5rem"><span style="color:var(--t3)">Route:</span> <b>'+roadLine+'</b></div>':'')+
     '<div style="display:flex;flex-wrap:wrap;gap:0.5rem">'+
       '<div style="flex:1;min-width:70px"><div style="font-size:0.58rem;color:var(--t3);text-transform:uppercase;letter-spacing:0.03em">Time</div><div style="font-weight:700;font-size:0.85rem">'+hTxt+'</div></div>'+
-      '<div style="flex:1;min-width:70px"><div style="font-size:0.58rem;color:var(--t3);text-transform:uppercase;letter-spacing:0.03em">Distance</div><div style="font-weight:700;font-size:0.85rem">'+total+' km</div></div>'+
+      '<div style="flex:1;min-width:70px"><div style="font-size:0.58rem;color:var(--t3);text-transform:uppercase;letter-spacing:0.03em">Distance</div><div id="tripSummaryKm" style="font-weight:700;font-size:0.85rem">'+total+' km</div></div>'+
       '<div style="flex:1;min-width:70px"><div style="font-size:0.58rem;color:var(--t3);text-transform:uppercase;letter-spacing:0.03em">Fuel</div><div style="font-weight:700;font-size:0.85rem">₹'+(c.fuelCost||0).toLocaleString()+'</div></div>'+
       '<div style="flex:1;min-width:70px"><div style="font-size:0.58rem;color:var(--t3);text-transform:uppercase;letter-spacing:0.03em">Tolls'+(tollExact?'':' (est)')+'</div><div style="font-weight:700;font-size:0.85rem;color:'+(tollExact?'var(--green)':'#B45309')+'">₹'+(c.tollCost||0).toLocaleString()+'</div></div>'+
       '<div style="flex:1;min-width:80px"><div style="font-size:0.58rem;color:var(--t3);text-transform:uppercase;letter-spacing:0.03em">Fuel + Tolls</div><div style="font-weight:700;font-size:0.85rem">₹'+((c.fuelCost||0)+(c.tollCost||0)).toLocaleString()+'</div></div>'+
@@ -4799,9 +4847,7 @@ function wireLegOptions(container,p,ordered,legs,retKm,c,onTotalChanged){
             var newTotal=legs.reduce(function(a,b){return a+b;},0)+(p.isRet?retKm:0);
             container.innerHTML=buildTourPlanHTML(p,ordered,legs,retKm,c);
             wireLegOptions(container,p,ordered,legs,retKm,c,onTotalChanged);
-            var dl=document.getElementById('distLabel');if(dl)dl.textContent=newTotal+' km';
-            var hk2=document.getElementById('heroTotalKm');if(hk2)hk2.textContent=newTotal.toLocaleString();
-            var ds=document.getElementById('distSrc');if(ds){ds.textContent='· your chosen route ✓';ds.style.color='var(--green)';}
+            setTripDistance(newTotal,'your chosen route',false);
             if(onTotalChanged)onTotalChanged(newTotal);
             showToast('✓ Route updated — cost recalculated for this leg');
           });
@@ -5142,12 +5188,8 @@ function renderCalcResult(p,ordered,legs,retKm,total,c){
         if(!d||!d.km){audit('real_km',false,'all distance sources unavailable');return;}
         var prevTotal=total,diffKm=d.km-prevTotal;
         liveTotal=d.km;
-        var dl=document.getElementById('distLabel');if(dl)dl.textContent=d.km+' km';
-        /* The big headline "TOTAL KM" was written once at first render and never
-           refreshed, so it kept showing the matrix-based figure while every other
-           card on the same screen showed the newer authoritative one — that is
-           exactly the 819-vs-909 mismatch. Update it here too. */
-        var hk=document.getElementById('heroTotalKm');if(hk)hk.textContent=d.km.toLocaleString();
+        // ONE call updates every distance display on screen - see setTripDistance
+        setTripDistance(d.km,dres.source,d.via==='estimate');
         var ds=document.getElementById('distSrc');
         if(ds){
           ds.textContent='· '+dres.source+(d.via==='estimate'?'':' ✓');
