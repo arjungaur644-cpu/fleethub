@@ -1272,7 +1272,11 @@ function googleRouteAlternatives(fromCoord,toCoord){
       /* routes.description is what makes this readable — Google's own
          localised summary of the route, e.g. "via NH 48" or "via Alwar" —
          the same phrase you would see written under a route on Google Maps. */
-      'X-Goog-FieldMask':'routes.distanceMeters,routes.duration,routes.travelAdvisory.tollInfo,routes.routeLabels,routes.description'},
+      /* routes.description gives the highway code ("NE 4") which is not what an
+         operator recognises — they think in towns. legs.steps.navigationInstruction
+         carries the actual turn-by-turn text, which names the places the route
+         passes through, so we can show "via Mathura, Bharatpur" instead. */
+      'X-Goog-FieldMask':'routes.distanceMeters,routes.duration,routes.travelAdvisory.tollInfo,routes.routeLabels,routes.description,routes.legs.steps.navigationInstruction'},
     body:JSON.stringify(body)
   }).then(function(r){return r.json();}).then(function(d){
     if(!d||!d.routes||!d.routes.length)return null;
@@ -1284,9 +1288,35 @@ function googleRouteAlternatives(fromCoord,toCoord){
         var tp=rt.travelAdvisory.tollInfo.estimatedPrice;
         if(tp&&tp.length){var inr=tp.filter(function(x){return x.currencyCode==='INR';})[0]||tp[0];tollINR=Math.round(parseFloat(inr.units||0)+(inr.nanos?inr.nanos/1e9:0));}
       }catch(e){}
-      return{km:km,durSec:durSec,tollINR:tollINR,desc:rt.description||'',isDefault:(rt.routeLabels||[]).indexOf('DEFAULT_ROUTE')>=0};
+      return{km:km,durSec:durSec,tollINR:tollINR,desc:rt.description||'',
+             via:extractViaTowns(rt),
+             isDefault:(rt.routeLabels||[]).indexOf('DEFAULT_ROUTE')>=0};
     });
   }).catch(function(){return null;});
+}
+/* Pulls recognisable town names out of a route's turn-by-turn instructions.
+   Google writes things like "Take the NH-19 ramp to Mathura" or "Continue
+   toward Bharatpur" — the words after "to"/"toward" are the places an operator
+   actually navigates by. Highway codes alone ("NE 4") tell them nothing. */
+function extractViaTowns(rt){
+  var towns=[];
+  try{
+    (rt.legs||[]).forEach(function(lg){
+      (lg.steps||[]).forEach(function(st){
+        var txt=(st.navigationInstruction&&st.navigationInstruction.instructions)||'';
+        var m=txt.match(/(?:toward|towards|to)\s+([A-Z][A-Za-z\u0900-\u097F]+(?:\s+[A-Z][A-Za-z\u0900-\u097F]+)?)/g);
+        if(m)m.forEach(function(x){
+          var name=x.replace(/^(toward|towards|to)\s+/,'').trim();
+          // drop highway codes and directions - we want place names only
+          if(/^(NH|NE|SH|MDR)[\s-]?\d/i.test(name))return;
+          if(/^(North|South|East|West|Left|Right|Exit|Ramp)$/i.test(name))return;
+          if(name.length<3)return;
+          if(towns.indexOf(name)<0)towns.push(name);
+        });
+      });
+    });
+  }catch(e){}
+  return towns.slice(0,3);
 }
 /* Turns 2-3 raw alternative routes into the standard trade-off labels an
    operator actually thinks in: Fastest, Shortest, No toll. A route can earn
@@ -2562,7 +2592,7 @@ document.addEventListener('click',function(ev){
 });
 
 /* ═══ CALCULATOR ═══ */
-var CC={'bulandshahr':[28.4070,77.8498],'khurja':[28.2536,77.8556],'sikandrabad':[28.4500,77.7000],'anupshahr':[28.3600,78.2700],'jewar':[28.1200,77.5600],'delhi':[28.6139,77.2090],'noida':[28.5355,77.3910],'ghaziabad':[28.6692,77.4538],'agra':[27.1767,78.0081],'mathura':[27.4924,77.6737],'vrindavan':[27.5650,77.6593],'govardhan':[27.4969,77.4636],'goverdhan':[27.4969,77.4636],'barsana':[27.6463,77.3766],'gokul':[27.4380,77.7170],'nandgaon':[27.7167,77.3833],'aligarh':[27.8974,78.0880],'meerut':[28.9845,77.7064],'jaipur':[26.9124,75.7873],'khatu shyam':[27.3964,75.3997],'khatu':[27.3964,75.3997],'salasar':[27.6090,74.7271],'ranisati':[28.1353,75.4036],'rani sati':[28.1353,75.4036],'ranisati dadi':[28.1353,75.4036],'rani sati dadi':[28.1353,75.4036],'jhunjhunu':[28.1290,75.3998],'pushkar':[26.4899,74.5511],'ajmer':[26.4499,74.6399],'nathdwara':[24.9387,73.8231],'haridwar':[29.9457,78.1642],'rishikesh':[30.0869,78.2676],'dehradun':[30.3165,78.0322],'katra':[32.9916,74.9319],'vaishno devi':[33.0299,74.9490],'varanasi':[25.3176,82.9739],'ayodhya':[26.7922,82.1998],'lucknow':[26.8467,80.9462],'kanpur':[26.4499,80.3319],'mumbai':[19.0760,72.8777],'shirdi':[19.7645,74.4769],'gwalior':[26.2183,78.1828],'ujjain':[23.1765,75.7885],'amritsar':[31.6340,74.8723],'shimla':[31.1048,77.1734],'manali':[32.2396,77.1887],'chandigarh':[30.7333,76.7794],'mehandipur':[26.8000,76.5500],'mehandipur balaji':[26.8000,76.5500],'sambhar':[26.9100,75.1900],'deshnok':[27.7990,73.3410],'karni mata':[27.7990,73.3410],'bikaner':[28.0229,73.3119],'jodhpur':[26.2389,73.0243],'udaipur':[24.5854,73.7125],'kota':[25.2138,75.8648],'bharatpur':[27.2152,77.5030],'deeg':[27.4710,77.3250],'fatehpur sikri':[27.0940,77.6610],'sikandra':[27.2210,77.9500],'kasganj':[27.8090,78.6470],'etah':[27.5580,78.6620],'hathras':[27.5950,78.0530],'firozabad':[27.1591,78.3958],'moradabad':[28.8386,78.7733],'rampur':[28.7900,79.0250],'bareilly':[28.3670,79.4304],'badrinath':[30.7433,79.4938],'kedarnath':[30.7346,79.0669],'gangotri':[30.9947,78.9398],'yamunotri':[31.0118,78.4600],'dwarka':[22.2442,68.9685],'somnath':[20.8880,70.4010],'tirupati':[13.6288,79.4192]};
+var CC={'bulandshahr':[28.4070,77.8498],'khurja':[28.2536,77.8556],'sikandrabad':[28.4500,77.7000],'anupshahr':[28.3600,78.2700],'jewar':[28.1200,77.5600],'delhi':[28.6139,77.2090],'noida':[28.5355,77.3910],'ghaziabad':[28.6692,77.4538],'agra':[27.1767,78.0081],'mathura':[27.4924,77.6737],'vrindavan':[27.5650,77.6593],'govardhan':[27.4969,77.4636],'goverdhan':[27.4969,77.4636],'barsana':[27.6463,77.3766],'gokul':[27.4380,77.7170],'nandgaon':[27.7167,77.3833],'aligarh':[27.8974,78.0880],'meerut':[28.9845,77.7064],'jaipur':[26.9124,75.7873],'khatu shyam':[27.3964,75.3997],'khatu':[27.3964,75.3997],'salasar':[27.6090,74.7271],'ranisati':[28.1353,75.4036],'rani sati':[28.1353,75.4036],'ranisati dadi':[28.1353,75.4036],'rani sati dadi':[28.1353,75.4036],'jhunjhunu':[28.1290,75.3998],'pushkar':[26.4899,74.5511],'ajmer':[26.4499,74.6399],'nathdwara':[24.9387,73.8231],'sawariya seth':[24.6600,74.4000],'sanwariya seth':[24.6600,74.4000],'sawariya':[24.6600,74.4000],'sanwariya':[24.6600,74.4000],'sanwaliya ji':[24.6600,74.4000],'sanwaliya':[24.6600,74.4000],'sanwariya ji':[24.6600,74.4000],'mandphiya':[24.6600,74.4000],'mandfiya':[24.6600,74.4000],'chittorgarh':[24.8800,74.6300],'bhilwara':[25.3463,74.6364],'haridwar':[29.9457,78.1642],'rishikesh':[30.0869,78.2676],'dehradun':[30.3165,78.0322],'katra':[32.9916,74.9319],'vaishno devi':[33.0299,74.9490],'varanasi':[25.3176,82.9739],'ayodhya':[26.7922,82.1998],'lucknow':[26.8467,80.9462],'kanpur':[26.4499,80.3319],'mumbai':[19.0760,72.8777],'shirdi':[19.7645,74.4769],'gwalior':[26.2183,78.1828],'ujjain':[23.1765,75.7885],'amritsar':[31.6340,74.8723],'shimla':[31.1048,77.1734],'manali':[32.2396,77.1887],'chandigarh':[30.7333,76.7794],'mehandipur':[26.8000,76.5500],'mehandipur balaji':[26.8000,76.5500],'sambhar':[26.9100,75.1900],'deshnok':[27.7990,73.3410],'karni mata':[27.7990,73.3410],'bikaner':[28.0229,73.3119],'jodhpur':[26.2389,73.0243],'udaipur':[24.5854,73.7125],'kota':[25.2138,75.8648],'bharatpur':[27.2152,77.5030],'deeg':[27.4710,77.3250],'fatehpur sikri':[27.0940,77.6610],'sikandra':[27.2210,77.9500],'kasganj':[27.8090,78.6470],'etah':[27.5580,78.6620],'hathras':[27.5950,78.0530],'firozabad':[27.1591,78.3958],'moradabad':[28.8386,78.7733],'rampur':[28.7900,79.0250],'bareilly':[28.3670,79.4304],'badrinath':[30.7433,79.4938],'kedarnath':[30.7346,79.0669],'gangotri':[30.9947,78.9398],'yamunotri':[31.0118,78.4600],'dwarka':[22.2442,68.9685],'somnath':[20.8880,70.4010],'tirupati':[13.6288,79.4192]};
 /* ── EXTRA PLACES + COMMON SPELLING VARIANTS ──
    Operators type place names phonetically (jhangirabad / jahangirabad,
    mehandipur / mehendipur). Every variant maps to the same real coords. */
@@ -2642,7 +2672,7 @@ var ALIAS={
   'goverdhan':'govardhan','goverdhan parikrama':'govardhan',
   'sikandarabad':'sikandrabad','gurugram':'gurgaon','new delhi':'delhi',
   'vrindavan dham':'vrindavan','banke bihari':'vrindavan','prem mandir':'vrindavan','iskcon vrindavan':'vrindavan',
-  'reengus':'ringas','vaishno devi':'katra','karni mata':'deshnok','jewar airport':'jewar',
+  'reengus':'ringas','vaishno devi':'katra','savariya seth':'sawariya seth','savariya':'sawariya seth','sanwaliya seth':'sawariya seth','sanwaliya ji temple':'sawariya seth','shri sanwaliya ji':'sawariya seth','shree sanwaliya seth':'sawariya seth','सांवलिया सेठ':'sawariya seth','सांवरिया सेठ':'sawariya seth','karni mata':'deshnok','jewar airport':'jewar',
   'wagha':'wagah border','wagha border':'wagah border','waga border':'wagah border',
   'wagah':'wagah border','attari':'wagah border','attari border':'wagah border',
   'wagah attari':'wagah border','india pakistan border':'wagah border',
@@ -4561,6 +4591,11 @@ function drawRouteMap(ordered,isRet){
       var routeSpanKm=hav([Math.min.apply(null,latVals),Math.min.apply(null,lngVals)],
                            [Math.max.apply(null,latVals),Math.max.apply(null,lngVals)]);
       var clusterKm=Math.max(6,Math.min(220,routeSpanKm*0.06));
+      /* Price chips stacked vertically still pile into an unreadable wall on a
+         long route (13 plazas on one screen). Show a small NUMBERED DOT on the
+         map instead — compact, never covers the route line — and put the actual
+         prices in a readable list underneath the map, keyed by the same number. */
+      var plazaLegend=[];
       var used=new Array(plz.length).fill(false);
       var clusters=[];
       for(var ci=0;ci<plz.length;ci++){
@@ -4572,17 +4607,37 @@ function drawRouteMap(ordered,isRet){
         }
         clusters.push(group);
       }
+      var plazaNum=0;
       clusters.forEach(function(group){
         var lat=group.reduce(function(s,z){return s+z.lat;},0)/group.length;
         var lng=group.reduce(function(s,z){return s+z.lng;},0)/group.length;
-        group.forEach(function(z,gi){
-          var tIcon=L.divIcon({className:'',
-            html:'<div style="background:#0EA5E9;color:#fff;padding:1px 5px;border-radius:9px;font-weight:700;font-size:10px;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35);white-space:nowrap">🅣 ₹'+z.amt+'</div>',
-            iconSize:[46,18],iconAnchor:[23,9+gi*20]});
-          L.marker([lat,lng],{icon:tIcon,zIndexOffset:1000+gi}).addTo(_routeMap)
-            .bindPopup('<b>'+z.name+'</b><br>FASTag ₹'+z.amt+(z.cash&&z.cash!==z.amt?('<br>Cash ₹'+z.cash):'')+(z.hw?('<br>'+z.hw):''));
-        });
+        var groupTotal=group.reduce(function(s,z){return s+(z.amt||0);},0);
+        var startNum=plazaNum+1;
+        group.forEach(function(z){plazaNum++;plazaLegend.push({n:plazaNum,name:z.name,amt:z.amt,hw:z.hw,cash:z.cash});});
+        /* One dot per CLUSTER, not per plaza. Label is the number (or a range
+           like "3-5" when several plazas share a spot), so the map stays clean
+           at any zoom and the amounts live in the legend below. */
+        var label=(group.length>1)?(startNum+'-'+plazaNum):String(startNum);
+        var tIcon=L.divIcon({className:'',
+          html:'<div style="background:#0EA5E9;color:#fff;min-width:18px;height:18px;line-height:16px;text-align:center;padding:0 4px;border-radius:9px;font-weight:700;font-size:10px;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.4)">'+label+'</div>',
+          iconSize:[26,18],iconAnchor:[13,9]});
+        L.marker([lat,lng],{icon:tIcon,zIndexOffset:900}).addTo(_routeMap)
+          .bindPopup('<b>Toll '+label+'</b><br>'+group.map(function(z){return z.name+' — ₹'+z.amt;}).join('<br>')+
+            (group.length>1?('<br><b>Group total ₹'+groupTotal+'</b>'):''));
       });
+      window._plazaLegend=plazaLegend;
+      /* Render the readable price list under the map, keyed to the dot numbers. */
+      var legEl=document.getElementById('tollLegend');
+      if(legEl&&plazaLegend.length){
+        var legTotal=plazaLegend.reduce(function(s,z){return s+(z.amt||0);},0);
+        legEl.innerHTML='<div style="font-size:0.66rem;font-weight:700;margin-bottom:0.3rem">🅣 Toll plazas on this route</div>'+
+          '<div style="display:flex;flex-wrap:wrap;gap:0.3rem">'+
+          plazaLegend.map(function(z){
+            return '<span style="font-size:0.63rem;background:var(--cream2,#F5F1E8);border-radius:8px;padding:2px 7px;white-space:nowrap">'+
+              '<b style="color:#0EA5E9">'+z.n+'</b> '+(z.name||'Plaza').replace(/\s*\(.*?\)\s*/g,' ').trim()+' <b>₹'+z.amt+'</b></span>';
+          }).join('')+'</div>'+
+          '<div style="font-size:0.63rem;color:var(--t3);margin-top:0.35rem">Total of listed plazas: <b>₹'+legTotal.toLocaleString()+'</b> (one way) · tap any dot on the map for details</div>';
+      }
     }catch(e){}
     _routeMap.fitBounds(line.getBounds(),{padding:[30,30]});
     // CRITICAL: container was hidden/just-rendered — force Leaflet to recompute size
@@ -4722,13 +4777,15 @@ function wireLegOptions(container,p,ordered,legs,retKm,c,onTotalChanged){
         box.innerHTML='<div style="font-size:0.65rem;color:var(--t3);margin:0.3rem 0 0.2rem">'+classified.length+' real routes found for '+cap(isRetLeg?ordered[ordered.length-1].c:ordered[i].c)+' → '+cap(isRetLeg?ordered[0].c:ordered[i+1].c)+':</div>'+
           classified.map(function(r,ri){
             var h=Math.floor(r.durSec/3600),m=Math.round((r.durSec%3600)/60);
-            var viaText=r.desc?r.desc:('Route option '+(ri+1));
+            var viaTowns=(r.via&&r.via.length)?('via '+r.via.join(', ')):'';
+            var viaText=viaTowns||(r.desc?r.desc:('Route option '+(ri+1)));
+            var hwNote=(viaTowns&&r.desc)?('<div style="font-size:0.6rem;color:var(--t3)">'+r.desc+'</div>'):'';
             var tagHtml=r.tags.map(function(t){
               return '<span style="background:var(--green-bg);color:var(--green);padding:1px 5px;border-radius:6px;margin-right:3px;font-weight:700;font-size:0.6rem">'+t+'</span>';
             }).join('');
             return '<div style="border:1px solid var(--line);border-radius:8px;padding:0.5rem 0.6rem;margin:0.3rem 0;display:flex;justify-content:space-between;align-items:center;gap:0.5rem">'+
               '<div style="flex:1;min-width:0">'+
-                '<div style="font-size:0.72rem;font-weight:700">'+viaText+'</div>'+
+                '<div style="font-size:0.72rem;font-weight:700">'+viaText+'</div>'+hwNote+
                 '<div style="font-size:0.63rem;color:var(--t3);margin-top:2px">'+tagHtml+' '+r.km+' km · '+h+'h '+m+'m'+(r.tollINR>0?' · ~₹'+r.tollINR+' toll (car rate)':' · no toll')+'</div>'+
               '</div>'+
               '<button class="cbtn legOptUse" data-km="'+r.km+'" data-legkey="'+legKey+'" style="font-size:0.7rem;white-space:nowrap;font-weight:700">Use this</button>'+
@@ -4743,6 +4800,7 @@ function wireLegOptions(container,p,ordered,legs,retKm,c,onTotalChanged){
             container.innerHTML=buildTourPlanHTML(p,ordered,legs,retKm,c);
             wireLegOptions(container,p,ordered,legs,retKm,c,onTotalChanged);
             var dl=document.getElementById('distLabel');if(dl)dl.textContent=newTotal+' km';
+            var hk2=document.getElementById('heroTotalKm');if(hk2)hk2.textContent=newTotal.toLocaleString();
             var ds=document.getElementById('distSrc');if(ds){ds.textContent='· your chosen route ✓';ds.style.color='var(--green)';}
             if(onTotalChanged)onTotalChanged(newTotal);
             showToast('✓ Route updated — cost recalculated for this leg');
@@ -4833,12 +4891,12 @@ function renderCalcResult(p,ordered,legs,retKm,total,c){
   el.appendChild(ex);
   // hero
   var rh=document.createElement('div');rh.className='reshero';
-  rh.innerHTML='<div class="resgrid"><div><span class="rv" style="color:#7DD3FC">'+total.toLocaleString()+'</span><div class="rl">TOTAL KM</div></div><div><span class="rv">'+c.days+'d</span><div class="rl">DAYS</div></div><div><span class="rv" id="heroGrand" style="color:#34D399">₹'+c.grand.toLocaleString()+'</span><div class="rl">QUOTE</div></div><div><span class="rv" id="perHeadVal" style="color:#FFB020">₹'+c.perHead+'</span><div class="rl">PER HEAD</div></div></div>';
+  rh.innerHTML='<div class="resgrid"><div><span class="rv" id="heroTotalKm" style="color:#7DD3FC">'+total.toLocaleString()+'</span><div class="rl">TOTAL KM</div></div><div><span class="rv">'+c.days+'d</span><div class="rl">DAYS</div></div><div><span class="rv" id="heroGrand" style="color:#34D399">₹'+c.grand.toLocaleString()+'</span><div class="rl">QUOTE</div></div><div><span class="rv" id="perHeadVal" style="color:#FFB020">₹'+c.perHead+'</span><div class="rl">PER HEAD</div></div></div>';
   el.appendChild(rh);
   // ROUTE MAP (free OpenStreetMap via Leaflet) + route order
   renderTripSummary(el,c,p,ordered,total);
   var mapCard=document.createElement('div');mapCard.className='rescard';
-  mapCard.innerHTML='<div class="rc-h">🗺️ Optimized Route Map</div><div class="rc-b" style="padding:0"><div id="routeMap" style="width:100%;height:240px;border-radius:0 0 var(--r2) var(--r2)"></div></div>';
+  mapCard.innerHTML='<div class="rc-h">🗺️ Optimized Route Map</div><div class="rc-b" style="padding:0"><div id="routeMap" style="width:100%;height:240px"></div><div id="tollLegend" style="padding:0.5rem 0.7rem"></div></div>';
   el.appendChild(mapCard);
   // render the map after it is in the DOM
   setTimeout(function(){drawRouteMap(ordered,p.isRet);},350);
@@ -5085,6 +5143,11 @@ function renderCalcResult(p,ordered,legs,retKm,total,c){
         var prevTotal=total,diffKm=d.km-prevTotal;
         liveTotal=d.km;
         var dl=document.getElementById('distLabel');if(dl)dl.textContent=d.km+' km';
+        /* The big headline "TOTAL KM" was written once at first render and never
+           refreshed, so it kept showing the matrix-based figure while every other
+           card on the same screen showed the newer authoritative one — that is
+           exactly the 819-vs-909 mismatch. Update it here too. */
+        var hk=document.getElementById('heroTotalKm');if(hk)hk.textContent=d.km.toLocaleString();
         var ds=document.getElementById('distSrc');
         if(ds){
           ds.textContent='· '+dres.source+(d.via==='estimate'?'':' ✓');
