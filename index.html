@@ -300,8 +300,13 @@ body{font-family:var(--body);background:var(--cream);color:var(--ink);font-size:
 .ci:focus{outline:none;border-color:var(--saffron2);background:#fff;box-shadow:0 0 0 2px rgba(255,159,28,0.15);}
 .resgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:0.5rem;}
 @media(max-width:480px){.resgrid{grid-template-columns:1fr 1fr;}}
-.rv{font-family:var(--disp);font-weight:800;font-size:1.25rem;display:block;text-align:center;}
-.rl{font-size:0.56rem;color:#94A3B8;text-align:center;margin-top:0.1rem;}
+.rv{font-family:var(--disp);font-weight:800;font-size:1.7rem;line-height:1.05;display:block;text-align:center;letter-spacing:-0.02em;}
+.rl{font-size:0.6rem;color:#94A3B8;text-align:center;margin-top:0.25rem;letter-spacing:0.06em;text-transform:uppercase;}
+/* Distance is the number an operator checks first, so it gets visual priority
+   over the other three stats rather than being one of four equal cells. */
+.resgrid{display:grid;grid-template-columns:1fr 1fr;gap:0.9rem 0.5rem;}
+.resgrid>div:first-child .rv{font-size:2.1rem;}
+.gem-drop{outline:2px dashed var(--saffron)!important;outline-offset:3px;background:rgba(255,159,28,0.06);}
 .crow{display:flex;justify-content:space-between;padding:0.45rem 0;border-bottom:1px solid var(--line2);font-size:0.82rem;}
 .crow:last-child{border-bottom:none;}
 .crow.tot{font-weight:800;}
@@ -668,12 +673,14 @@ body{font-family:var(--body);background:var(--cream);color:var(--ink);font-size:
           <div id="calcEnqPanel" style="display:none"></div>
           <!-- Gemini-style unified input bar -->
           <div class="gem-inp">
-            <textarea class="gem-ta" id="calcInp" rows="2" placeholder="Type the trip… e.g. Khurja to Mathura, Vrindavan, 26 seat AC tempo, round trip, 1 day"></textarea>
+            <textarea class="gem-ta" id="calcInp" rows="2" placeholder="Type or speak the trip… e.g. Khurja to Mathura, Vrindavan, 26 seat AC tempo, round trip"></textarea>
             <div class="gem-bar">
-              <button class="gem-plus" id="calcImgBtn" title="Add photo of route">＋</button>
-              <input type="file" id="calcImgInput" accept="image/*" style="display:none"/>
-              <span class="gem-hint" id="gemHint">Add photo · or type / speak</span>
-              <button class="gem-mic" id="calcMic" title="Speak">🎤</button>
+              <button class="gem-plus" id="calcImgBtn" title="Attach a photo, screenshot or PDF of the route">＋</button>
+              <!-- Accept what an operator actually has on their phone: a photo of a
+                   handwritten list, a WhatsApp screenshot, or a PDF itinerary. -->
+              <input type="file" id="calcImgInput" accept="image/*,.pdf,.heic,.webp" style="display:none"/>
+              <span class="gem-hint" id="gemHint">Attach photo / PDF · or type · or speak</span>
+              <button class="gem-mic" id="calcMic" title="Speak the trip">🎤</button>
               <button class="gem-send" id="calcGo" title="Calculate">➤</button>
             </div>
           </div>
@@ -3445,15 +3452,32 @@ function renderAltRoutes(p,cands,verdict,isEstimate){
     var tagHtml=(o.tags||[]).map(function(t){
       return '<span style="font-size:0.58rem;background:var(--green-bg);color:var(--green);font-weight:700;padding:1px 5px;border-radius:6px">'+t+'</span>';
     }).join(' ');
-    oh+='<div style="padding:0.55rem 0.5rem;border-bottom:1px solid var(--line);margin:0 -0.5rem'+(isBest?';background:var(--green-bg);border-radius:8px':'')+'">'+
-      '<div style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap">'+
-        '<b style="font-size:0.79rem">'+o.name+'</b>'+
-        '<span style="font-size:0.72rem;font-weight:700;color:'+(diff===0?'var(--green)':'var(--t3)')+';margin-left:auto">'+o.km+' km'+(diff>0?' (+'+diff+')':'')+'</span>'+
+    oh+='<div style="padding:0.6rem 0.55rem;border-bottom:1px solid var(--line);margin:0 -0.5rem'+(isBest?';background:var(--green-bg);border-radius:10px':'')+'">'+
+      '<div style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;margin-bottom:0.35rem">'+
+        '<b style="font-size:0.8rem">'+o.name+'</b>'+
+        (isBest?'<span style="font-size:0.56rem;background:var(--green);color:#fff;font-weight:800;padding:2px 6px;border-radius:6px">RECOMMENDED</span>':'')+
       '</div>'+
-      (tagHtml?'<div style="margin:3px 0">'+tagHtml+'</div>':'')+
-      '<div style="font-size:0.67rem;color:var(--t3);margin:2px 0 3px">≈₹'+o.toll.toLocaleString()+' toll · ~'+o.hours+' hr driving'+(o.why?' · '+o.why:'')+(note?' · '+note:'')+'</div>'+
-      '<div style="font-size:0.72rem;line-height:1.45">'+o.path.join(' → ')+(p.isRet?' → '+o.path[0]:'')+'</div>'+
-      (!isEstimate&&!isBest?'<button class="cbtn useOptBtn" data-oi="'+oi+'" style="margin-top:0.4rem;font-size:0.7rem;font-weight:700;width:100%">Use this route — verify distance &amp; toll for real</button>':'')+
+      /* Three stats side by side so the trade-off reads instantly: an operator
+         comparing "shorter but slower" vs "longer but faster" should not have
+         to parse a sentence to see it. */
+      '<div style="display:flex;gap:0.4rem;margin-bottom:0.35rem">'+
+        '<div style="flex:1;background:rgba(0,0,0,0.03);border-radius:8px;padding:0.35rem 0.4rem;text-align:center">'+
+          '<div style="font-size:0.95rem;font-weight:800;line-height:1.1;color:'+(diff===0?'var(--green)':'var(--t1,#0F172A)')+'">'+o.km+'</div>'+
+          '<div style="font-size:0.54rem;color:var(--t3);letter-spacing:0.04em">KM'+(diff>0?' (+'+diff+')':'')+'</div>'+
+        '</div>'+
+        '<div style="flex:1;background:rgba(0,0,0,0.03);border-radius:8px;padding:0.35rem 0.4rem;text-align:center">'+
+          '<div style="font-size:0.95rem;font-weight:800;line-height:1.1">'+o.hours+'</div>'+
+          '<div style="font-size:0.54rem;color:var(--t3);letter-spacing:0.04em">HOURS</div>'+
+        '</div>'+
+        '<div style="flex:1;background:rgba(0,0,0,0.03);border-radius:8px;padding:0.35rem 0.4rem;text-align:center">'+
+          '<div style="font-size:0.95rem;font-weight:800;line-height:1.1">₹'+(o.toll>999?(Math.round(o.toll/100)/10+'k'):o.toll)+'</div>'+
+          '<div style="font-size:0.54rem;color:var(--t3);letter-spacing:0.04em">TOLL ≈</div>'+
+        '</div>'+
+      '</div>'+
+      (tagHtml?'<div style="margin-bottom:0.3rem">'+tagHtml+'</div>':'')+
+      '<div style="font-size:0.71rem;line-height:1.5;color:var(--t2)">'+o.path.join(' → ')+(p.isRet?' → '+o.path[0]:'')+'</div>'+
+      ((o.why||note)?'<div style="font-size:0.64rem;color:var(--t3);margin-top:3px">'+[o.why,note].filter(Boolean).join(' · ')+'</div>':'')+
+      (!isEstimate&&!isBest?'<button class="cbtn useOptBtn" data-oi="'+oi+'" style="margin-top:0.45rem;font-size:0.71rem;font-weight:700;width:100%">Use this route — verify distance &amp; toll for real</button>':'')+
     '</div>';
   });
   host.innerHTML='<div class="rescard"><div class="rc-h">'+(cands.exhaustive?'🔍 All possible routes checked':'🔀 Other route options')+(isEstimate?' <span style="font-size:0.58rem;color:var(--t3);font-weight:400;margin-left:auto">estimating…</span>':'')+'</div><div class="rc-b">'+
@@ -5568,6 +5592,45 @@ document.getElementById('calcMic').addEventListener('click',function(){
   var plus=document.getElementById('calcImgBtn');
   if(!btn)return;
   btn.addEventListener('click',function(){input.click();});
+  /* Drag-and-drop and paste, the way an operator already expects from any
+     modern chat app: drop a photo of the handwritten list onto the box, or
+     paste a WhatsApp screenshot straight from the clipboard. Both route into
+     the SAME handler as the file picker, so there is one code path to keep
+     correct rather than three. */
+  var dropZone=document.querySelector('.gem-inp');
+  function handleIncomingFile(file){
+    if(!file)return;
+    try{
+      var dt=new DataTransfer();
+      dt.items.add(file);
+      input.files=dt.files;
+      input.dispatchEvent(new Event('change'));
+    }catch(e){
+      showToast('Could not read that file — try the ＋ button');
+    }
+  }
+  if(dropZone){
+    ['dragenter','dragover'].forEach(function(ev){
+      dropZone.addEventListener(ev,function(e){e.preventDefault();e.stopPropagation();dropZone.classList.add('gem-drop');});
+    });
+    ['dragleave','drop'].forEach(function(ev){
+      dropZone.addEventListener(ev,function(e){e.preventDefault();e.stopPropagation();dropZone.classList.remove('gem-drop');});
+    });
+    dropZone.addEventListener('drop',function(e){
+      var f=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0];
+      if(f)handleIncomingFile(f);
+    });
+  }
+  var ta=document.getElementById('calcInp');
+  if(ta)ta.addEventListener('paste',function(e){
+    var items=(e.clipboardData&&e.clipboardData.items)||[];
+    for(var i=0;i<items.length;i++){
+      if(items[i].type&&items[i].type.indexOf('image')===0){
+        var f=items[i].getAsFile();
+        if(f){e.preventDefault();handleIncomingFile(f);showToast('📎 Image pasted — reading the route…');break;}
+      }
+    }
+  });
   xBtn.addEventListener('click',function(){preview.style.display='none';input.value='';statusEl.textContent='';if(plus)plus.classList.remove('has-img');});
   input.addEventListener('change',async function(){
     var file=input.files&&input.files[0];
