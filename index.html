@@ -307,6 +307,28 @@ body{font-family:var(--body);background:var(--cream);color:var(--ink);font-size:
 .resgrid{display:grid;grid-template-columns:1fr 1fr;gap:0.9rem 0.5rem;}
 .resgrid>div:first-child .rv{font-size:2.1rem;}
 .gem-drop{outline:2px dashed var(--saffron)!important;outline-offset:3px;background:rgba(255,159,28,0.06);}
+/* ── Saved-trips drawer ── slides in from the left over the content, the same
+   pattern ChatGPT/Claude use on mobile. Off-canvas by default so it costs no
+   screen space until asked for. */
+.trip-drawer{position:fixed;top:0;left:0;bottom:0;width:82%;max-width:320px;background:#fff;z-index:1200;
+  transform:translateX(-102%);transition:transform .22s ease;display:flex;flex-direction:column;
+  box-shadow:2px 0 18px rgba(0,0,0,0.18);}
+.trip-drawer.open{transform:translateX(0);}
+.drawer-scrim{position:fixed;inset:0;background:rgba(0,0,0,0.35);z-index:1199;opacity:0;pointer-events:none;transition:opacity .22s ease;}
+.drawer-scrim.open{opacity:1;pointer-events:auto;}
+.td-head{display:flex;align-items:center;justify-content:space-between;padding:0.9rem 0.9rem 0.5rem;}
+.td-x{background:none;border:none;font-size:1.05rem;cursor:pointer;color:var(--t3);padding:0.2rem 0.4rem;}
+.td-new{margin:0 0.9rem 0.7rem;padding:0.6rem;border:1px solid var(--line);background:none;border-radius:10px;
+  font-weight:700;font-size:0.8rem;cursor:pointer;font-family:var(--body);text-align:left;}
+.td-new:active{background:var(--cream2,#F5F1E8);}
+.td-list{flex:1;overflow-y:auto;padding:0 0.55rem 0.5rem;}
+.td-item{display:flex;align-items:flex-start;gap:0.5rem;padding:0.6rem 0.5rem;border-radius:10px;cursor:pointer;}
+.td-item:active{background:var(--cream2,#F5F1E8);}
+.td-item-t{font-size:0.79rem;font-weight:700;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.td-item-s{font-size:0.63rem;color:var(--t3);margin-top:2px;}
+.td-del{background:none;border:none;color:var(--t3);font-size:0.85rem;cursor:pointer;padding:0 0.2rem;flex-shrink:0;}
+.td-foot{padding:0.6rem 0.9rem;font-size:0.6rem;color:var(--t3);border-top:1px solid var(--line);}
+.hamb-trips{background:none;border:none;font-size:1.15rem;cursor:pointer;padding:0.2rem 0.45rem;color:inherit;}
 .crow{display:flex;justify-content:space-between;padding:0.45rem 0;border-bottom:1px solid var(--line2);font-size:0.82rem;}
 .crow:last-child{border-bottom:none;}
 .crow.tot{font-weight:800;}
@@ -666,9 +688,26 @@ body{font-family:var(--body);background:var(--cream);color:var(--ink);font-size:
         </div>
       </div>
       <!-- Tool -->
+      <!-- ── SAVED TRIPS DRAWER (ChatGPT-style left panel) ──
+           Hidden off-canvas by default; slides in over the content. Every
+           calculated trip is auto-saved with a readable name so an operator can
+           reopen a quote they built last week without retyping it. -->
+      <div id="tripDrawerScrim" class="drawer-scrim"></div>
+      <aside id="tripDrawer" class="trip-drawer">
+        <div class="td-head">
+          <span style="font-weight:800;font-size:0.9rem">Saved trips</span>
+          <button id="tdClose" class="td-x" title="Close">✕</button>
+        </div>
+        <button id="tdNew" class="td-new">＋ New trip</button>
+        <div id="tdList" class="td-list"></div>
+        <div class="td-foot">Trips are saved on this device only.</div>
+      </aside>
       <div id="calcTool" class="hidden">
         <div class="calc-card">
-          <h3>🧮 Trip Cost Calculator</h3>
+          <div style="display:flex;align-items:center;gap:0.3rem">
+            <button id="tdOpen" class="hamb-trips" title="Saved trips">☰</button>
+            <h3 style="margin:0">🧮 Trip Cost Calculator</h3>
+          </div>
           <div class="cc-sub">Type, speak, or add a photo of the route. We calculate the full cost.</div>
           <div id="calcEnqPanel" style="display:none"></div>
           <!-- Gemini-style unified input bar -->
@@ -3957,6 +3996,103 @@ function checkAmbiguous(names,cb){
     });
   });
 }
+/* ═══════════════════════════════════════════════════════════════
+   SAVED TRIPS
+
+   Every calculated trip is stored automatically with a readable name, so an
+   operator can reopen a quote they built last week instead of retyping it.
+   Named from the actual stops ("Khurja → Vrindavan +2") rather than a
+   timestamp, because that is how an operator recognises their own work. */
+var SAVED_TRIPS=[];
+try{SAVED_TRIPS=JSON.parse(localStorage.getItem('fh_saved_trips')||'[]');}catch(e){SAVED_TRIPS=[];}
+function persistTrips(){
+  try{localStorage.setItem('fh_saved_trips',JSON.stringify(SAVED_TRIPS.slice(0,60)));}catch(e){}
+}
+function tripDisplayName(cities){
+  if(!cities||!cities.length)return 'Trip';
+  var first=cap(cities[0]);
+  if(cities.length===1)return first;
+  var second=cap(cities[1]);
+  var extra=cities.length>2?(' +'+(cities.length-2)):'';
+  return first+' → '+second+extra;
+}
+function saveTrip(text,cities,km){
+  if(!text||!text.trim())return;
+  var name=tripDisplayName(cities);
+  /* De-dupe on the raw input so recalculating the same trip updates the
+     existing entry instead of filling the list with near-identical rows. */
+  SAVED_TRIPS=SAVED_TRIPS.filter(function(t){return t.text!==text;});
+  SAVED_TRIPS.unshift({name:name,text:text,km:km||null,at:Date.now()});
+  persistTrips();
+  renderTripDrawer();
+}
+function renderTripDrawer(){
+  var list=document.getElementById('tdList');
+  if(!list)return;
+  if(!SAVED_TRIPS.length){
+    list.innerHTML='<div style="font-size:0.72rem;color:var(--t3);padding:0.8rem 0.5rem;line-height:1.5">No saved trips yet. Calculate a trip and it will appear here automatically.</div>';
+    return;
+  }
+  list.innerHTML=SAVED_TRIPS.map(function(t,i){
+    var d=new Date(t.at);
+    var when=d.toLocaleDateString('en-IN',{day:'numeric',month:'short'});
+    return '<div class="td-item" data-i="'+i+'">'+
+      '<div style="flex:1;min-width:0">'+
+        '<div class="td-item-t">'+t.name+'</div>'+
+        '<div class="td-item-s">'+(t.km?t.km+' km · ':'')+when+'</div>'+
+      '</div>'+
+      '<button class="td-del" data-del="'+i+'" title="Delete">🗑</button>'+
+    '</div>';
+  }).join('');
+  list.querySelectorAll('.td-item').forEach(function(el){
+    el.addEventListener('click',function(e){
+      if(e.target.closest('.td-del'))return;
+      var t=SAVED_TRIPS[+el.getAttribute('data-i')];
+      if(!t)return;
+      var inp=document.getElementById('calcInp');
+      if(inp)inp.value=t.text;
+      closeTripDrawer();
+      runCalc();
+    });
+  });
+  list.querySelectorAll('.td-del').forEach(function(b){
+    b.addEventListener('click',function(e){
+      e.stopPropagation();
+      SAVED_TRIPS.splice(+b.getAttribute('data-del'),1);
+      persistTrips();renderTripDrawer();
+    });
+  });
+}
+function openTripDrawer(){
+  renderTripDrawer();
+  var d=document.getElementById('tripDrawer'),s=document.getElementById('tripDrawerScrim');
+  if(d)d.classList.add('open');
+  if(s)s.classList.add('open');
+}
+function closeTripDrawer(){
+  var d=document.getElementById('tripDrawer'),s=document.getElementById('tripDrawerScrim');
+  if(d)d.classList.remove('open');
+  if(s)s.classList.remove('open');
+}
+(function(){
+  function wire(){
+    var o=document.getElementById('tdOpen'),x=document.getElementById('tdClose'),
+        sc=document.getElementById('tripDrawerScrim'),nw=document.getElementById('tdNew');
+    if(o)o.addEventListener('click',openTripDrawer);
+    if(x)x.addEventListener('click',closeTripDrawer);
+    if(sc)sc.addEventListener('click',closeTripDrawer);
+    if(nw)nw.addEventListener('click',function(){
+      var inp=document.getElementById('calcInp');
+      if(inp){inp.value='';inp.focus();}
+      var res=document.getElementById('calcResult');
+      if(res)res.innerHTML='';
+      closeTripDrawer();
+    });
+    renderTripDrawer();
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',wire);
+  else wire();
+})();
 function runCalc(){
   var text=document.getElementById('calcInp').value.trim();
   if(!text){showToast('Type or speak the trip first');return;}
@@ -3998,6 +4134,9 @@ function runCalc(){
         var order=optOrd(valid.map(function(x){return x.coord;}),p.isRet);
         var ordered=order.map(function(i){return valid[i];});
         computeAndRender(p,ordered,false);
+        // Auto-save only once the trip actually resolved — a failed or
+        // half-resolved attempt should not clutter the operator's list.
+        try{saveTrip(text,ordered.map(function(o){return o.c;}),null);}catch(e){}
         refineWithRealRoads(p,valid);
       });
     });
@@ -5214,6 +5353,13 @@ function renderCalcResult(p,ordered,legs,retKm,total,c){
         liveTotal=d.km;
         // ONE call updates every distance display on screen - see setTripDistance
         setTripDistance(d.km,dres.source,d.via==='estimate');
+        /* Backfill the real km onto the saved trip so the drawer shows the
+           authoritative figure, not the initial estimate. */
+        try{
+          var _txt=(document.getElementById('calcInp')||{}).value||'';
+          var _hit=SAVED_TRIPS.filter(function(t){return t.text===_txt;})[0];
+          if(_hit){_hit.km=d.km;persistTrips();}
+        }catch(e){}
         var ds=document.getElementById('distSrc');
         if(ds){
           ds.textContent='· '+dres.source+(d.via==='estimate'?'':' ✓');
