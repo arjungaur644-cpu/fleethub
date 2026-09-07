@@ -2767,6 +2767,12 @@ function snapToKnown(name){
 var QUALIFIER_WORDS={'border':1,'sahib':1,'dham':1,'mandir':1,'temple':1,'ji':1,'tirth':1,
   'darbar':1,'ghat':1,'fort':1,'palace':1,'airport':1,'station':1,'bypass':1,'city':1,
   'devi':1,'mata':1,'baba':1,'wale':1,'shyam':1,'balaji':1,'parikrama':1,'darshan':1,
+  /* These merge onto the PRECEDING place ("sagar district" -> one token) rather
+     than being dropped as junk, because dropping them separately orphaned the
+     state hint that had attached to them — found by testing "Deori, Sagar
+     district, Madhya Pradesh" live: the hint ended up on the word "district"
+     itself, which then vanished, leaving "sagar" with no hint at all. */
+  'district':1,'dist':1,'zila':1,'near':1,'nearby':1,'close':1,'closeby':1,'tehsil':1,'taluka':1,'block':1,
   'बॉर्डर':1,'साहिब':1,'धाम':1,'मंदिर':1,'जी':1,'देवी':1,'माता':1,'घाट':1};
 /* State names an operator may append to disambiguate ("wagha border punjab").
    When present, the state is used as a geocoding hint and the place is treated
@@ -2886,6 +2892,21 @@ function parseTrip(text){
      the operator named. Both run BEFORE snapping so "wagha border punjab" becomes
      one stop ("wagah border") with a Punjab hint, instead of three stops. */
   PLACE_HINTS={};
+  /* State names get shredded into single words by the earlier tokenizer, same
+     as any other unknown multi-word phrase — "madhya pradesh" arrives here as
+     TWO separate tokens ["madhya","pradesh"], neither of which is a key in
+     STATE_HINTS (only the combined "madhya pradesh" is). Without this
+     pre-merge, both words fell through as two fake standalone stops — found
+     by testing the exact "Deori, Sagar, Madhya Pradesh" trip live. */
+  var premerged=[];
+  for(var pi=0;pi<cities.length;pi++){
+    if(pi+1<cities.length){
+      var pair=cities[pi]+' '+cities[pi+1];
+      if(STATE_HINTS[pair]){premerged.push(pair);pi++;continue;}
+    }
+    premerged.push(cities[pi]);
+  }
+  cities=premerged;
   var merged=[];
   for(var ci=0;ci<cities.length;ci++){
     var tok=cities[ci];
