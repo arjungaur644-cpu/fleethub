@@ -1,0 +1,112 @@
+{
+  "_meta": {
+    "purpose": "Ground-truth reference for classifying which authority owns each tolled road in India, since no single government API provides this classification directly.",
+    "compiled": "2026-09-08",
+    "method": "Each entry below was individually verified via web search against Wikipedia/AARoads/MoRTH-sourced articles. Entries NOT marked verified are structural placeholders and must not be treated as confirmed.",
+    "known_gap": "MoRTH had designated 8 roads as National Expressways as of April 2021. Only 6 are confirmed by name below. NE6 and the 8th are NOT yet identified - do not assume NE6 is any specific road.",
+    "cross_check_finding": "Checked all 14 plazas whose NAME contains 'DME' (Delhi-Mumbai Expwy, which should be NE4) in the india_tolls_raw_1674.json community dataset. Result: ZERO were tagged 'NE4'. Their nh_no values were: NH-9 (7 plazas), NH-334 (4 plazas), 'NE II' (1), 'NE 3' (2). The nh_no field appears to record whichever conventional highway number the plaza's coordinate is nearest to, not the expressway it actually serves. CONCLUSION: nh_no cannot be trusted as a road-identity field for expressway plazas in this dataset - the plaza NAME text is a more reliable signal, and even that requires manual confirmation per corridor."
+  },
+  "national_expressways": [
+    {
+      "code": "NE1", "name": "Ahmedabad-Vadodara Expressway", "authority": "NHAI",
+      "states": ["Gujarat"], "length_km": null,
+      "verified": true, "source": "Wikipedia/MORTHIndia tweet cross-ref, 2018-04"
+    },
+    {
+      "code": "NE2", "name": "Eastern Peripheral Expressway", "authority": "NHAI",
+      "states": ["Haryana", "Uttar Pradesh"], "length_km": 135,
+      "route": "Sonipat - Baghpat - Ghaziabad - Greater Noida - Faridabad - Palwal",
+      "completed": "2018-05-27",
+      "verified": true, "source": "curlytales.com citing MORTHIndia, cross-ref Western Peripheral Expwy Wikipedia article"
+    },
+    {
+      "code": "NE3", "name": "Delhi-Meerut Expressway", "authority": "NHAI",
+      "states": ["Delhi", "Uttar Pradesh"], "length_km": 96,
+      "route": "Nizamuddin Bridge - Delhi/UP Border - Dasna - Hapur - Meerut",
+      "completed": "2021-04-01",
+      "note": "Widest expressway in India - up to 14 lanes on the Delhi-Dasna section",
+      "verified": true, "source": "Wikipedia disambiguation (NE3), curlytales.com"
+    },
+    {
+      "code": "NE4", "name": "Delhi-Mumbai Expressway", "authority": "NHAI",
+      "states": ["Delhi", "Haryana", "Rajasthan", "Madhya Pradesh", "Gujarat", "Maharashtra"],
+      "length_km": 1350,
+      "route": "Sohna Elevated Corridor (Gurugram) via Dausa, Kota, Ratlam, Vadodara, Surat to JNPT Navi Mumbai",
+      "status": "Partially operational (under construction)",
+      "verified": true, "source": "Wikipedia (Delhi-Mumbai Expressway), directly matches our own toll-api corridor data for DME"
+    },
+    {
+      "code": "NE5", "name": "Delhi-Amritsar-Katra Expressway", "authority": "NHAI",
+      "states": ["Delhi", "Haryana", "Punjab", "Jammu & Kashmir"], "length_km": null,
+      "note": "Includes Amritsar-Gurdaspur section via Nakodar, Sultanpur Lodhi, Goindwal Sahib, Khadoor Sahib",
+      "verified": true, "source": "curlytales.com One Nation 11 National Expressways article"
+    },
+    {
+      "code": "NE6", "name": null, "authority": "NHAI",
+      "verified": false,
+      "note": "NOT YET IDENTIFIED. Candidate guesses (Mumbai-Nagpur/Samruddhi Mahamarg is actually MSRDC/state-owned, so NOT this) must not be assumed without direct source confirmation."
+    },
+    {
+      "code": "NE7", "name": "Bangalore-Chennai Expressway", "authority": "NHAI",
+      "states": ["Karnataka", "Andhra Pradesh", "Tamil Nadu"], "length_km": null,
+      "route": "Hoskote (Bangalore) to Sriperumbudur (Chennai)",
+      "verified": true, "source": "Wikipedia List of national highways by state (Andhra Pradesh), curlytales.com"
+    },
+    {
+      "code": "NE8", "name": null, "authority": "NHAI",
+      "verified": false,
+      "note": "The 8th MoRTH-designated NE as of April 2021 - not yet identified by name."
+    }
+  ],
+  "state_expressway_authorities": [
+    {
+      "state": "Uttar Pradesh", "authority": "UPEIDA",
+      "full_name": "Uttar Pradesh Expressways Industrial Development Authority",
+      "founded": "2007-12-27", "hq": "Lucknow",
+      "roads": ["Purvanchal Expressway", "Bundelkhand Expressway", "Ganga Expressway", "Agra-Lucknow Expressway"],
+      "verified": true, "source": "Wikipedia (UPEIDA)"
+    },
+    {
+      "state": "Uttar Pradesh", "authority": "YEIDA",
+      "full_name": "Yamuna Expressway Industrial Development Authority",
+      "note": "Separate legal entity from UPEIDA - operates Yamuna Expressway specifically",
+      "roads": ["Yamuna Expressway"],
+      "verified": true, "source": "Cross-referenced via 'interchange connecting Yamuna Expressway to NE2' mention"
+    },
+    {
+      "state": "Maharashtra", "authority": "MSRDC",
+      "full_name": "Maharashtra State Road Development Corporation",
+      "founded": "1996-08-02", "hq": "Mumbai",
+      "roads": ["Mumbai-Pune Expressway (Yashwantrao Chavan Expressway)", "Mumbai-Nagpur Expressway (Samruddhi Mahamarg)"],
+      "verified": true, "source": "Wikipedia (MSRDC)"
+    },
+    {
+      "state": "Haryana", "authority": "HSIIDC",
+      "full_name": "Haryana State Industrial and Infrastructure Development Corporation",
+      "roads": ["Western Peripheral Expressway / KMP Expressway"],
+      "verified": true, "source": "Wikipedia (Western Peripheral Expressway)"
+    },
+    {
+      "state": "West Bengal", "authority": "WBHDCL",
+      "full_name": "West Bengal Highway Development Corporation",
+      "note": "Distinct legal category on Wikipedia: 'State Expressway' - declared by state govt, not Govt of India",
+      "verified": true, "source": "Wikipedia (List of expressways in West Bengal)"
+    }
+  ],
+  "structural_classification": {
+    "source": "Wikipedia 'Expressways of India' infobox, MoRTH terminology",
+    "categories": {
+      "NE": "National Expressways - primary corridors, NHAI/Centre, cross state borders, formally NE-tagged",
+      "EC": "Economic Corridors - industrial corridors, NHAI/Centre",
+      "SE": "State Expressways - regional corridors, built and owned by state authorities, NOT part of the national expressway system even when operated to similar standards",
+      "NHAI_intrastate": "Built by NHAI but stay within one state - may not carry an NE tag even though centrally owned"
+    },
+    "national_totals_2026": {
+      "operational_km": 7332,
+      "under_construction_km": 11127.69,
+      "as_of": "April 2026",
+      "source": "Wikipedia Expressways of India"
+    },
+    "state_with_most_expressways": {"state": "Uttar Pradesh", "count": "13+", "source": "studyiq.com 2026 article"}
+  }
+}
