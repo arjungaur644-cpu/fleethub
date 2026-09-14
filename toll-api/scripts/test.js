@@ -4,7 +4,7 @@
    figure (TollGuru: Rs 1,445 by car), so a future change that breaks the
    closed-system model fails here instead of in a customer quote. */
 const { computeToll } = require('../src/engine');
-const db = require('../data/plazas-2026-08-national.json');
+const db = require('../data/plazas-2026-09-national.json');
 
 function interp(a,b,n){const o=[];for(let i=0;i<=n;i++)o.push([a[0]+(b[0]-a[0])*i/n,a[1]+(b[1]-a[1])*i/n]);return o;}
 const dme=[[28.2536,77.8556],[28.22,77.06],[27.48,76.74],[26.83,76.42],[26.56,76.47],[25.25,76.05],[24.59,76.16],[24.22,75.95],[23.45,75.82],[23.1765,75.7885]];

@@ -329,6 +329,12 @@ body{font-family:var(--body);background:var(--cream);color:var(--ink);font-size:
 .td-del{background:none;border:none;color:var(--t3);font-size:0.85rem;cursor:pointer;padding:0 0.2rem;flex-shrink:0;}
 .td-foot{padding:0.6rem 0.9rem;font-size:0.6rem;color:var(--t3);border-top:1px solid var(--line);}
 .hamb-trips{background:none;border:none;font-size:1.15rem;cursor:pointer;padding:0.2rem 0.45rem;color:inherit;}
+/* ── Chat-style presentation ── */
+.chat-bubble-user{background:var(--navy,#0F172A);color:#fff;padding:0.65rem 0.95rem;border-radius:16px 16px 4px 16px;
+  font-size:0.83rem;line-height:1.45;margin:0.8rem 0 0.6rem;max-width:88%;margin-left:auto;box-shadow:0 1px 4px rgba(0,0,0,0.12);}
+.chat-avatar-row{align-items:center;gap:0.4rem;margin-bottom:0.4rem;}
+.chat-avatar{width:26px;height:26px;border-radius:50%;background:var(--saffron,#FF9F1C);display:flex;align-items:center;justify-content:center;font-size:0.85rem;flex-shrink:0;}
+.chat-avatar-label{font-size:0.68rem;font-weight:700;color:var(--t3);letter-spacing:0.02em;}
 .crow{display:flex;justify-content:space-between;padding:0.45rem 0;border-bottom:1px solid var(--line2);font-size:0.82rem;}
 .crow:last-child{border-bottom:none;}
 .crow.tot{font-weight:800;}
@@ -749,7 +755,7 @@ body{font-family:var(--body);background:var(--cream);color:var(--ink);font-size:
               </div>
               <div style="margin-top:0.7rem;border-top:1px dashed var(--line);padding-top:0.55rem">
                 <div style="font-size:0.7rem;font-weight:700;margin-bottom:0.2rem">🛠️ FleetHub Toll Engine</div>
-                <div style="font-size:0.66rem;color:var(--t2);margin-bottom:0.35rem">Connected by default — 570+ NHAI plazas nationwide, cross-validated, auto-updated weekly, hosted on Google Cloud Run. Only change this if you deploy your own copy of the service.</div>
+                <div style="font-size:0.66rem;color:var(--t2);margin-bottom:0.35rem">Connected by default — 1,254+ NHAI & state-authority plazas nationwide, cross-validated, auto-updated weekly, hosted on Google Cloud Run. Only change this if you deploy your own copy of the service.</div>
                 <div style="display:flex;gap:0.4rem">
                   <input id="tapiUrlInput" placeholder="https://your-toll-api.up.railway.app" style="flex:1;border:1px solid var(--line);border-radius:8px;padding:0.45rem;font-size:0.72rem;outline:none"/>
                   <button id="tapiUrlSave" style="background:var(--saffron);color:var(--navy);border:none;border-radius:8px;padding:0.45rem 0.8rem;font-size:0.72rem;font-weight:700;cursor:pointer">Save</button>
@@ -760,6 +766,8 @@ body{font-family:var(--body);background:var(--cream);color:var(--ink);font-size:
             </div>
           </div>
         </div>
+        <div id="chatUserBubble" class="chat-bubble-user" style="display:none"></div>
+        <div id="chatAvatarRow" class="chat-avatar-row" style="display:none"><div class="chat-avatar">🚌</div><div class="chat-avatar-label">FleetHub</div></div>
         <div id="calcResult"></div>
       </div>
     </div>
@@ -1079,7 +1087,7 @@ try{FH_API=localStorage.getItem('fh_api')||'';}catch(e){}
 var GKEY='';
 try{GKEY=localStorage.getItem('fh_gkey')||'';}catch(e){}
 function saveGKey(k){GKEY=(k||'').trim();try{localStorage.setItem('fh_gkey',GKEY);}catch(e){}}
-/* Optional FleetHub Toll API — a self-hosted service with 570+ NHAI plazas,
+/* Optional FleetHub Toll API — a self-hosted service with 1,254+ NHAI & state plazas,
    cross-validated across sources, auto-updated weekly. See the tollapi
    README for what it is; this is just the client that calls it.
    Outranks TollGuru in the toll chain when configured, because it carries
@@ -4118,6 +4126,16 @@ function runCalc(){
   var text=document.getElementById('calcInp').value.trim();
   if(!text){showToast('Type or speak the trip first');return;}
   showToast('🤖 Reading your trip…');
+  /* ── Chat-style presentation ──
+     Echo what was typed as a right-aligned "you" bubble, and show the
+     assistant avatar — the same visual grammar as Claude/ChatGPT. These sit
+     OUTSIDE #calcResult as siblings deliberately: every existing render
+     function already freely clears and rebuilds #calcResult's own contents,
+     and this way none of that code needs to change or risk breaking. */
+  var ub=document.getElementById('chatUserBubble');
+  if(ub){ub.textContent=text;ub.style.display='block';}
+  var av=document.getElementById('chatAvatarRow');
+  if(av)av.style.display='flex';
   understandTrip(text,function(p){
     p.cities=p.cities.filter(function(c){return !PLACE_SKIP[c];});
     if(p.cities.length<2){showToast('Mention at least 2 places (from and to)');return;}
