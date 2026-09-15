@@ -185,9 +185,9 @@ body{font-family:var(--body);background:var(--cream);color:var(--ink);font-size:
 .enq-ctx-edit{margin-top:0.5rem;background:none;border:none;color:#7C3AED;font-size:0.68rem;font-weight:700;cursor:pointer;padding:0;font-family:var(--body);}
 .calc-inp-wrap{position:relative;}
 /* GEMINI-STYLE UNIFIED INPUT */
-.gem-inp{border:1.5px solid var(--line);border-radius:22px;background:#fff;padding:0.7rem 0.9rem 0.5rem;box-shadow:0 2px 10px rgba(15,23,42,0.05);transition:border-color .15s;}
+.gem-inp{border:1.5px solid var(--line);border-radius:26px;background:#fff;padding:0.55rem 0.9rem 0.45rem;box-shadow:0 2px 10px rgba(15,23,42,0.05);transition:border-color .15s;}
 .gem-inp:focus-within{border-color:var(--saffron);box-shadow:0 2px 14px rgba(255,159,28,0.15);}
-.gem-ta{width:100%;border:none;outline:none;resize:none;font-family:var(--body);font-size:0.9rem;color:var(--ink);background:transparent;line-height:1.5;max-height:120px;}
+.gem-ta{width:100%;border:none;outline:none;resize:none;font-family:var(--body);font-size:0.92rem;color:var(--ink);background:transparent;line-height:1.5;max-height:120px;}
 .gem-bar{display:flex;align-items:center;gap:0.5rem;margin-top:0.35rem;}
 .gem-plus{width:34px;height:34px;border-radius:50%;border:1.5px solid var(--line);background:#fff;color:var(--t2);font-size:1.2rem;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s;}
 .gem-plus:active{transform:scale(0.9);}
@@ -323,6 +323,7 @@ body{font-family:var(--body);background:var(--cream);color:var(--ink);font-size:
 .td-new:active{background:var(--cream2,#F5F1E8);}
 .td-list{flex:1;overflow-y:auto;padding:0 0.55rem 0.5rem;}
 .td-item{display:flex;align-items:flex-start;gap:0.5rem;padding:0.6rem 0.5rem;border-radius:10px;cursor:pointer;}
+.td-item-active{background:var(--cream2,#F5F1E8);border-left:3px solid var(--saffron,#FF9F1C);padding-left:calc(0.5rem - 3px);}
 .td-item:active{background:var(--cream2,#F5F1E8);}
 .td-item-t{font-size:0.79rem;font-weight:700;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .td-item-s{font-size:0.63rem;color:var(--t3);margin-top:2px;}
@@ -710,15 +711,16 @@ body{font-family:var(--body);background:var(--cream);color:var(--ink);font-size:
       </aside>
       <div id="calcTool" class="hidden">
         <div class="calc-card">
-          <div style="display:flex;align-items:center;gap:0.3rem">
+          <div style="display:flex;align-items:center;gap:0.5rem">
             <button id="tdOpen" class="hamb-trips" title="Saved trips">☰</button>
-            <h3 style="margin:0">🧮 Trip Cost Calculator</h3>
+            <h3 style="margin:0;flex:1">🧮 Trip Cost Calculator</h3>
+            <button id="tdNewHeader" class="hamb-trips" title="New trip" style="font-size:1.3rem">＋</button>
           </div>
           <div class="cc-sub">Type, speak, or add a photo of the route. We calculate the full cost.</div>
           <div id="calcEnqPanel" style="display:none"></div>
           <!-- Gemini-style unified input bar -->
           <div class="gem-inp">
-            <textarea class="gem-ta" id="calcInp" rows="2" placeholder="Type or speak the trip… e.g. Khurja to Mathura, Vrindavan, 26 seat AC tempo, round trip"></textarea>
+            <textarea class="gem-ta" id="calcInp" rows="1" placeholder="Ask anything — e.g. Khurja to Mathura, Vrindavan, 26 seat tempo"></textarea>
             <div class="gem-bar">
               <button class="gem-plus" id="calcImgBtn" title="Attach a photo, screenshot or PDF of the route">＋</button>
               <!-- Accept what an operator actually has on their phone: a photo of a
@@ -4062,12 +4064,14 @@ function renderTripDrawer(){
     list.innerHTML='<div style="font-size:0.72rem;color:var(--t3);padding:0.8rem 0.5rem;line-height:1.5">No saved trips yet. Calculate a trip and it will appear here automatically.</div>';
     return;
   }
+  var currentText=((document.getElementById('calcInp')||{}).value||'').trim();
   list.innerHTML=SAVED_TRIPS.map(function(t,i){
     var d=new Date(t.at);
     var when=d.toLocaleDateString('en-IN',{day:'numeric',month:'short'});
-    return '<div class="td-item" data-i="'+i+'">'+
+    var isActive=currentText&&t.text===currentText;
+    return '<div class="td-item'+(isActive?' td-item-active':'')+'" data-i="'+i+'">'+
       '<div style="flex:1;min-width:0">'+
-        '<div class="td-item-t">'+t.name+'</div>'+
+        '<div class="td-item-t">'+(isActive?'💬 ':'')+t.name+'</div>'+
         '<div class="td-item-s">'+(t.km?t.km+' km · ':'')+when+'</div>'+
       '</div>'+
       '<button class="td-del" data-del="'+i+'" title="Delete">🗑</button>'+
@@ -4103,24 +4107,43 @@ function closeTripDrawer(){
   if(d)d.classList.remove('open');
   if(s)s.classList.remove('open');
 }
+function startNewTrip(){
+  var inp=document.getElementById('calcInp');
+  if(inp){inp.value='';inp.style.height='auto';inp.focus();}
+  var res=document.getElementById('calcResult');
+  if(res)res.innerHTML='';
+  var ub=document.getElementById('chatUserBubble');if(ub)ub.style.display='none';
+  var av=document.getElementById('chatAvatarRow');if(av)av.style.display='none';
+  closeTripDrawer();
+}
 (function(){
   function wire(){
     var o=document.getElementById('tdOpen'),x=document.getElementById('tdClose'),
-        sc=document.getElementById('tripDrawerScrim'),nw=document.getElementById('tdNew');
+        sc=document.getElementById('tripDrawerScrim'),nw=document.getElementById('tdNew'),
+        nwH=document.getElementById('tdNewHeader');
     if(o)o.addEventListener('click',openTripDrawer);
     if(x)x.addEventListener('click',closeTripDrawer);
     if(sc)sc.addEventListener('click',closeTripDrawer);
-    if(nw)nw.addEventListener('click',function(){
-      var inp=document.getElementById('calcInp');
-      if(inp){inp.value='';inp.focus();}
-      var res=document.getElementById('calcResult');
-      if(res)res.innerHTML='';
-      closeTripDrawer();
-    });
+    if(nwH)nwH.addEventListener('click',startNewTrip);
+    if(nw)nw.addEventListener('click',startNewTrip);
     renderTripDrawer();
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',wire);
   else wire();
+})();
+/* Auto-grow the input like ChatGPT/Claude's box: starts as one clean line,
+   expands only as the operator actually types more, capped by the existing
+   max-height in CSS so it never takes over the screen. */
+(function(){
+  function setupAutoGrow(){
+    var ta=document.getElementById('calcInp');
+    if(!ta)return;
+    function grow(){ta.style.height='auto';ta.style.height=Math.min(ta.scrollHeight,120)+'px';}
+    ta.addEventListener('input',grow);
+    grow();
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',setupAutoGrow);
+  else setupAutoGrow();
 })();
 function runCalc(){
   var text=document.getElementById('calcInp').value.trim();
