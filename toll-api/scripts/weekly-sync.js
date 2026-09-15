@@ -110,14 +110,23 @@ async function main() {
   const effectiveFrom = version;
 
   if (dryRun) {
-    console.log(`\n[dry run] would write plazas-${version}.json with ${withRates.length} rated plazas.`);
+    console.log(`\n[dry run] would write pending-${version}.json with ${withRates.length} rated plazas, awaiting approval.`);
     console.log(JSON.stringify(diff.rateChanged.slice(0, 5), null, 2));
     return;
   }
 
-  console.log('\nStep 4: writing new versioned rate set...');
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-  const outFile = path.join(DATA_DIR, `plazas-${version}.json`);
+  /* CHANGED: a detected change no longer becomes live automatically. It is
+     written to a PENDING folder and logged as awaiting approval - the
+     operator reviews what changed (via /v1/updates/pending or the app's
+     "Check for updates" panel) and explicitly approves or skips it. This is
+     the "ask before updating" behaviour requested - the sync still runs
+     unattended on schedule, but nothing reaches a live quote without a human
+     saying yes first. */
+  console.log('\nStep 4: writing PENDING update for review (not yet live)...');
+  const pendingDir = path.join(DATA_DIR, 'pending');
+  fs.mkdirSync(pendingDir, { recursive: true });
+  const pendingId = `pending-${version}`;
+  const outFile = path.join(pendingDir, `${pendingId}.json`);
   fs.writeFileSync(outFile, JSON.stringify({
     version, effectiveFrom,
     source: 'weekly-sync: ' + results.map((_, i) => `source-${i}`).join('+'),
@@ -128,19 +137,26 @@ async function main() {
   }, null, 2));
   console.log(`  wrote ${outFile}`);
 
-  const changelog = loadChangelog();
-  changelog.unshift({
-    version, effectiveFrom, generatedAt: new Date().toISOString(),
-    stats, diffSummary: diff.summary,
-    rateChanges: diff.rateChanged,
+  const pendingIndexFile = path.join(DATA_DIR, 'pending-updates.json');
+  let pendingIndex = [];
+  try { pendingIndex = JSON.parse(fs.readFileSync(pendingIndexFile, 'utf8')); } catch { /* none yet */ }
+  pendingIndex.unshift({
+    id: pendingId, version, effectiveFrom, generatedAt: new Date().toISOString(),
+    status: 'awaiting_review',
+    summary: diff.summary,
+    headline: `${diff.summary.added} new, ${diff.summary.removed} removed, ${diff.summary.rateChanged} rate changes` +
+      (diff.summary.rateChanged ? ` (avg move ${diff.summary.avgRateDeltaPct}%)` : ''),
+    rateChanges: diff.rateChanged.slice(0, 20), // enough to show the operator without bloating the index
     added: diff.added, removed: diff.removed,
     sourceErrors: errors,
   });
-  saveChangelog(changelog.slice(0, 104)); // ~2 years of weekly history
-  console.log(`  changelog updated: ${CHANGELOG_FILE}`);
+  fs.writeFileSync(pendingIndexFile, JSON.stringify(pendingIndex.slice(0, 30), null, 2));
+  console.log(`  pending-updates index updated: ${pendingIndexFile}`);
 
-  console.log('\nSync complete. Reload the running API with:');
-  console.log('  curl -XPOST $API_URL/v1/admin/reload -H "X-Api-Key: $KEY"');
+  console.log('\nSync complete. Update is PENDING REVIEW, not live.');
+  console.log('Approve it with:');
+  console.log(`  curl -XPOST $API_URL/v1/admin/approve-update -H "X-Api-Key: $KEY" -d '{"id":"${pendingId}"}'`);
+  console.log('...or check it from the app\'s "Check for updates" panel.');
 }
 
 main().catch((e) => { console.error('Sync failed:', e); process.exit(1); });

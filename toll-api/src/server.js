@@ -161,6 +161,60 @@ const server = http.createServer(async (req, res) => {
     return send(res, 200, { entries: log.slice(0, limit) });
   }
 
+  if (p === '/v1/updates/pending') {
+    const idxFile = path.join(DATA_DIR, 'pending-updates.json');
+    let idx = [];
+    try { idx = JSON.parse(fs.readFileSync(idxFile, 'utf8')); } catch { /* none yet */ }
+    const awaiting = idx.filter((u) => u.status === 'awaiting_review');
+    return send(res, 200, { pending: awaiting, count: awaiting.length });
+  }
+
+  if (p === '/v1/admin/approve-update' && req.method === 'POST') {
+    if (!authed(req)) return send(res, 401, { error: 'invalid api key' });
+    let body;
+    try { body = await readBody(req); } catch { return send(res, 400, { error: 'invalid JSON body' }); }
+    const id = body.id;
+    if (!id) return send(res, 400, { error: 'id is required - see /v1/updates/pending' });
+
+    const idxFile = path.join(DATA_DIR, 'pending-updates.json');
+    let idx = [];
+    try { idx = JSON.parse(fs.readFileSync(idxFile, 'utf8')); } catch { return send(res, 404, { error: 'no pending updates found' }); }
+    const entry = idx.find((u) => u.id === id && u.status === 'awaiting_review');
+    if (!entry) return send(res, 404, { error: `pending update '${id}' not found or already resolved` });
+
+    const pendingFile = path.join(DATA_DIR, 'pending', `${id}.json`);
+    let pendingData;
+    try { pendingData = JSON.parse(fs.readFileSync(pendingFile, 'utf8')); }
+    catch { return send(res, 500, { error: 'pending data file missing or corrupt' }); }
+
+    // Promote: write it as a normal live version, same shape every other
+    // version file uses, then reload the running store.
+    const liveFile = path.join(DATA_DIR, `plazas-${entry.version}.json`);
+    fs.writeFileSync(liveFile, JSON.stringify(pendingData, null, 2));
+    entry.status = 'approved';
+    entry.resolvedAt = new Date().toISOString();
+    fs.writeFileSync(idxFile, JSON.stringify(idx, null, 2));
+    const n = plazaStore.load();
+
+    return send(res, 200, { ok: true, appliedVersion: entry.version, rateSetsLoaded: n, versions: plazaStore.versions() });
+  }
+
+  if (p === '/v1/admin/reject-update' && req.method === 'POST') {
+    if (!authed(req)) return send(res, 401, { error: 'invalid api key' });
+    let body;
+    try { body = await readBody(req); } catch { return send(res, 400, { error: 'invalid JSON body' }); }
+    const id = body.id;
+    const idxFile = path.join(DATA_DIR, 'pending-updates.json');
+    let idx = [];
+    try { idx = JSON.parse(fs.readFileSync(idxFile, 'utf8')); } catch { return send(res, 404, { error: 'no pending updates found' }); }
+    const entry = idx.find((u) => u.id === id && u.status === 'awaiting_review');
+    if (!entry) return send(res, 404, { error: `pending update '${id}' not found or already resolved` });
+    entry.status = 'rejected';
+    entry.resolvedAt = new Date().toISOString();
+    fs.writeFileSync(idxFile, JSON.stringify(idx, null, 2));
+    return send(res, 200, { ok: true, rejected: id });
+  }
+
   if (p === '/v1/rates/versions') {
     return send(res, 200, { versions: plazaStore.versions(), nextRevision: plazaStore.nextRevision() });
   }

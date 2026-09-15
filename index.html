@@ -720,7 +720,7 @@ body{font-family:var(--body);background:var(--cream);color:var(--ink);font-size:
           <div id="calcEnqPanel" style="display:none"></div>
           <!-- Gemini-style unified input bar -->
           <div class="gem-inp">
-            <textarea class="gem-ta" id="calcInp" rows="1" placeholder="Ask anything — e.g. Khurja to Mathura, Vrindavan, 26 seat tempo"></textarea>
+            <textarea class="gem-ta" id="calcInp" rows="1" placeholder="Where's the trip? e.g. Khurja to Mathura, 26 seat tempo"></textarea>
             <div class="gem-bar">
               <button class="gem-plus" id="calcImgBtn" title="Attach a photo, screenshot or PDF of the route">＋</button>
               <!-- Accept what an operator actually has on their phone: a photo of a
@@ -764,6 +764,12 @@ body{font-family:var(--body);background:var(--cream);color:var(--ink);font-size:
                 </div>
                 <input id="tapiKeyInput" placeholder="X-Api-Key (if the API requires one)" style="width:100%;margin-top:0.35rem;border:1px solid var(--line);border-radius:8px;padding:0.45rem;font-size:0.72rem;outline:none"/>
                 <div id="tapiUrlStatus" style="font-size:0.62rem;margin-top:0.35rem;color:var(--t3)"></div>
+              </div>
+              <div style="margin-top:0.7rem;border-top:1px dashed var(--line);padding-top:0.55rem">
+                <div style="font-size:0.7rem;font-weight:700;margin-bottom:0.2rem">🔔 Toll data updates</div>
+                <div style="font-size:0.66rem;color:var(--t2);margin-bottom:0.4rem">The toll engine checks government sources weekly for rate changes, new plazas, and closures. Nothing is applied automatically — every change waits here for you to review and approve.</div>
+                <button id="checkUpdatesBtn" class="cbtn" style="width:100%;font-size:0.74rem;font-weight:700">Check for updates</button>
+                <div id="pendingUpdatesBox" style="margin-top:0.5rem"></div>
               </div>
             </div>
           </div>
@@ -5788,6 +5794,66 @@ document.getElementById('calcMic').addEventListener('click',function(){
     saveTapiUrl(tuInp.value.trim());
     saveTapiKey(tuKeyInp?tuKeyInp.value.trim():'');
     refreshTapi();
+  });
+})();
+/* ── CHECK FOR UPDATES ──
+   Every number the toll engine gives an operator should be something they
+   chose to trust, not something that changed under them silently. The
+   backend's weekly sync writes DETECTED changes to a pending queue instead
+   of applying them automatically - this panel is where the operator actually
+   sees "here's what changed" and decides, once, whether to use it. */
+(function(){
+  var btn=document.getElementById('checkUpdatesBtn');
+  var box=document.getElementById('pendingUpdatesBox');
+  if(!btn)return;
+  btn.addEventListener('click',function(){
+    if(!TAPI_URL){box.innerHTML='<div style="font-size:0.68rem;color:var(--t3)">No toll engine connected — nothing to check.</div>';return;}
+    box.innerHTML='<div style="font-size:0.68rem;color:var(--t3)">🔍 Checking tis.nhai.gov.in and state authority sources for anything new…</div>';
+    fetch(TAPI_URL+'/v1/updates/pending').then(function(r){return r.json();}).then(function(d){
+      if(!d||!d.pending||!d.pending.length){
+        box.innerHTML='<div style="font-size:0.7rem;color:var(--green);font-weight:600">✓ Up to date — nothing new since the last review.</div>';
+        return;
+      }
+      box.innerHTML=d.pending.map(function(u){
+        var rc=(u.rateChanges||[]).slice(0,5).map(function(r){
+          var c=r.changes&&r.changes[0];
+          return '<div style="font-size:0.65rem;color:var(--t3);padding-left:0.5rem">• '+r.name+
+            (c?(' — '+c.class+' ₹'+c.before+' → ₹'+c.after+' ('+(c.deltaPct>0?'+':'')+c.deltaPct+'%)'):'')+'</div>';
+        }).join('');
+        return '<div style="border:1px solid var(--line);border-radius:10px;padding:0.6rem;margin-bottom:0.5rem">'+
+          '<div style="font-size:0.74rem;font-weight:700;margin-bottom:0.3rem">📋 Update detected — '+(u.effectiveFrom||u.version)+'</div>'+
+          '<div style="font-size:0.68rem;color:var(--t2);margin-bottom:0.4rem">'+u.headline+'</div>'+
+          rc+
+          '<div style="display:flex;gap:0.4rem;margin-top:0.5rem">'+
+            '<button class="cbtn puApprove" data-id="'+u.id+'" style="flex:1;font-size:0.7rem;font-weight:700;color:var(--green)">✓ Use this</button>'+
+            '<button class="cbtn puReject" data-id="'+u.id+'" style="flex:1;font-size:0.7rem">Skip for now</button>'+
+          '</div>'+
+        '</div>';
+      }).join('');
+      box.querySelectorAll('.puApprove').forEach(function(b){
+        b.addEventListener('click',function(){
+          var id=b.getAttribute('data-id');
+          var headers={'Content-Type':'application/json'};
+          if(TAPI_KEY)headers['X-Api-Key']=TAPI_KEY;
+          fetch(TAPI_URL+'/v1/admin/approve-update',{method:'POST',headers:headers,body:JSON.stringify({id:id})})
+            .then(function(r){return r.json();}).then(function(res){
+              if(res&&res.ok){showToast('✓ Update applied — toll engine now uses the new rates');btn.click();}
+              else showToast('Could not apply that update: '+(res&&res.error||'unknown error'));
+            }).catch(function(){showToast('Could not reach the toll engine to apply this');});
+        });
+      });
+      box.querySelectorAll('.puReject').forEach(function(b){
+        b.addEventListener('click',function(){
+          var id=b.getAttribute('data-id');
+          var headers={'Content-Type':'application/json'};
+          if(TAPI_KEY)headers['X-Api-Key']=TAPI_KEY;
+          fetch(TAPI_URL+'/v1/admin/reject-update',{method:'POST',headers:headers,body:JSON.stringify({id:id})})
+            .then(function(){showToast('Skipped — will not ask about this one again');btn.click();});
+        });
+      });
+    }).catch(function(){
+      box.innerHTML='<div style="font-size:0.68rem;color:var(--t3)">Could not reach the toll engine right now.</div>';
+    });
   });
 })();
 (function(){
