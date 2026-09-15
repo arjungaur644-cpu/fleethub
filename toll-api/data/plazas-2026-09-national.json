@@ -1,9 +1,9 @@
 {
-  "version": "2026-09-national-deduped",
+  "version": "2026-09-national-epe",
   "effectiveFrom": "2026-09-08",
-  "source": "merge: fleethub_verified + geohacker national mirror + national_1674_dataset (1159 new plazas added, 513 excluded for missing/zero rate on both car+bus, 1 excluded as inactive) | deduplicated: 475 duplicate records merged away",
+  "source": "merge: fleethub_verified + geohacker national mirror + national_1674_dataset (1159 new plazas added, 513 excluded for missing/zero rate on both car+bus, 1 excluded as inactive) | deduplicated: 475 duplicate records merged away | added 10 EPE segment plazas, rates derived from TollGuru-sourced full-route fare",
   "generatedAt": "2026-09-08T00:00:00Z",
-  "plazaCount": 1254,
+  "plazaCount": 1264,
   "plazas": [
     {
       "id": "ye_jewar",
@@ -28463,6 +28463,246 @@
       ],
       "sourceCount": 1,
       "effectiveFrom": null
+    },
+    {
+      "id": "epe_seg_1",
+      "name": "Mawikalan (EPE Close Loop Toll)",
+      "highway": "NE2 (Eastern Peripheral Expwy)",
+      "state": "Haryana/UP",
+      "lat": 28.877058,
+      "lng": 77.250984,
+      "direction": "closed",
+      "systemId": "epe",
+      "rates": {
+        "car": 16,
+        "lcv": 26,
+        "bus2": 53,
+        "bus3": 58,
+        "truck3": 53,
+        "oversized": 83
+      },
+      "confidence": "single-source",
+      "sources": [
+        "fleethub_derived_from_tollguru_epe_190_full_route"
+      ],
+      "sourceCount": 1,
+      "note": "Segment rate derived proportionally from TollGuru-sourced full-route fare (Rs190 car, 135km) - not an official per-gantry rate card. Flagged single-source and should be replaced with NHAI/IHMCL official rates if found."
+    },
+    {
+      "id": "epe_seg_2",
+      "name": "Badagaon (EPE Close Loop Toll)",
+      "highway": "NE2 (Eastern Peripheral Expwy)",
+      "state": "Haryana/UP",
+      "lat": 28.86933846808413,
+      "lng": 77.32394926295241,
+      "direction": "closed",
+      "systemId": "epe",
+      "rates": {
+        "car": 11,
+        "lcv": 18,
+        "bus2": 36,
+        "bus3": 40,
+        "truck3": 36,
+        "oversized": 57
+      },
+      "confidence": "single-source",
+      "sources": [
+        "fleethub_derived_from_tollguru_epe_190_full_route"
+      ],
+      "sourceCount": 1,
+      "note": "Segment rate derived proportionally from TollGuru-sourced full-route fare (Rs190 car, 135km) - not an official per-gantry rate card. Flagged single-source and should be replaced with NHAI/IHMCL official rates if found."
+    },
+    {
+      "id": "epe_seg_3",
+      "name": "Duhai (EPE Close Loop Toll)",
+      "highway": "NE2 (Eastern Peripheral Expwy)",
+      "state": "Haryana/UP",
+      "lat": 28.73377,
+      "lng": 77.47471,
+      "direction": "closed",
+      "systemId": "epe",
+      "rates": {
+        "car": 33,
+        "lcv": 53,
+        "bus2": 109,
+        "bus3": 119,
+        "truck3": 109,
+        "oversized": 172
+      },
+      "confidence": "single-source",
+      "sources": [
+        "fleethub_derived_from_tollguru_epe_190_full_route"
+      ],
+      "sourceCount": 1,
+      "note": "Segment rate derived proportionally from TollGuru-sourced full-route fare (Rs190 car, 135km) - not an official per-gantry rate card. Flagged single-source and should be replaced with NHAI/IHMCL official rates if found."
+    },
+    {
+      "id": "epe_seg_4",
+      "name": "Rasoolpur Sikrod (EPE Close Loop Toll)",
+      "highway": "NE2 (Eastern Peripheral Expwy)",
+      "state": "Haryana/UP",
+      "lat": 28.707,
+      "lng": 77.517,
+      "direction": "closed",
+      "systemId": "epe",
+      "rates": {
+        "car": 8,
+        "lcv": 13,
+        "bus2": 26,
+        "bus3": 29,
+        "truck3": 26,
+        "oversized": 42
+      },
+      "confidence": "single-source",
+      "sources": [
+        "fleethub_derived_from_tollguru_epe_190_full_route"
+      ],
+      "sourceCount": 1,
+      "note": "Segment rate derived proportionally from TollGuru-sourced full-route fare (Rs190 car, 135km) - not an official per-gantry rate card. Flagged single-source and should be replaced with NHAI/IHMCL official rates if found."
+    },
+    {
+      "id": "epe_seg_5",
+      "name": "Dasna (EPE Close Loop Toll)",
+      "highway": "NE2 (Eastern Peripheral Expwy)",
+      "state": "Haryana/UP",
+      "lat": 28.68572,
+      "lng": 77.53373,
+      "direction": "closed",
+      "systemId": "epe",
+      "rates": {
+        "car": 5,
+        "lcv": 8,
+        "bus2": 16,
+        "bus3": 18,
+        "truck3": 16,
+        "oversized": 26
+      },
+      "confidence": "single-source",
+      "sources": [
+        "fleethub_derived_from_tollguru_epe_190_full_route"
+      ],
+      "sourceCount": 1,
+      "note": "Segment rate derived proportionally from TollGuru-sourced full-route fare (Rs190 car, 135km) - not an official per-gantry rate card. Flagged single-source and should be replaced with NHAI/IHMCL official rates if found. KNOWN RISK: a separate open-toll plaza named plain \"Dasna\" sits 1.1km away in real coordinates - tested with a straight-line polyline and both matched simultaneously, which would double-count. Needs verification against a REAL routed polyline through this exact area before being considered fully safe."
+    },
+    {
+      "id": "epe_seg_6",
+      "name": "Bilakbarpur (EPE Close Loop Toll)",
+      "highway": "NE2 (Eastern Peripheral Expwy)",
+      "state": "Haryana/UP",
+      "lat": 28.52294,
+      "lng": 77.59598,
+      "direction": "closed",
+      "systemId": "epe",
+      "rates": {
+        "car": 30,
+        "lcv": 48,
+        "bus2": 99,
+        "bus3": 108,
+        "truck3": 99,
+        "oversized": 156
+      },
+      "confidence": "single-source",
+      "sources": [
+        "fleethub_derived_from_tollguru_epe_190_full_route"
+      ],
+      "sourceCount": 1,
+      "note": "Segment rate derived proportionally from TollGuru-sourced full-route fare (Rs190 car, 135km) - not an official per-gantry rate card. Flagged single-source and should be replaced with NHAI/IHMCL official rates if found."
+    },
+    {
+      "id": "epe_seg_7",
+      "name": "Fatehpur Rampur (EPE Close Loop Toll)",
+      "highway": "NE2 (Eastern Peripheral Expwy)",
+      "state": "Haryana/UP",
+      "lat": 28.43818,
+      "lng": 77.58719,
+      "direction": "closed",
+      "systemId": "epe",
+      "rates": {
+        "car": 15,
+        "lcv": 24,
+        "bus2": 50,
+        "bus3": 54,
+        "truck3": 50,
+        "oversized": 78
+      },
+      "confidence": "single-source",
+      "sources": [
+        "fleethub_derived_from_tollguru_epe_190_full_route"
+      ],
+      "sourceCount": 1,
+      "note": "Segment rate derived proportionally from TollGuru-sourced full-route fare (Rs190 car, 135km) - not an official per-gantry rate card. Flagged single-source and should be replaced with NHAI/IHMCL official rates if found."
+    },
+    {
+      "id": "epe_seg_8",
+      "name": "Maujpur (EPE Close Loop Toll)",
+      "highway": "NE2 (Eastern Peripheral Expwy)",
+      "state": "Haryana/UP",
+      "lat": 28.2810361,
+      "lng": 77.4389116,
+      "direction": "closed",
+      "systemId": "epe",
+      "rates": {
+        "car": 36,
+        "lcv": 58,
+        "bus2": 119,
+        "bus3": 130,
+        "truck3": 119,
+        "oversized": 187
+      },
+      "confidence": "single-source",
+      "sources": [
+        "fleethub_derived_from_tollguru_epe_190_full_route"
+      ],
+      "sourceCount": 1,
+      "note": "Segment rate derived proportionally from TollGuru-sourced full-route fare (Rs190 car, 135km) - not an official per-gantry rate card. Flagged single-source and should be replaced with NHAI/IHMCL official rates if found."
+    },
+    {
+      "id": "epe_seg_9",
+      "name": "Pelak (EPE Close Loop Toll)",
+      "highway": "NE2 (Eastern Peripheral Expwy)",
+      "state": "Haryana/UP",
+      "lat": 28.127789,
+      "lng": 77.406093,
+      "direction": "closed",
+      "systemId": "epe",
+      "rates": {
+        "car": 28,
+        "lcv": 45,
+        "bus2": 92,
+        "bus3": 101,
+        "truck3": 92,
+        "oversized": 146
+      },
+      "confidence": "single-source",
+      "sources": [
+        "fleethub_derived_from_tollguru_epe_190_full_route"
+      ],
+      "sourceCount": 1,
+      "note": "Segment rate derived proportionally from TollGuru-sourced full-route fare (Rs190 car, 135km) - not an official per-gantry rate card. Flagged single-source and should be replaced with NHAI/IHMCL official rates if found."
+    },
+    {
+      "id": "epe_seg_10",
+      "name": "Chhajju Nagar(EPE) Close Loop Toll",
+      "highway": "NE2 (Eastern Peripheral Expwy)",
+      "state": "Haryana/UP",
+      "lat": 28.09952,
+      "lng": 77.36404,
+      "direction": "closed",
+      "systemId": "epe",
+      "rates": {
+        "car": 8,
+        "lcv": 13,
+        "bus2": 26,
+        "bus3": 29,
+        "truck3": 26,
+        "oversized": 42
+      },
+      "confidence": "single-source",
+      "sources": [
+        "fleethub_derived_from_tollguru_epe_190_full_route"
+      ],
+      "sourceCount": 1,
+      "note": "Segment rate derived proportionally from TollGuru-sourced full-route fare (Rs190 car, 135km) - not an official per-gantry rate card. Flagged single-source and should be replaced with NHAI/IHMCL official rates if found."
     }
   ]
 }
