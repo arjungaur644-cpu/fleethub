@@ -1,7 +1,7 @@
 {
   "version": "2026-09-national-epe",
   "effectiveFrom": "2026-09-08",
-  "source": "merge: fleethub_verified + geohacker national mirror + national_1674_dataset (1159 new plazas added, 513 excluded for missing/zero rate on both car+bus, 1 excluded as inactive) | deduplicated: 475 duplicate records merged away | added 10 EPE segment plazas, rates derived from TollGuru-sourced full-route fare",
+  "source": "merge: fleethub_verified + geohacker national mirror + national_1674_dataset (1159 new plazas added, 513 excluded for missing/zero rate on both car+bus, 1 excluded as inactive) | deduplicated: 475 duplicate records merged away | added 10 EPE segment plazas, rates derived from TollGuru-sourced full-route fare | NOTE: EPE segment rates flagged pending_government_verification - see per-plaza notes",
   "generatedAt": "2026-09-08T00:00:00Z",
   "plazaCount": 1264,
   "plazas": [
@@ -28481,12 +28481,12 @@
         "truck3": 53,
         "oversized": 83
       },
-      "confidence": "single-source",
+      "confidence": "pending_government_verification",
       "sources": [
         "fleethub_derived_from_tollguru_epe_190_full_route"
       ],
       "sourceCount": 1,
-      "note": "Segment rate derived proportionally from TollGuru-sourced full-route fare (Rs190 car, 135km) - not an official per-gantry rate card. Flagged single-source and should be replaced with NHAI/IHMCL official rates if found."
+      "note": "Segment rate derived proportionally from TollGuru-sourced full-route fare (Rs190 car, 135km) - not an official per-gantry rate card. Flagged single-source and should be replaced with NHAI/IHMCL official rates if found. SOURCING CORRECTION: this segment rate was derived from TollGuru (a commercial aggregator), which should only ever be used for cross-checking, not as our primary source. Confirmed via NHAI TIS (tis.nhai.gov.in) that this exact gantry exists on their official system with a real Toll Plaza ID, but the government rate table itself could not be fetched (robots.txt blocks automated access). This number is a placeholder pending that real government figure and should be treated as LOWER confidence than our other plaza data until replaced."
     },
     {
       "id": "epe_seg_2",
@@ -28505,12 +28505,12 @@
         "truck3": 36,
         "oversized": 57
       },
-      "confidence": "single-source",
+      "confidence": "pending_government_verification",
       "sources": [
         "fleethub_derived_from_tollguru_epe_190_full_route"
       ],
       "sourceCount": 1,
-      "note": "Segment rate derived proportionally from TollGuru-sourced full-route fare (Rs190 car, 135km) - not an official per-gantry rate card. Flagged single-source and should be replaced with NHAI/IHMCL official rates if found."
+      "note": "Segment rate derived proportionally from TollGuru-sourced full-route fare (Rs190 car, 135km) - not an official per-gantry rate card. Flagged single-source and should be replaced with NHAI/IHMCL official rates if found. SOURCING CORRECTION: this segment rate was derived from TollGuru (a commercial aggregator), which should only ever be used for cross-checking, not as our primary source. Confirmed via NHAI TIS (tis.nhai.gov.in) that this exact gantry exists on their official system with a real Toll Plaza ID, but the government rate table itself could not be fetched (robots.txt blocks automated access). This number is a placeholder pending that real government figure and should be treated as LOWER confidence than our other plaza data until replaced."
     },
     {
       "id": "epe_seg_3",
@@ -28529,12 +28529,12 @@
         "truck3": 109,
         "oversized": 172
       },
-      "confidence": "single-source",
+      "confidence": "pending_government_verification",
       "sources": [
         "fleethub_derived_from_tollguru_epe_190_full_route"
       ],
       "sourceCount": 1,
-      "note": "Segment rate derived proportionally from TollGuru-sourced full-route fare (Rs190 car, 135km) - not an official per-gantry rate card. Flagged single-source and should be replaced with NHAI/IHMCL official rates if found."
+      "note": "Segment rate derived proportionally from TollGuru-sourced full-route fare (Rs190 car, 135km) - not an official per-gantry rate card. Flagged single-source and should be replaced with NHAI/IHMCL official rates if found. SOURCING CORRECTION: this segment rate was derived from TollGuru (a commercial aggregator), which should only ever be used for cross-checking, not as our primary source. Confirmed via NHAI TIS (tis.nhai.gov.in) that this exact gantry exists on their official system with a real Toll Plaza ID, but the government rate table itself could not be fetched (robots.txt blocks automated access). This number is a placeholder pending that real government figure and should be treated as LOWER confidence than our other plaza data until replaced."
     },
     {
       "id": "epe_seg_4",
@@ -28553,12 +28553,12 @@
         "truck3": 26,
         "oversized": 42
       },
-      "confidence": "single-source",
+      "confidence": "pending_government_verification",
       "sources": [
         "fleethub_derived_from_tollguru_epe_190_full_route"
       ],
       "sourceCount": 1,
-      "note": "Segment rate derived proportionally from TollGuru-sourced full-route fare (Rs190 car, 135km) - not an official per-gantry rate card. Flagged single-source and should be replaced with NHAI/IHMCL official rates if found."
+      "note": "Segment rate derived proportionally from TollGuru-sourced full-route fare (Rs190 car, 135km) - not an official per-gantry rate card. Flagged single-source and should be replaced with NHAI/IHMCL official rates if found. SOURCING CORRECTION: this segment rate was derived from TollGuru (a commercial aggregator), which should only ever be used for cross-checking, not as our primary source. Confirmed via NHAI TIS (tis.nhai.gov.in) that this exact gantry exists on their official system with a real Toll Plaza ID, but the government rate table itself could not be fetched (robots.txt blocks automated access). This number is a placeholder pending that real government figure and should be treated as LOWER confidence than our other plaza data until replaced."
     },
     {
       "id": "epe_seg_5",
@@ -28577,12 +28577,12 @@
         "truck3": 16,
         "oversized": 26
       },
-      "confidence": "single-source",
+      "confidence": "pending_government_verification",
       "sources": [
         "fleethub_derived_from_tollguru_epe_190_full_route"
       ],
       "sourceCount": 1,
-      "note": "Segment rate derived proportionally from TollGuru-sourced full-route fare (Rs190 car, 135km) - not an official per-gantry rate card. Flagged single-source and should be replaced with NHAI/IHMCL official rates if found. KNOWN RISK: a separate open-toll plaza named plain \"Dasna\" sits 1.1km away in real coordinates - tested with a straight-line polyline and both matched simultaneously, which would double-count. Needs verification against a REAL routed polyline through this exact area before being considered fully safe."
+      "note": "Segment rate derived proportionally from TollGuru-sourced full-route fare (Rs190 car, 135km) - not an official per-gantry rate card. Flagged single-source and should be replaced with NHAI/IHMCL official rates if found. SOURCING CORRECTION: this segment rate was derived from TollGuru (a commercial aggregator), which should only ever be used for cross-checking, not as our primary source. Confirmed via NHAI TIS (tis.nhai.gov.in) that this exact gantry exists on their official system with a real Toll Plaza ID, but the government rate table itself could not be fetched (robots.txt blocks automated access). This number is a placeholder pending that real government figure and should be treated as LOWER confidence than our other plaza data until replaced. KNOWN RISK: a separate open-toll plaza named plain \"Dasna\" sits 1.1km away in real coordinates - tested with a straight-line polyline and both matched simultaneously, which would double-count. Needs verification against a REAL routed polyline through this exact area before being considered fully safe."
     },
     {
       "id": "epe_seg_6",
@@ -28601,12 +28601,12 @@
         "truck3": 99,
         "oversized": 156
       },
-      "confidence": "single-source",
+      "confidence": "pending_government_verification",
       "sources": [
         "fleethub_derived_from_tollguru_epe_190_full_route"
       ],
       "sourceCount": 1,
-      "note": "Segment rate derived proportionally from TollGuru-sourced full-route fare (Rs190 car, 135km) - not an official per-gantry rate card. Flagged single-source and should be replaced with NHAI/IHMCL official rates if found."
+      "note": "Segment rate derived proportionally from TollGuru-sourced full-route fare (Rs190 car, 135km) - not an official per-gantry rate card. Flagged single-source and should be replaced with NHAI/IHMCL official rates if found. SOURCING CORRECTION: this segment rate was derived from TollGuru (a commercial aggregator), which should only ever be used for cross-checking, not as our primary source. Confirmed via NHAI TIS (tis.nhai.gov.in) that this exact gantry exists on their official system with a real Toll Plaza ID, but the government rate table itself could not be fetched (robots.txt blocks automated access). This number is a placeholder pending that real government figure and should be treated as LOWER confidence than our other plaza data until replaced."
     },
     {
       "id": "epe_seg_7",
@@ -28625,12 +28625,12 @@
         "truck3": 50,
         "oversized": 78
       },
-      "confidence": "single-source",
+      "confidence": "pending_government_verification",
       "sources": [
         "fleethub_derived_from_tollguru_epe_190_full_route"
       ],
       "sourceCount": 1,
-      "note": "Segment rate derived proportionally from TollGuru-sourced full-route fare (Rs190 car, 135km) - not an official per-gantry rate card. Flagged single-source and should be replaced with NHAI/IHMCL official rates if found."
+      "note": "Segment rate derived proportionally from TollGuru-sourced full-route fare (Rs190 car, 135km) - not an official per-gantry rate card. Flagged single-source and should be replaced with NHAI/IHMCL official rates if found. SOURCING CORRECTION: this segment rate was derived from TollGuru (a commercial aggregator), which should only ever be used for cross-checking, not as our primary source. Confirmed via NHAI TIS (tis.nhai.gov.in) that this exact gantry exists on their official system with a real Toll Plaza ID, but the government rate table itself could not be fetched (robots.txt blocks automated access). This number is a placeholder pending that real government figure and should be treated as LOWER confidence than our other plaza data until replaced."
     },
     {
       "id": "epe_seg_8",
@@ -28649,12 +28649,12 @@
         "truck3": 119,
         "oversized": 187
       },
-      "confidence": "single-source",
+      "confidence": "pending_government_verification",
       "sources": [
         "fleethub_derived_from_tollguru_epe_190_full_route"
       ],
       "sourceCount": 1,
-      "note": "Segment rate derived proportionally from TollGuru-sourced full-route fare (Rs190 car, 135km) - not an official per-gantry rate card. Flagged single-source and should be replaced with NHAI/IHMCL official rates if found."
+      "note": "Segment rate derived proportionally from TollGuru-sourced full-route fare (Rs190 car, 135km) - not an official per-gantry rate card. Flagged single-source and should be replaced with NHAI/IHMCL official rates if found. SOURCING CORRECTION: this segment rate was derived from TollGuru (a commercial aggregator), which should only ever be used for cross-checking, not as our primary source. Confirmed via NHAI TIS (tis.nhai.gov.in) that this exact gantry exists on their official system with a real Toll Plaza ID, but the government rate table itself could not be fetched (robots.txt blocks automated access). This number is a placeholder pending that real government figure and should be treated as LOWER confidence than our other plaza data until replaced."
     },
     {
       "id": "epe_seg_9",
@@ -28673,12 +28673,12 @@
         "truck3": 92,
         "oversized": 146
       },
-      "confidence": "single-source",
+      "confidence": "pending_government_verification",
       "sources": [
         "fleethub_derived_from_tollguru_epe_190_full_route"
       ],
       "sourceCount": 1,
-      "note": "Segment rate derived proportionally from TollGuru-sourced full-route fare (Rs190 car, 135km) - not an official per-gantry rate card. Flagged single-source and should be replaced with NHAI/IHMCL official rates if found."
+      "note": "Segment rate derived proportionally from TollGuru-sourced full-route fare (Rs190 car, 135km) - not an official per-gantry rate card. Flagged single-source and should be replaced with NHAI/IHMCL official rates if found. SOURCING CORRECTION: this segment rate was derived from TollGuru (a commercial aggregator), which should only ever be used for cross-checking, not as our primary source. Confirmed via NHAI TIS (tis.nhai.gov.in) that this exact gantry exists on their official system with a real Toll Plaza ID, but the government rate table itself could not be fetched (robots.txt blocks automated access). This number is a placeholder pending that real government figure and should be treated as LOWER confidence than our other plaza data until replaced."
     },
     {
       "id": "epe_seg_10",
@@ -28697,12 +28697,12 @@
         "truck3": 26,
         "oversized": 42
       },
-      "confidence": "single-source",
+      "confidence": "pending_government_verification",
       "sources": [
         "fleethub_derived_from_tollguru_epe_190_full_route"
       ],
       "sourceCount": 1,
-      "note": "Segment rate derived proportionally from TollGuru-sourced full-route fare (Rs190 car, 135km) - not an official per-gantry rate card. Flagged single-source and should be replaced with NHAI/IHMCL official rates if found."
+      "note": "Segment rate derived proportionally from TollGuru-sourced full-route fare (Rs190 car, 135km) - not an official per-gantry rate card. Flagged single-source and should be replaced with NHAI/IHMCL official rates if found. SOURCING CORRECTION: this segment rate was derived from TollGuru (a commercial aggregator), which should only ever be used for cross-checking, not as our primary source. Confirmed via NHAI TIS (tis.nhai.gov.in) that this exact gantry exists on their official system with a real Toll Plaza ID, but the government rate table itself could not be fetched (robots.txt blocks automated access). This number is a placeholder pending that real government figure and should be treated as LOWER confidence than our other plaza data until replaced."
     }
   ]
 }

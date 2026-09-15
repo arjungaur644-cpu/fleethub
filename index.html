@@ -3234,7 +3234,7 @@ var CHAIN_DEFS={
   places:{icon:'📍',title:'Place coordinates',tiers:['Google Places knowledge base','FleetHub verified places','Google Geocoding API','OpenStreetMap Nominatim']},
   distance:{icon:'📏',title:'Distance & time',tiers:['Google Routes API','OSRM (OpenStreetMap)','Geometric estimate']},
   optimize:{icon:'🔀',title:'Stop order',tiers:['Google Route Optimization','2-opt on real road matrix','2-opt on straight-line']},
-  toll:{icon:'🪙',title:'Toll',tiers:['Your saved rate','FleetHub Toll API','TollGuru plaza data','FleetHub toll engine (in-browser)','Google Routes API x NHAI class','Per-km estimate']}
+  toll:{icon:'🪙',title:'Toll',tiers:['Your saved rate','FleetHub Toll API (government-sourced)','FleetHub toll engine (in-browser)','Google Routes API x NHAI class','Per-km estimate']}
 };
 function renderSourcesCard(el,c,replace){
   var existing=document.getElementById('sourcesCard');
@@ -3317,8 +3317,7 @@ function renderAuditCard(el,c,p,ordered,total){
   // 4. Toll basis — the honest one
   if(c.tollSource==='learned')add('pass','Toll is your own verified figure','You corrected this route before; that figure is used instead of any estimate.');
   else if(c.tollSource==='tapi')add(c.tollConfidence==='conflict'?'warn':'pass','Toll from your FleetHub Toll API',
-    'Cross-validated plaza data for the '+VTYPE_LABEL[c.vtype]+' class'+(c.tollRateVersion?' · rate version '+c.tollRateVersion:'')+(c.tollConfidence?' · confidence: '+c.tollConfidence:'')+'.');
-  else if(c.tollSource==='tollguru')add('pass','Toll from real plaza data','TollGuru returned plaza-by-plaza rates for the '+VTYPE_LABEL[c.vtype]+' class on this exact route.');
+    'Government-sourced plaza data for the '+VTYPE_LABEL[c.vtype]+' class'+(c.tollRateVersion?' · rate version '+c.tollRateVersion:'')+(c.tollConfidence?' · confidence: '+c.tollConfidence:'')+'.');
   else if(c.tollSource==='engine')add(c.tollCoverage>=70?'pass':'warn','Toll from '+(c.tollPlazaList?c.tollPlazaList.length:0)+' plazas matched to the route',
     'FleetHub matched each plaza geometrically to the actual road path and charged the '+VTYPE_LABEL[c.vtype]+' rate'+((''+c.tollCoverage)!=='null'?'. These plazas span about '+c.tollCoverage+'% of the route':'')+
     (c.tollCoverage<70?' — stretches outside that span may have plazas not yet in the database, so the real total could be higher.':'.'));
@@ -3432,7 +3431,7 @@ function renderTripSummary(el,c,p,ordered,total){
   }else if(c.routeDesc){
     roadLine=c.routeDesc;
   }
-  var tollExact=(c.tollSource==='tapi'||c.tollSource==='tollguru'||c.tollSource==='learned'||c.tollSource==='nhai');
+  var tollExact=(c.tollSource==='tapi'||c.tollSource==='learned'||c.tollSource==='engine');
   host.innerHTML='<div class="rescard"><div class="rc-b" style="padding:0.75rem">'+
     (roadLine?'<div style="font-size:0.74rem;margin-bottom:0.5rem"><span style="color:var(--t3)">Route:</span> <b>'+roadLine+'</b></div>':'')+
     '<div style="display:flex;flex-wrap:wrap;gap:0.5rem">'+
@@ -3807,24 +3806,29 @@ function tollChain(ordered,vtype,isRound,googleCarToll,totalKm,routePoly){
   var pts=ordered.map(function(o){return o.coord;});
   if(isRound&&pts.length>1)pts=pts.concat([ordered[0].coord]);
   var tripType=isRound?'roundtrip':'oneway';
+  /* TollGuru is DELIBERATELY not a tier here. A commercial aggregator is not
+     a source of truth for what NHAI or a state authority actually charges —
+     it is itself inferring/re-publishing from the same government data we
+     should be going to directly. The live number an operator sees must only
+     ever come from the operator's own confirmed rate, our own government-
+     sourced plaza data, or a clearly-labelled estimate. TollGuru is still
+     used — see auditTollAgainstTollGuru() below — but strictly as a
+     cross-check run AFTER the real answer is settled, never as the answer. */
   return runChain('toll',[
     {label:'Your saved rate',tier:'1',note:'you corrected this route before',
      run:function(){
        var v=TOLL_LEARNED[tollLearnKey(ordered,vtype)];
        return (v!=null&&v>0)?{amount:v,plazas:[{name:'Your saved toll for this route',amt:v}],exact:true}:null;
      }},
-    {label:'FleetHub Toll API',tier:'2',note:'self-hosted, 570+ plazas cross-validated, weekly auto-updated',
+    {label:'FleetHub Toll API',tier:'2',note:'government-sourced plaza data, cross-validated, weekly auto-updated',
      run:function(){
        if(!TAPI_URL)return null;
        return withTimeout(fleethubTollApi(ordered,vtype,tripType,routePoly,totalKm,googleCarToll),9000).then(function(r){
-         // A conflict-flagged or low-coverage answer should not silently outrank TollGuru's cleaner data
          if(r&&r.confidence==='conflict')return null;
          return r;
        });
      }},
-    {label:'TollGuru plaza data',tier:'3',note:'commercial plaza database, full national coverage',
-     run:function(){return TGKEY?withTimeout(tollGuruRoute(pts,vtype),9000):null;}},
-    {label:'FleetHub toll engine (in-browser)',tier:'4',note:'plazas matched geometrically to the actual route polyline',
+    {label:'FleetHub toll engine (in-browser)',tier:'3',note:'plazas matched geometrically to the actual route polyline',
      run:function(){
        if(!routePoly||routePoly.length<2)return null;
        var r=computeRouteToll(routePoly,vtype,isRound);
@@ -3837,14 +3841,31 @@ function tollChain(ordered,vtype,isRound,googleCarToll,totalKm,routePoly){
        if(r.coverage<40&&totalKm>300)return null;
        return r;
      }},
-    {label:'Google Routes API x NHAI class',tier:'5',note:'Google gives the car rate; scaled to this vehicle class',
+    {label:'Google Routes API x NHAI class',tier:'4',note:'Google gives the car rate; scaled to this vehicle class',
      run:function(){
        if(!(googleCarToll>0))return null;
        return{amount:googleTollForClass(googleCarToll,vtype),plazas:[],exact:false};
      }},
-    {label:'Per-km estimate',tier:'6',note:'no plaza data for this route - assumption only, verify before quoting',
+    {label:'Per-km estimate',tier:'5',note:'no plaza data for this route - assumption only, verify before quoting',
      run:function(){return{amount:Math.round(totalKm*perKm),plazas:[],exact:false};}}
   ],null,function(v){return v&&v.amount>=0;});
+}
+/* ── TOLLGURU: AUDIT ONLY, NEVER THE ANSWER ──
+   Runs AFTER the real toll number is already settled. Fetches TollGuru's own
+   figure purely to compare — if the two disagree by more than 15%, that is
+   surfaced to the operator as something worth a manual check, exactly like a
+   cross-source conflict in the plaza-confidence system. TollGuru's number is
+   never substituted in, never averaged in, and never shown as if it were our
+   own — it only ever appears labelled as a third-party cross-check. */
+function auditTollAgainstTollGuru(ourAmount,ordered,vtype){
+  if(!TGKEY||!(ourAmount>0))return Promise.resolve(null);
+  var pts=ordered.map(function(o){return o.coord;});
+  return withTimeout(tollGuruRoute(pts,vtype),9000).then(function(tg){
+    if(!tg||!(tg.amount>0))return null;
+    var diffPct=Math.abs(tg.amount-ourAmount)/ourAmount*100;
+    return{tollguruAmount:tg.amount,ourAmount:ourAmount,diffPct:Math.round(diffPct),
+           agrees:diffPct<=15};
+  }).catch(function(){return null;});
 }
 /* -- CHAIN 4: STOP ORDER OPTIMISATION --
    1. Google Route Optimization (optimizeWaypointOrder) on real roads
@@ -5475,7 +5496,7 @@ function renderCalcResult(p,ordered,legs,retKm,total,c){
           if(t&&t.amount>=0){
             var et=document.getElementById('ed-toll');
             if(et){et.value=t.amount;c.tollCost=t.amount;}
-            c.tollSource=tres.tier==='1'?'learned':tres.tier==='2'?'tapi':tres.tier==='3'?'tollguru':tres.tier==='4'?'engine':tres.tier==='5'?'google':'estimate';
+            c.tollSource=tres.tier==='1'?'learned':tres.tier==='2'?'tapi':tres.tier==='3'?'engine':tres.tier==='4'?'google':'estimate';
             c.tollConfidence=t.confidence||null;
             c.tollRateVersion=t.rateVersion||null;
             c.tollCoverage=(t.coveragePct!=null)?t.coveragePct:(t.coverage!=null?t.coverage:null);
@@ -5485,9 +5506,27 @@ function renderCalcResult(p,ordered,legs,retKm,total,c){
             if(window._tollPlazasForMap.length)drawRouteMap(ordered,!!p.isRet||retKm>0);
             var tb=document.getElementById('tollBadge');
             if(tb){
-              tb.textContent=tres.tier==='1'?'★ your saved rate':tres.tier==='2'?('✓ FleetHub API · '+(t.plazas?t.plazas.length:0)+' plazas'):tres.tier==='3'?'✓ TollGuru plazas':tres.tier==='4'?('✓ '+(t.count||(t.plazas?t.plazas.length:0))+' plazas matched'):tres.tier==='5'?(vtNow==='cab'?'✓ Google':'✓ Google × NHAI class'):'⚠ estimate only';
-              tb.className='toll-badge '+(tres.tier==='6'?'est':tres.tier==='5'?'mixed':'nhai');
+              tb.textContent=tres.tier==='1'?'★ your saved rate':tres.tier==='2'?('✓ FleetHub API · '+(t.plazas?t.plazas.length:0)+' plazas'):tres.tier==='3'?('✓ '+(t.count||(t.plazas?t.plazas.length:0))+' plazas matched'):tres.tier==='4'?(vtNow==='cab'?'✓ Google':'✓ Google × NHAI class'):'⚠ estimate only';
+              tb.className='toll-badge '+(tres.tier==='5'?'est':tres.tier==='4'?'mixed':'nhai');
             }
+            /* Cross-check against TollGuru AFTER the real answer is settled —
+               audit only, never a substitute. Shown as a small note, not a
+               competing number, and never overwrites tollBadge or ed-toll. */
+            auditTollAgainstTollGuru(t.amount,ordered,vtNow).then(function(aud){
+              if(!aud)return;
+              var auditEl=document.getElementById('tollAuditNote');
+              if(!auditEl&&tb){
+                auditEl=document.createElement('div');auditEl.id='tollAuditNote';
+                auditEl.style.cssText='font-size:0.6rem;color:var(--t3);margin-top:2px';
+                tb.parentNode.appendChild(auditEl);
+              }
+              if(auditEl){
+                auditEl.textContent=aud.agrees
+                  ?'✓ cross-checked against TollGuru — within '+aud.diffPct+'%'
+                  :'⚠ TollGuru estimates ₹'+aud.tollguruAmount+' — '+aud.diffPct+'% different, worth a manual check';
+                auditEl.style.color=aud.agrees?'var(--green)':'#B45309';
+              }
+            });
           }
           recalc();
           renderTripSummary(el,c,p,ordered,liveTotal);
