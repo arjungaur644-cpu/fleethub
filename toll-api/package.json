@@ -8,6 +8,11 @@
     "ingest": "node scripts/ingest.js",
     "test": "node scripts/test.js"
   },
-  "engines": { "node": ">=18" },
-  "license": "UNLICENSED"
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "UNLICENSED",
+  "dependencies": {
+    "better-sqlite3": "^13.0.3"
+  }
 }

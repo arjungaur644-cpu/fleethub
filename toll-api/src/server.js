@@ -8,6 +8,7 @@ const { computeToll, decodePolyline, cumulativeKm, CLASS_MAP } = require('./engi
 /** Total length of a polyline in km. */
 function polyLengthKm(poly) { const c = cumulativeKm(poly); return c[c.length - 1] || 0; }
 const { PlazaStore, CorrectionStore, DATA_DIR } = require('./store');
+const { getEvidenceForPlaza, listAllDocuments, evidenceCoverageSummary } = require('./evidence');
 
 const PORT = process.env.PORT || 8080;
 const GOOGLE_KEY = process.env.GOOGLE_MAPS_KEY || '';
@@ -213,6 +214,33 @@ const server = http.createServer(async (req, res) => {
     entry.resolvedAt = new Date().toISOString();
     fs.writeFileSync(idxFile, JSON.stringify(idx, null, 2));
     return send(res, 200, { ok: true, rejected: id });
+  }
+
+  if (p === '/v1/evidence/plaza') {
+    const plazaId = url.searchParams.get('id');
+    if (!plazaId) return send(res, 400, { error: 'id query param required, e.g. ?id=nh91_somna' });
+    try {
+      const rows = getEvidenceForPlaza(plazaId);
+      return send(res, 200, { plazaId, evidence: rows, count: rows.length });
+    } catch (e) {
+      return send(res, 500, { error: 'evidence lookup failed', detail: String(e.message || e) });
+    }
+  }
+
+  if (p === '/v1/evidence/documents') {
+    try {
+      return send(res, 200, { documents: listAllDocuments() });
+    } catch (e) {
+      return send(res, 500, { error: 'evidence lookup failed', detail: String(e.message || e) });
+    }
+  }
+
+  if (p === '/v1/evidence/coverage') {
+    try {
+      return send(res, 200, evidenceCoverageSummary());
+    } catch (e) {
+      return send(res, 500, { error: 'evidence lookup failed', detail: String(e.message || e) });
+    }
   }
 
   if (p === '/v1/rates/versions') {
