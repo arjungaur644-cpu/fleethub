@@ -66,4 +66,45 @@ function evidenceCoverageSummary() {
   }
 }
 
-module.exports = { getEvidenceForPlaza, listAllDocuments, evidenceCoverageSummary, DB_PATH };
+/** Every vehicle type with its sourced specs and which official NHAI class it falls under. */
+function listVehicleTypes() {
+  const db = openEvidenceDb();
+  try {
+    return db.prepare(`
+      SELECT vt.*, vc.official_name as nhai_official_name, vc.toll_multiplier_of_car
+      FROM vehicle_types vt JOIN vehicle_classes vc ON vt.nhai_class_code = vc.code
+      ORDER BY vt.seats_min
+    `).all();
+  } finally {
+    db.close();
+  }
+}
+
+/** The 7 official toll classes with their sourced multiplier. */
+function listVehicleClasses() {
+  const db = openEvidenceDb();
+  try {
+    return db.prepare('SELECT * FROM vehicle_classes ORDER BY toll_multiplier_of_car').all();
+  } finally {
+    db.close();
+  }
+}
+
+/** Classify by seat count alone - the deterministic fallback when no LLM call is made. */
+function classifyBySeats(seats) {
+  const db = openEvidenceDb();
+  try {
+    const row = db.prepare(`
+      SELECT * FROM vehicle_types WHERE ? BETWEEN seats_min AND seats_max ORDER BY seats_min LIMIT 1
+    `).get(seats);
+    return row || null;
+  } finally {
+    db.close();
+  }
+}
+
+module.exports = {
+  getEvidenceForPlaza, listAllDocuments, evidenceCoverageSummary,
+  listVehicleTypes, listVehicleClasses, classifyBySeats,
+  DB_PATH,
+};

@@ -8,7 +8,8 @@ const { computeToll, decodePolyline, cumulativeKm, CLASS_MAP } = require('./engi
 /** Total length of a polyline in km. */
 function polyLengthKm(poly) { const c = cumulativeKm(poly); return c[c.length - 1] || 0; }
 const { PlazaStore, CorrectionStore, DATA_DIR } = require('./store');
-const { getEvidenceForPlaza, listAllDocuments, evidenceCoverageSummary } = require('./evidence');
+const { getEvidenceForPlaza, listAllDocuments, evidenceCoverageSummary, listVehicleTypes, listVehicleClasses, classifyBySeats } = require('./evidence');
+const { buildClassificationPrompt, validateClassificationResponse } = require('./vehicleClassifier');
 
 const PORT = process.env.PORT || 8080;
 const GOOGLE_KEY = process.env.GOOGLE_MAPS_KEY || '';
@@ -214,6 +215,42 @@ const server = http.createServer(async (req, res) => {
     entry.resolvedAt = new Date().toISOString();
     fs.writeFileSync(idxFile, JSON.stringify(idx, null, 2));
     return send(res, 200, { ok: true, rejected: id });
+  }
+
+  if (p === '/v1/vehicles/types') {
+    try { return send(res, 200, { types: listVehicleTypes() }); }
+    catch (e) { return send(res, 500, { error: String(e.message || e) }); }
+  }
+
+  if (p === '/v1/vehicles/classes') {
+    try { return send(res, 200, { classes: listVehicleClasses() }); }
+    catch (e) { return send(res, 500, { error: String(e.message || e) }); }
+  }
+
+  if (p === '/v1/vehicles/classify-by-seats') {
+    const seats = parseInt(url.searchParams.get('seats') || '', 10);
+    if (!seats) return send(res, 400, { error: 'seats query param required, e.g. ?seats=26' });
+    const match = classifyBySeats(seats);
+    return send(res, 200, { seats, matched: match });
+  }
+
+  if (p === '/v1/vehicles/classify-prompt') {
+    // Returns the grounding prompt itself - lets the caller (or Claude, or the
+    // app) run it through whichever LLM is available, then POST the raw text
+    // back to /v1/vehicles/validate-classification. Keeps the DB grounding
+    // logic server-side and testable, without this service needing its own
+    // Gemini key.
+    const text = url.searchParams.get('text');
+    if (!text) return send(res, 400, { error: 'text query param required' });
+    return send(res, 200, { prompt: buildClassificationPrompt(text) });
+  }
+
+  if (p === '/v1/vehicles/validate-classification' && req.method === 'POST') {
+    let body;
+    try { body = await readBody(req); } catch { return send(res, 400, { error: 'invalid JSON body' }); }
+    if (!body.rawResponse) return send(res, 400, { error: 'rawResponse (the LLM output text) is required' });
+    const result = validateClassificationResponse(body.rawResponse);
+    return send(res, result.ok ? 200 : 422, result);
   }
 
   if (p === '/v1/evidence/plaza') {
