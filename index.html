@@ -330,6 +330,24 @@ body{font-family:var(--body);background:var(--cream);color:var(--ink);font-size:
 .td-del{background:none;border:none;color:var(--t3);font-size:0.85rem;cursor:pointer;padding:0 0.2rem;flex-shrink:0;}
 .td-foot{padding:0.6rem 0.9rem;font-size:0.6rem;color:var(--t3);border-top:1px solid var(--line);}
 .hamb-trips{background:none;border:none;font-size:1.15rem;cursor:pointer;padding:0.2rem 0.45rem;color:inherit;}
+/* ── Calculator full-screen takeover ──
+   The calculator was sitting as one card among the Seller Dashboard's other
+   tabs/headers - a chat tool should not share the screen with a district
+   picker and a listings menu. When active, this hides everything except the
+   brand strip (top) and the app's own bottom nav (footer), and makes the
+   calculator itself an edge-to-edge fixed panel, the same shape as
+   ChatGPT/Claude's own screen. */
+body.calc-fullscreen .city-tabs,
+body.calc-fullscreen .dash-head,
+body.calc-fullscreen .dash-tabs{display:none!important;}
+body.calc-fullscreen #calcTool{
+  position:fixed;top:var(--topbar-h,64px);left:0;right:0;bottom:64px;
+  z-index:1300;background:var(--cream,#FFFBF3);
+  overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding:0.7rem 0.7rem calc(0.7rem + env(safe-area-inset-bottom));
+  margin:0;max-width:none;
+}
+body.calc-fullscreen .calc-card{box-shadow:none;border:none;border-radius:0;padding:0;background:transparent;}
 /* ── Chat-style presentation ── */
 .chat-bubble-user{background:var(--navy,#0F172A);color:#fff;padding:0.65rem 0.95rem;border-radius:16px 16px 4px 16px;
   font-size:0.83rem;line-height:1.45;margin:0.8rem 0 0.6rem;max-width:88%;margin-left:auto;box-shadow:0 1px 4px rgba(0,0,0,0.12);}
@@ -1505,6 +1523,7 @@ function show(view){
     var el=document.getElementById('view-'+v);
     if(el&&v!=='detail')el.classList.toggle('hidden',v!==view);
   });
+  if(view!=='dash')document.body.classList.remove('calc-fullscreen');
   window.scrollTo({top:0,behavior:'smooth'});
 }
 
@@ -2317,6 +2336,19 @@ function setDashTab(tab){
   if(tab==='calc'){
     document.getElementById('calcGate').classList.toggle('hidden',IS_SUB);
     document.getElementById('calcTool').classList.toggle('hidden',!IS_SUB);
+    /* Full-screen takeover, matching ChatGPT/Claude's own layout: the
+       calculator should not sit as one card among the district picker and
+       dashboard tabs — it should own the screen, with only the brand strip
+       above and the app's bottom nav below still visible. Measured, not
+       guessed, since the topbar's real height depends on how many lines the
+       brand text wraps to. */
+    if(IS_SUB){
+      document.body.classList.add('calc-fullscreen');
+      var tb=document.querySelector('.topbar');
+      if(tb)document.documentElement.style.setProperty('--topbar-h',tb.getBoundingClientRect().height+'px');
+    }
+  }else{
+    document.body.classList.remove('calc-fullscreen');
   }
   if(tab==='enquiries')renderEnquiries();
 }
