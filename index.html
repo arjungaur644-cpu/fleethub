@@ -2185,12 +2185,7 @@ document.getElementById('resendBtn').addEventListener('click',async function(){
     fbRecaptcha=new firebase.auth.RecaptchaVerifier('recaptcha-container',{size:'invisible'});
     await fbRecaptcha.render();
     fbConfirmation=await fbAuth.signInWithPhoneNumber('+91'+ph,fbRecaptcha);
-    var testNums=['8587809938'];
-    if(testNums.indexOf(ph)>=0){
-      document.getElementById('otpHint').innerHTML='✅ Test number — enter <b>123456</b> as the OTP.';
-    }else{
-      document.getElementById('otpHint').innerHTML='✅ OTP resent to <b>+91 '+ph+'</b>.';
-    }
+    document.getElementById('otpHint').innerHTML='✅ OTP resent to <b>+91 '+ph+'</b>.';
     showToast('OTP resent');
     audit('otp_resend',true,'+91'+ph);
     startResendTimer();
@@ -2204,6 +2199,7 @@ document.getElementById('resendBtn').addEventListener('click',async function(){
 document.getElementById('loginBtn').addEventListener('click',async function(){
   var biz=document.getElementById('login-biz').value.trim();
   var ph=document.getElementById('login-phone').value.trim();
+  var btn=this;
   if(loginStage===0){
     if(!biz){showToast('Enter your business name');return;}
     if(!/^\d{10}$/.test(ph)){showToast('Enter a valid 10-digit mobile number');return;}
@@ -2221,18 +2217,23 @@ document.getElementById('loginBtn').addEventListener('click',async function(){
         showToast('Add test number in Firebase Console to test locally');
         return;
       }
+      /* Visible loading state during the async OTP send: reCAPTCHA rendering
+         and the actual SMS dispatch can take a couple of seconds with zero
+         visual feedback otherwise, which reads as "the button needs several
+         taps" when really it's one tap that's just quietly in flight. */
+      btn.disabled=true;btn.style.opacity='0.6';var origText=btn.textContent;btn.textContent='Sending OTP…';
       try{
         if(!fbRecaptcha){
           fbRecaptcha=new firebase.auth.RecaptchaVerifier('recaptcha-container',{size:'invisible'});
           await fbRecaptcha.render();
         }
         fbConfirmation=await fbAuth.signInWithPhoneNumber('+91'+ph,fbRecaptcha);
-        var testNums=['8587809938'];
-        if(testNums.indexOf(ph)>=0){
-          document.getElementById('otpHint').innerHTML='✅ Test number detected — enter <b>123456</b> as the OTP (no SMS needed).';
-        }else{
-          document.getElementById('otpHint').innerHTML='✅ OTP sent by SMS to <b>+91 '+ph+'</b>. If it doesn\u2019t arrive in 30 sec, tap Resend below.';
-        }
+        /* No hardcoded test-number bypass here anymore — every real number,
+           including the operator's own, goes through the real SMS flow.
+           Firebase's OWN "Test phone numbers" list (Console → Authentication
+           → Phone) is still respected automatically by signInWithPhoneNumber
+           itself if configured there — this code just doesn't shortcut it. */
+        document.getElementById('otpHint').innerHTML='✅ OTP sent by SMS to <b>+91 '+ph+'</b>. If it doesn\u2019t arrive in 30 sec, tap Resend below.';
         showToast('OTP sent to +91 '+ph);
         audit('otp_send',true,'+91'+ph);
         startResendTimer();
@@ -2248,7 +2249,7 @@ document.getElementById('loginBtn').addEventListener('click',async function(){
         }else if(code.includes('operation-not-allowed')){
           hint='Phone sign-in is OFF. Firebase Console → Authentication → Sign-in method → enable Phone.';
         }else if(code.includes('captcha-check-failed')||code.includes('invalid-app-credential')){
-          hint='Domain not authorized for OTP. Firebase Console → Authentication → Settings → Authorized domains → add fleethub-travel.netlify.app';
+          hint='Domain not authorized for OTP. Firebase Console → Authentication → Settings → Authorized domains → add this exact domain.';
         }else if(code.includes('internal-error')){
           hint='Internal error — usually SMS region policy is blocking India. Firebase Console → Authentication → Settings → SMS region policy → Allow India.';
         }else if(code.includes('too-many-requests')){
@@ -2263,6 +2264,7 @@ document.getElementById('loginBtn').addEventListener('click',async function(){
         // show the exact code on screen so we can diagnose without desktop
         document.getElementById('otpHint').innerHTML='⚠️ '+hint+'<br><span style="font-size:0.6rem;color:#94A3B8">error code: '+(code||'unknown')+'</span>';
         showToast('OTP failed: '+(code||'see message'));
+        btn.disabled=false;btn.style.opacity='';btn.textContent=origText;
         return;
       }
     }else{
@@ -2271,9 +2273,11 @@ document.getElementById('loginBtn').addEventListener('click',async function(){
     }
     document.getElementById('otpField').classList.remove('hidden');
     document.getElementById('loginBackBtn').classList.remove('hidden');
+    btn.disabled=false;btn.style.opacity='';
     document.getElementById('loginBtn').textContent='Verify & Login →';
     loginStage=1;
   }else{
+    btn.disabled=true;btn.style.opacity='0.6';var origText2=btn.textContent;btn.textContent='Verifying…';
     var otp=document.getElementById('login-otp').value.trim();
     var ok=false;
     if(FB_READY && fbConfirmation){
@@ -2284,22 +2288,23 @@ document.getElementById('loginBtn').addEventListener('click',async function(){
       }catch(err){
         ok=false;audit('otp_verify',false,String(err&&err.message||err));
         showToast('Wrong OTP — check the SMS and try again');
+        btn.disabled=false;btn.style.opacity='';btn.textContent=origText2;
         return;
       }
     }else{
       // demo only when no Firebase keys
       ok=(otp==='1234');
     }
-    if(!ok){showToast('Wrong OTP. Try again');return;}
+    if(!ok){showToast('Wrong OTP. Try again');btn.disabled=false;btn.style.opacity='';btn.textContent=origText2;return;}
     SELLER={biz:biz,phone:ph,city:'Bulandshahr'};
     try{localStorage.setItem('fh_seller',JSON.stringify(SELLER));}catch(e){}
-    // register seller in Firestore
     if(FB_READY){
       fbDB.collection('sellers').doc(ph).set({business:biz,phone:ph,lastLogin:new Date().toISOString()},{merge:true})
         .then(function(){audit('seller_register',true,ph);})
         .catch(function(e){audit('seller_register',false,String(e));});
     }
     showToast('Welcome, '+biz+'!');
+    btn.disabled=false;btn.style.opacity='';
     enterDash();
   }
 });
@@ -2313,6 +2318,22 @@ function enterDash(){
   renderMyListings();
   setDashTab('listings');
   document.getElementById('calcLock').textContent=IS_SUB?'':'🔒';
+  /* Re-check subscription against the account's own Firestore record on every
+     dashboard entry, not just at fresh login — this is what makes a real
+     subscriber see the calculator unlocked on ANY device they log in from,
+     instead of only the one browser that originally set the localStorage
+     flag. Cheap enough to run every time: one doc read, only on entering
+     the dashboard, not on every render. */
+  if(FB_READY&&SELLER&&SELLER.phone){
+    fbDB.collection('sellers').doc(SELLER.phone).get().then(function(doc){
+      if(doc.exists&&doc.data().subscribed&&!IS_SUB){
+        IS_SUB=true;
+        try{localStorage.setItem('fh_sub','1');}catch(e){}
+        document.getElementById('calcLock').textContent='';
+        updateDashSub();
+      }
+    }).catch(function(){});
+  }
 }
 function updateDashSub(){
   var mine=userListings.filter(function(l){return l.owner===SELLER.phone;});
@@ -2667,6 +2688,17 @@ document.getElementById('publishBtn').addEventListener('click',function(){
 function unlock(isTrial){
   IS_SUB=true;
   try{localStorage.setItem('fh_sub','1');}catch(e){}
+  /* Persist to the seller's own account record, not just this browser's
+     localStorage — this is what enterDash() checks, and what makes a real
+     subscriber's status follow them to a new device/browser instead of
+     resetting to locked every time. */
+  if(FB_READY&&SELLER&&SELLER.phone){
+    fbDB.collection('sellers').doc(SELLER.phone).set({
+      subscribed:true,
+      subscribedAt:new Date().toISOString(),
+      subscriptionType:isTrial?'trial':'paid'
+    },{merge:true}).catch(function(e){audit('subscribe_write',false,String(e));});
+  }
   if(isTrial){
     var ends=new Date(Date.now()+7*24*60*60*1000);
     try{localStorage.setItem('fh_trial_ends',ends.toISOString());}catch(e){}
