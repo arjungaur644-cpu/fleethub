@@ -335,16 +335,22 @@ body{font-family:var(--body);background:var(--cream);color:var(--ink);font-size:
    tabs/headers - a chat tool should not share the screen with a district
    picker and a listings menu. When active, this hides everything except the
    brand strip (top) and the app's own bottom nav (footer), and makes the
-   calculator itself an edge-to-edge fixed panel, the same shape as
-   ChatGPT/Claude's own screen. */
+   calculator itself the full screen — no fixed positioning, deliberately.
+   position:fixed combined with overflow-y:auto on a container holding a
+   textarea is a documented Android Chrome bug class: when the virtual
+   keyboard opens, Chrome's visual viewport and layout viewport can drift
+   out of sync, so the input LOOKS correctly placed but taps land on the
+   wrong coordinates underneath it — exactly a "can't type" symptom with a
+   normal-looking screen. Letting #calcTool sit in normal document flow
+   (just with the surrounding chrome hidden, so it visually fills the
+   screen) avoids that entire bug class. */
 body.calc-fullscreen .city-tabs,
 body.calc-fullscreen .dash-head,
 body.calc-fullscreen .dash-tabs{display:none!important;}
 body.calc-fullscreen #calcTool{
-  position:fixed;top:var(--topbar-h,64px);left:0;right:0;bottom:64px;
-  z-index:1300;background:var(--cream,#FFFBF3);
-  overflow-y:auto;-webkit-overflow-scrolling:touch;
-  padding:0.7rem 0.7rem calc(0.7rem + env(safe-area-inset-bottom));
+  min-height:calc(100vh - 64px);
+  background:var(--cream,#FFFBF3);
+  padding:0.7rem 0.7rem calc(4.2rem + env(safe-area-inset-bottom));
   margin:0;max-width:none;
 }
 body.calc-fullscreen .calc-card{box-shadow:none;border:none;border-radius:0;padding:0;background:transparent;}
@@ -2357,17 +2363,14 @@ function setDashTab(tab){
   if(tab==='calc'){
     document.getElementById('calcGate').classList.toggle('hidden',IS_SUB);
     document.getElementById('calcTool').classList.toggle('hidden',!IS_SUB);
-    /* Full-screen takeover, matching ChatGPT/Claude's own layout: the
-       calculator should not sit as one card among the district picker and
-       dashboard tabs — it should own the screen, with only the brand strip
-       above and the app's bottom nav below still visible. Measured, not
-       guessed, since the topbar's real height depends on how many lines the
-       brand text wraps to. */
-    if(IS_SUB){
-      document.body.classList.add('calc-fullscreen');
-      var tb=document.querySelector('.topbar');
-      if(tb)document.documentElement.style.setProperty('--topbar-h',tb.getBoundingClientRect().height+'px');
-    }
+    /* Full-screen takeover, matching ChatGPT/Claude's own layout: hide the
+       district picker and dashboard tabs so the calculator owns the screen.
+       #calcTool stays in normal document flow (see the CSS comment on
+       body.calc-fullscreen #calcTool) rather than position:fixed, which
+       avoids a real Android Chrome bug where a fixed+scrollable container
+       holding a textarea can visually look correct while taps land on the
+       wrong coordinates once the keyboard opens. */
+    if(IS_SUB)document.body.classList.add('calc-fullscreen');
   }else{
     document.body.classList.remove('calc-fullscreen');
   }
