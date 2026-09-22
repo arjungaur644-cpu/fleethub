@@ -744,7 +744,7 @@ body.calc-fullscreen .calc-card{box-shadow:none;border:none;border-radius:0;padd
           <div id="calcEnqPanel" style="display:none"></div>
           <!-- Gemini-style unified input bar -->
           <div class="gem-inp">
-            <textarea class="gem-ta" id="calcInp" rows="1" placeholder="Where's the trip? e.g. Khurja to Mathura, 26 seat tempo"></textarea>
+            <textarea class="gem-ta" id="calcInp" rows="2" placeholder="Where's the trip? e.g. Khurja to Mathura, 26 seat tempo"></textarea>
             <div class="gem-bar">
               <button class="gem-plus" id="calcImgBtn" title="Attach a photo, screenshot or PDF of the route">＋</button>
               <!-- Accept what an operator actually has on their phone: a photo of a
@@ -4225,20 +4225,12 @@ function startNewTrip(){
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',wire);
   else wire();
 })();
-/* Auto-grow the input like ChatGPT/Claude's box: starts as one clean line,
-   expands only as the operator actually types more, capped by the existing
-   max-height in CSS so it never takes over the screen. */
-(function(){
-  function setupAutoGrow(){
-    var ta=document.getElementById('calcInp');
-    if(!ta)return;
-    function grow(){ta.style.height='auto';ta.style.height=Math.min(ta.scrollHeight,120)+'px';}
-    ta.addEventListener('input',grow);
-    grow();
-  }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',setupAutoGrow);
-  else setupAutoGrow();
-})();
+/* Auto-grow was removed here after live testing kept showing "keyboard opens
+   then the input goes blank, no cursor" — that is a known symptom of Android
+   keyboard composition being disrupted when a page forces a layout reset
+   (ta.style.height='auto') on every single keystroke. The textarea keeps its
+   built-in scroll behavior instead: less visually fancy, but it cannot
+   interfere with typing, which matters far more than the polish. */
 function runCalc(){
   var text=document.getElementById('calcInp').value.trim();
   if(!text){showToast('Type or speak the trip first');return;}
