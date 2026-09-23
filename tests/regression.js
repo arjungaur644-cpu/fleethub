@@ -117,5 +117,29 @@ console.log('\n[4] Toll constants');
     perKm && +perKm[1] >= 1 && +perKm[1] <= 3, perKm ? `got ${perKm[1]}` : 'not found');
 }
 
+/* ── 5. Khatu–Salasar circuit (live bug, Sep 2026) ───────────────
+   "Khurja se jaegi Khatu shyam salasar balaji jeernamata jaipur Pushkar
+   vrindavan vapis khurja" was quoted ONE-WAY (vapis not recognised), split
+   "salasar balaji" into Salasar + Mehendipur, dropped Jeen Mata and kept
+   "jaegi" as a place. Runs the real parser in jsdom when available. */
+console.log('\n[5] Rajasthan circuit enquiry');
+{
+  let JSDOM = null;
+  try { JSDOM = require('jsdom').JSDOM; } catch (e) {}
+  checkTrue('jeen mata in place table', /'jeen mata':\[27\.44/.test(html));
+  checkTrue('model is not the retired gemini-1.5-flash', !/gemini-1\.5-flash:generateContent/.test(html));
+  checkTrue('map markers are numbers, not letters', !/String\.fromCharCode\(65\+i\)/.test(html));
+  if (!JSDOM) { console.log('        (jsdom not installed — parser run skipped: npm i jsdom)'); }
+  else {
+    const dom = new JSDOM(html, { runScripts: 'dangerously', url: 'https://x.github.io/fleethub/' });
+    const r = dom.window.parseTrip('Khurja se jaegi Khatu shyam salasar balaji jeernamata jaipur Pushkar vrindavan vapis khurja Bus AC ,54 seater');
+    check('stops parsed', r.cities, ['khurja','khatu shyam','salasar','jeen mata','jaipur','pushkar','vrindavan']);
+    check('"vapis khurja" = round trip', r.isRet, true);
+    check('seats', r.seats, 54);
+    check('"mehandipur balaji" still resolves', dom.window.parseTrip('khurja se mehandipur balaji').cities, ['khurja','mehendipur balaji']);
+    dom.window.close();
+  }
+}
+
 console.log(`\n${pass} passed, ${fail} failed\n`);
 process.exit(fail ? 1 : 0);

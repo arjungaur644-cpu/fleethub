@@ -289,6 +289,35 @@ body{font-family:var(--body);background:var(--cream);color:var(--ink);font-size:
 .pf .pl{font-size:0.58rem;color:var(--t3);text-transform:uppercase;}
 .pf .pv{font-weight:700;font-size:0.85rem;margin-top:0.05rem;}
 .xtag{font-size:0.66rem;background:var(--blue-bg);color:var(--blue);padding:2px 8px;border-radius:20px;font-weight:600;}
+.xcard .rc-b{padding:0.8rem 0.9rem;}
+.gem-inp.gem-dock{position:sticky;bottom:calc(4.6rem + env(safe-area-inset-bottom));z-index:20;margin-top:0.7rem;box-shadow:0 -4px 18px rgba(15,23,42,0.10);background:#fff;}
+.optc{padding:0.65rem;border:1.5px solid var(--line);border-radius:12px;margin-bottom:0.55rem;}
+.optc.cur{border-color:var(--green);background:var(--green-bg);}
+.opth{display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;margin-bottom:0.45rem;font-size:0.8rem;}
+.optl{color:var(--t3);font-size:0.72rem;}
+.optb{margin-left:auto;font-size:0.56rem;background:var(--green);color:#fff;font-weight:800;padding:2px 7px;border-radius:6px;}
+.opts{display:grid;grid-template-columns:repeat(3,1fr);gap:0.35rem;margin-bottom:0.4rem;}
+.opts>div{background:rgba(0,0,0,0.035);border-radius:8px;padding:0.35rem 0.2rem;text-align:center;min-width:0;}
+.opts b{display:block;font-size:0.86rem;line-height:1.15;white-space:nowrap;}
+.opts span{font-size:0.54rem;color:var(--t3);letter-spacing:0.04em;}
+.optt{display:flex;gap:0.3rem;flex-wrap:wrap;margin-bottom:0.35rem;}
+.optt span{font-size:0.58rem;background:var(--green-bg);color:var(--green);font-weight:700;padding:1px 6px;border-radius:6px;}
+.optp{font-size:0.72rem;line-height:1.6;color:var(--t2);}
+.optn{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;background:#2563EB;color:#fff;font-size:0.55rem;font-weight:800;margin-right:3px;vertical-align:1px;}
+.optw{font-size:0.64rem;color:var(--t3);margin-top:3px;}
+.optcur{margin-top:0.45rem;font-size:0.72rem;font-weight:700;color:var(--green);text-align:center;}
+.useOptBtn{margin-top:0.45rem;font-size:0.72rem;font-weight:700;width:100%;}
+.xroute{font-weight:700;font-size:0.86rem;line-height:1.45;margin-bottom:0.55rem;word-break:break-word;}
+.xfacts{display:flex;flex-wrap:wrap;gap:0.35rem;}
+.xfacts .xtag{font-size:0.7rem;padding:3px 9px;}
+.xedit{margin-top:0.55rem;}
+.xedit summary{font-size:0.72rem;color:var(--t3);cursor:pointer;font-weight:600;}
+.xedit-row{display:flex;flex-wrap:wrap;gap:0.4rem;margin-top:0.45rem;align-items:center;}
+.xedit-row select{flex:1;min-width:0;font-size:0.78rem;}
+.xedit-row label{display:flex;align-items:center;gap:0.25rem;font-size:0.68rem;color:var(--t3);}
+.xedit-row input{width:52px;font-size:0.78rem;}
+.fhdetails{margin:0.2rem 0 0.85rem;}
+.fhdetails>summary{font-size:0.74rem;color:var(--t3);cursor:pointer;padding:0.4rem 0.2rem;font-weight:600;}
 .reshero{background:linear-gradient(135deg,var(--navy),var(--navy2));border-radius:var(--r2);padding:1.1rem;margin-bottom:0.85rem;color:#fff;}
 .cost-basis{font-size:0.72rem;color:var(--t2);background:var(--cream2);border-radius:8px;padding:0.5rem 0.65rem;margin-bottom:0.7rem;}
 .cost-line{display:grid;grid-template-columns:1fr auto;gap:0.2rem 0.5rem;padding:0.55rem 0;border-bottom:1px solid var(--line2);align-items:center;}
@@ -1052,7 +1081,7 @@ function audit(what,ok,detail){
 
 <script>
 /* FleetHub Platform - buyer marketplace + seller login/dashboard + calculator */
-var APP_VERSION='2.6-gemini-ui';
+var APP_VERSION='2.7-clean-chat';
 console.log('FleetHub build '+APP_VERSION+' loaded '+new Date().toISOString());
 var CITY='all', EVENT='all', CAT='all';
 var SELLER=null, IS_SUB=false;
@@ -2724,7 +2753,7 @@ document.addEventListener('click',function(ev){
 });
 
 /* ═══ CALCULATOR ═══ */
-var CC={'bulandshahr':[28.4070,77.8498],'khurja':[28.2536,77.8556],'sikandrabad':[28.4500,77.7000],'anupshahr':[28.3600,78.2700],'jewar':[28.1200,77.5600],'delhi':[28.6139,77.2090],'noida':[28.5355,77.3910],'ghaziabad':[28.6692,77.4538],'agra':[27.1767,78.0081],'mathura':[27.4924,77.6737],'vrindavan':[27.5650,77.6593],'govardhan':[27.4969,77.4636],'goverdhan':[27.4969,77.4636],'barsana':[27.6463,77.3766],'gokul':[27.4380,77.7170],'nandgaon':[27.7167,77.3833],'aligarh':[27.8974,78.0880],'meerut':[28.9845,77.7064],'jaipur':[26.9124,75.7873],'khatu shyam':[27.3964,75.3997],'khatu':[27.3964,75.3997],'salasar':[27.6090,74.7271],'ranisati':[28.1353,75.4036],'rani sati':[28.1353,75.4036],'ranisati dadi':[28.1353,75.4036],'rani sati dadi':[28.1353,75.4036],'jhunjhunu':[28.1290,75.3998],'pushkar':[26.4899,74.5511],'ajmer':[26.4499,74.6399],'nathdwara':[24.9387,73.8231],'sawariya seth':[24.6600,74.4000],'sanwariya seth':[24.6600,74.4000],'sawariya':[24.6600,74.4000],'sanwariya':[24.6600,74.4000],'sanwaliya ji':[24.6600,74.4000],'sanwaliya':[24.6600,74.4000],'sanwariya ji':[24.6600,74.4000],'mandphiya':[24.6600,74.4000],'mandfiya':[24.6600,74.4000],'chittorgarh':[24.8800,74.6300],'bhilwara':[25.3463,74.6364],'haridwar':[29.9457,78.1642],'rishikesh':[30.0869,78.2676],'dehradun':[30.3165,78.0322],'katra':[32.9916,74.9319],'vaishno devi':[33.0299,74.9490],'varanasi':[25.3176,82.9739],'ayodhya':[26.7922,82.1998],'lucknow':[26.8467,80.9462],'kanpur':[26.4499,80.3319],'mumbai':[19.0760,72.8777],'shirdi':[19.7645,74.4769],'gwalior':[26.2183,78.1828],'ujjain':[23.1765,75.7885],'amritsar':[31.6340,74.8723],'shimla':[31.1048,77.1734],'manali':[32.2396,77.1887],'chandigarh':[30.7333,76.7794],'mehandipur':[26.8000,76.5500],'mehandipur balaji':[26.8000,76.5500],'sambhar':[26.9100,75.1900],'deshnok':[27.7990,73.3410],'karni mata':[27.7990,73.3410],'bikaner':[28.0229,73.3119],'jodhpur':[26.2389,73.0243],'udaipur':[24.5854,73.7125],'kota':[25.2138,75.8648],'bharatpur':[27.2152,77.5030],'deeg':[27.4710,77.3250],'fatehpur sikri':[27.0940,77.6610],'sikandra':[27.2210,77.9500],'kasganj':[27.8090,78.6470],'etah':[27.5580,78.6620],'hathras':[27.5950,78.0530],'firozabad':[27.1591,78.3958],'moradabad':[28.8386,78.7733],'rampur':[28.7900,79.0250],'bareilly':[28.3670,79.4304],'badrinath':[30.7433,79.4938],'kedarnath':[30.7346,79.0669],'gangotri':[30.9947,78.9398],'yamunotri':[31.0118,78.4600],'dwarka':[22.2442,68.9685],'somnath':[20.8880,70.4010],'tirupati':[13.6288,79.4192]};
+var CC={'salasar balaji':[27.6090,74.7271],'salasar dham':[27.6090,74.7271],'jeen mata':[27.4442,75.1945],'bulandshahr':[28.4070,77.8498],'khurja':[28.2536,77.8556],'sikandrabad':[28.4500,77.7000],'anupshahr':[28.3600,78.2700],'jewar':[28.1200,77.5600],'delhi':[28.6139,77.2090],'noida':[28.5355,77.3910],'ghaziabad':[28.6692,77.4538],'agra':[27.1767,78.0081],'mathura':[27.4924,77.6737],'vrindavan':[27.5650,77.6593],'govardhan':[27.4969,77.4636],'goverdhan':[27.4969,77.4636],'barsana':[27.6463,77.3766],'gokul':[27.4380,77.7170],'nandgaon':[27.7167,77.3833],'aligarh':[27.8974,78.0880],'meerut':[28.9845,77.7064],'jaipur':[26.9124,75.7873],'khatu shyam':[27.3964,75.3997],'khatu':[27.3964,75.3997],'salasar':[27.6090,74.7271],'ranisati':[28.1353,75.4036],'rani sati':[28.1353,75.4036],'ranisati dadi':[28.1353,75.4036],'rani sati dadi':[28.1353,75.4036],'jhunjhunu':[28.1290,75.3998],'pushkar':[26.4899,74.5511],'ajmer':[26.4499,74.6399],'nathdwara':[24.9387,73.8231],'sawariya seth':[24.6600,74.4000],'sanwariya seth':[24.6600,74.4000],'sawariya':[24.6600,74.4000],'sanwariya':[24.6600,74.4000],'sanwaliya ji':[24.6600,74.4000],'sanwaliya':[24.6600,74.4000],'sanwariya ji':[24.6600,74.4000],'mandphiya':[24.6600,74.4000],'mandfiya':[24.6600,74.4000],'chittorgarh':[24.8800,74.6300],'bhilwara':[25.3463,74.6364],'haridwar':[29.9457,78.1642],'rishikesh':[30.0869,78.2676],'dehradun':[30.3165,78.0322],'katra':[32.9916,74.9319],'vaishno devi':[33.0299,74.9490],'varanasi':[25.3176,82.9739],'ayodhya':[26.7922,82.1998],'lucknow':[26.8467,80.9462],'kanpur':[26.4499,80.3319],'mumbai':[19.0760,72.8777],'shirdi':[19.7645,74.4769],'gwalior':[26.2183,78.1828],'ujjain':[23.1765,75.7885],'amritsar':[31.6340,74.8723],'shimla':[31.1048,77.1734],'manali':[32.2396,77.1887],'chandigarh':[30.7333,76.7794],'mehandipur':[26.8000,76.5500],'mehandipur balaji':[26.8000,76.5500],'sambhar':[26.9100,75.1900],'deshnok':[27.7990,73.3410],'karni mata':[27.7990,73.3410],'bikaner':[28.0229,73.3119],'jodhpur':[26.2389,73.0243],'udaipur':[24.5854,73.7125],'kota':[25.2138,75.8648],'bharatpur':[27.2152,77.5030],'deeg':[27.4710,77.3250],'fatehpur sikri':[27.0940,77.6610],'sikandra':[27.2210,77.9500],'kasganj':[27.8090,78.6470],'etah':[27.5580,78.6620],'hathras':[27.5950,78.0530],'firozabad':[27.1591,78.3958],'moradabad':[28.8386,78.7733],'rampur':[28.7900,79.0250],'bareilly':[28.3670,79.4304],'badrinath':[30.7433,79.4938],'kedarnath':[30.7346,79.0669],'gangotri':[30.9947,78.9398],'yamunotri':[31.0118,78.4600],'dwarka':[22.2442,68.9685],'somnath':[20.8880,70.4010],'tirupati':[13.6288,79.4192]};
 /* ── EXTRA PLACES + COMMON SPELLING VARIANTS ──
    Operators type place names phonetically (jhangirabad / jahangirabad,
    mehandipur / mehendipur). Every variant maps to the same real coords. */
@@ -2796,6 +2825,7 @@ function _lev(a,b){
    survive as two separate stops even though they are the same town, which
    inflates the route and breaks the round-trip close. */
 var ALIAS={
+  'salasar balaji':'salasar','salasar dham':'salasar','salasar balaji dham':'salasar','jeenmata':'jeen mata','jeernamata':'jeen mata','jeern mata':'jeen mata','jin mata':'jeen mata','jeen mataji':'jeen mata','jeenmataji':'jeen mata','jeen mata ji':'jeen mata','jeen':'jeen mata','जीण माता':'jeen mata','सालासर बालाजी':'salasar',
   'jhangirabad':'jahangirabad','jahangirabaad':'jahangirabad','jehangirabad':'jahangirabad',
   'jhangirabaad':'jahangirabad','jahangeerabad':'jahangirabad',
   'mehandipur':'mehendipur balaji','mehandipur balaji':'mehendipur balaji','mehndipur':'mehendipur balaji',
@@ -3019,6 +3049,9 @@ function parseTrip(text){
   });
   PLACE_HINTS=hintsAfter;
   cities=snapped;
+  /* The pickup named again later ("... vapis khurja") is itself a round-trip
+     signal, even if no return word was recognised. */
+  var endsAtStart=cities.length>2&&cities.slice(1).indexOf(cities[0])>=0;
   // de-dupe, preserve order
   var seen={},out=[];cities.forEach(function(c){if(!seen[c]){seen[c]=1;out.push(c);}});
   // Drop obvious junk fragments: very short unknown words, and common non-place words
@@ -3028,6 +3061,7 @@ function parseTrip(text){
     'back':1,'wapas':1,'wapis':1,'vapas':1,'vapis':1,'wapsi':1,'vapsi':1,'waapas':1,'returning':1,'again':1,'same':1,'start':1,'starting':1,'pickup':1,'pick':1,'drop':1,'point':1,'home':1,'origin':1,'end':1,'ending':1,'last':1,'first':1,'then':1,'phir':1,'fir':1,'hokar':1,'hote':1,'hue':1,'yatra':1,'tour':1,'darshan':1,'jana':1,'jaana':1,'aana':1,'chalna':1,'nikalna':1,'वापस':1,'वापसी':1,'फिर':1,'दर्शन':1,'यात्रा':1,
     /* Spoken-sentence filler. People say "mujhe Khurja se Jaipur jana hai",
        so these must never be mistaken for place names. */
+    'jaegi':1,'jayegi':1,'jaega':1,'jayega':1,'jaenge':1,'jayenge':1,'jaygi':1,'jani':1,'jaani':1,'chalegi':1,'chalega':1,'chalenge':1,'ghumna':1,'ghumana':1,'ghoomna':1,'aayegi':1,'aaegi':1,'lautegi':1,'wapis':1,'vaapis':1,'waapis':1,'vapasi':1,'wapasi':1,'vaapas':1,
     'mujhe':1,'muje':1,'hai':1,'hain':1,'haye':1,'chahiye':1,'chahiye_':1,'karna':1,'karni':1,'lena':1,
     'gadi':1,'gaadi':1,'bus':1,'chaiye':1,'booking':1,'book':1,'rate':1,'kitna':1,'kitne':1,'batao':1,
     'kya':1,'koi':1,'ek':1,'do':1,'teen':1,'char':1,'liye':1,'sath':1,'saath':1,'raha':1,'rahe':1,
@@ -3054,7 +3088,7 @@ function parseTrip(text){
   if(!fuel){var f2=t.match(/(\d{2,3})\s*(?:rupee|rs|rupaye)/);if(f2)fuel=+f2[1];}
   /* Round trip = the vehicle must come back to the pickup point.
      Operators say this many ways; missing any of them silently under-quotes the trip. */
-  var isRet=/round|return|\bback\b|wapsi|vapsi|wapas|vapas|wapis|waapas|aana jaana|aana-jaana|up and down|both way|both side|dono taraf|वापस|वापसी|दोनों/.test(t);
+  var isRet=endsAtStart||/round|return|\bback\b|wapsi|vapsi|wapas|vapas|wapis|vapis|waapis|vaapis|vapasi|wapasi|waapas|vaapas|laut|aana jaana|aana-jaana|up and down|both way|both side|dono taraf|वापस|वापसी|दोनों/.test(t);
   return{cities:out,seats:seats,ac:ac,pax:pax,days:days,fuel:fuel,isRet:isRet};
 }
 function cap(s){return s.replace(/\b\w/g,function(c){return c.toUpperCase();});}
@@ -3116,6 +3150,34 @@ function normWa(raw){
    English, missing punctuation, vehicle details buried mid-sentence.
    The rule-based parseTrip() stays as the fallback, so the app still works with
    no API key and when the network or the model fails. */
+/* Gemini 1.5 Flash was shut down by Google, so every AI call had been silently
+   failing and the app was running on the rule parser alone. Try current models
+   in order; the first one that answers is remembered for the session. */
+/* Checked against Google's deprecation page, 24 Sep 2026: 3.8 Flash is the
+   newest stable Flash, 3.5 Flash-Lite the recommended light model. 2.5 models
+   are now limited to accounts that used them before, so they are not listed. */
+var GEMINI_MODELS=['gemini-3.8-flash','gemini-3.5-flash-lite','gemini-3.5-flash','gemini-3.1-flash-lite'];
+var _gemModelOk=null;
+function geminiFetch(opts){
+  try{
+    var b=JSON.parse(opts.body);
+    b.generationConfig=b.generationConfig||{};
+    // newer models spend output tokens on thinking; a small cap truncated the JSON
+    if(!b.generationConfig.maxOutputTokens||b.generationConfig.maxOutputTokens<2048)b.generationConfig.maxOutputTokens=2048;
+    opts.body=JSON.stringify(b);
+  }catch(e){}
+  var list=_gemModelOk?[_gemModelOk].concat(GEMINI_MODELS.filter(function(m){return m!==_gemModelOk;})):GEMINI_MODELS.slice();
+  function tryAt(i){
+    if(i>=list.length)return Promise.reject(new Error('no Gemini model available'));
+    return fetch('https://generativelanguage.googleapis.com/v1beta/models/'+list[i]+':generateContent?key='+encodeURIComponent(GKEY),opts)
+      .then(function(r){
+        if(r.status===404||r.status===403||r.status===429)return tryAt(i+1); // retired, access-limited or rate-limited → next model
+        if(r.ok)_gemModelOk=list[i];
+        return r;
+      });
+  }
+  return tryAt(0);
+}
 function geminiParseTrip(text){
   if(!GKEY)return Promise.resolve(null);
   var prompt='You read trip enquiries sent to a bus and taxi operator in North India. '+
@@ -3125,8 +3187,12 @@ function geminiParseTrip(text){
     'Rules:\n'+
     '- "pickup" is the first place named, unless the text clearly names a different starting/pickup point.\n'+
     '- "stops" lists every OTHER place to visit, in the order mentioned. Do not repeat the pickup.\n'+
-    '- Transliterate all place names to English (मथुरा->Mathura, खाटू श्याम->Khatu Shyam, बालाजी->Mehendipur Balaji).\n'+
-    '- Words like back, wapas, वापस, return, round trip mean returnsToStart=true. They are NOT places.\n'+
+    '- Transliterate all place names to English (मथुरा->Mathura, खाटू श्याम->Khatu Shyam, जीण माता->Jeen Mata).\n'+
+    '- "Salasar Balaji" / "salasar" is ONE place: Salasar. Only use Mehendipur Balaji when the text says mehendipur/mehandipur, or "balaji" stands alone.\n'+
+    '- "jeen mata", "jeenmata", "jeernamata" = Jeen Mata (Sikar, Rajasthan).\n'+
+    '- If the pickup place is named again later ("... vapis khurja"), returnsToStart=true and do NOT list it as a stop.\n'+
+    '- Verbs like jaegi, jayegi, jaana hai, chalegi are NOT places.\n'+
+    '- Words like back, wapas, vapis, वापस, return, round trip mean returnsToStart=true. They are NOT places.\n'+
     '- Ignore filler such as mujhe, jana hai, chahiye, gadi, batao, kitna.\n'+
     '- "56 seater bus" means vehicle="bus", seats=56. "56 ac bus" also means seats=56. Tempo traveller means "tempo". Innova means "suv".\n'+
     '- Keep multi-word place names WHOLE. "wagha border" is ONE place (Wagah Border, Punjab) — never split it into "wagha" and "border". Same for "golden temple", "vaishno devi", "anandpur sahib", "mehendipur balaji", "khatu shyam".\n'+
@@ -3134,7 +3200,7 @@ function geminiParseTrip(text){
     '- Use null for anything not stated. Never invent places that were not mentioned.\n\n'+
     'Enquiry: '+text;
   var body={contents:[{parts:[{text:prompt}]}],generationConfig:{temperature:0,maxOutputTokens:600}};
-  return fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key='+encodeURIComponent(GKEY),{
+  return geminiFetch({
     method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)
   }).then(function(r){return r.json();}).then(function(d){
     try{
@@ -3204,7 +3270,7 @@ function aiRouteAgent(candidates,cb){
   var settled=false;
   var finish=function(r){if(settled)return;settled=true;cb(r);};
   setTimeout(function(){finish(null);},5000); // never block the quote on a slow model
-  fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key='+encodeURIComponent(GKEY),{
+  geminiFetch({
     method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)
   }).then(function(r){return r.json();}).then(function(d){
     try{
@@ -3253,10 +3319,10 @@ function buildRouteCandidates(p,valid,D,vtype){
   var exh=window._exhaustiveAlts;
   var sameStops=exh&&exh.valid&&exh.valid.length===n&&exh.valid.every(function(v,i){return v.c===valid[i].c;});
   if(exh&&sameStops&&exh.results&&exh.results.length){
-    var labels=['Option 1 — Best possible route','Option 2 — Next best route','Option 3 — Third best route'];
+    var labels=['Best route','2nd best','3rd best'];
     var out2=exh.results.map(function(r,i){
       return build(labels[i]||('Option '+(i+1)),r.seq,
-        i===0?'every possible order checked — this is the provably shortest':'next-shortest of all combinations checked');
+        '');
     });
     var minKm2=Math.min.apply(null,out2.map(function(o){return o.km;}));
     var minHr2=Math.min.apply(null,out2.map(function(o){return o.hours;}));
@@ -3268,17 +3334,17 @@ function buildRouteCandidates(p,valid,D,vtype){
       if(o.toll===minToll2)o.tags.push('lowest toll');
     });
     out2.exhaustive=true;
-    out2.valid=valid;out2.D=D;out2.vtype=vtype;
+    out2.valid=valid;out2.D=D;out2.vtype=vtype;out2.kmOf=kmOf;
     return out2;
   }
   var baseSeq=solveOrder(matrix,n,!!p.isRet);
-  var out=[build('Option 1 — Shortest distance',baseSeq,'least km and least fuel')];
+  var out=[build('Shortest',baseSeq,'')];
   var rev=[0].concat(baseSeq.slice(1).reverse());
-  if(kmOf(rev)!==kmOf(baseSeq))out.push(build('Option 2 — Reverse order',rev,'same stops, opposite direction'));
+  if(kmOf(rev)!==kmOf(baseSeq))out.push(build('Reverse order',rev,''));
   var far=[0].concat(baseSeq.slice(1).sort(function(a,b){
     return hav(valid[0].coord,valid[b].coord)-hav(valid[0].coord,valid[a].coord);
   }));
-  if(kmOf(far)!==kmOf(baseSeq))out.push(build('Option 3 — Farthest first',far,'long haul on day 1, shorter legs after'));
+  if(kmOf(far)!==kmOf(baseSeq))out.push(build('Farthest first',far,''));
   /* Mark which option wins on each measure so the labels state a fact rather
      than a preference. Ties are left unmarked. */
   var minKm=Math.min.apply(null,out.map(function(o){return o.km;}));
@@ -3290,7 +3356,7 @@ function buildRouteCandidates(p,valid,D,vtype){
     if(o.hours===minHr)o.tags.push('least time');
     if(o.toll===minToll)o.tags.push('lowest toll');
   });
-  out.valid=valid;out.D=D;out.vtype=vtype;
+  out.valid=valid;out.D=D;out.vtype=vtype;out.kmOf=kmOf;
   return out;
 }
 function cap2(s){return s?String(s):'';}
@@ -3300,13 +3366,24 @@ function cap2(s){return s?String(s):'';}
    capability and marks which tier actually answered, so a fallback to an
    estimate is visible rather than hidden. */
 var CHAIN_DEFS={
-  language:{icon:'🗣️',title:'Understanding your text',tiers:['Gemini 1.5 Flash','FleetHub rule parser']},
+  language:{icon:'🗣️',title:'Understanding your text',tiers:['Gemini AI','FleetHub rule parser']},
   places:{icon:'📍',title:'Place coordinates',tiers:['Google Places knowledge base','FleetHub verified places','Google Geocoding API','OpenStreetMap Nominatim']},
   distance:{icon:'📏',title:'Distance & time',tiers:['Google Routes API','OSRM (OpenStreetMap)','Geometric estimate']},
   optimize:{icon:'🔀',title:'Stop order',tiers:['Google Route Optimization','2-opt on real road matrix','2-opt on straight-line']},
   toll:{icon:'🪙',title:'Toll',tiers:['Your saved rate','FleetHub Toll API (government-sourced)','FleetHub toll engine (in-browser)','Google Routes API x NHAI class','Per-km estimate']}
 };
+/* The sources and self-check cards stay available but out of the way:
+   one collapsed row at the bottom instead of two long cards. */
+function fhDetailsBody(el){
+  var b=document.getElementById('fhDetailsBody');
+  if(b)return b;
+  var d=document.createElement('details');d.className='fhdetails';
+  d.innerHTML='<summary>How this was calculated</summary><div id="fhDetailsBody"></div>';
+  el.appendChild(d);
+  return document.getElementById('fhDetailsBody');
+}
 function renderSourcesCard(el,c,replace){
+  el=fhDetailsBody(el);
   var existing=document.getElementById('sourcesCard');
   if(existing&&replace)existing.remove();
   else if(existing)return;
@@ -3342,6 +3419,7 @@ function renderSourcesCard(el,c,replace){
    assertions computed from the actual values on screen — not decoration. A
    check that cannot be verified says so rather than showing a green tick. */
 function renderAuditCard(el,c,p,ordered,total){
+  el=fhDetailsBody(el);
   var checks=[];
   function add(state,label,detail){checks.push({state:state,label:label,detail:detail});}
 
@@ -3492,9 +3570,7 @@ function renderTripSummary(el,c,p,ordered,total){
     host=document.createElement('div');host.id='tripSummaryHost';
     el.appendChild(host);
   }
-  var hrs=c.realDurSec>0?(c.realDurSec/3600):(total/(({cab:52,suv:50,tempo:45,minibus:42,bus:40})[c.vtype]||45));
-  if(p.isRet&&c.realDurSec>0&&!c.durIncludesReturn)hrs=hrs; // duration already covers the drawn route
-  var hTxt=Math.floor(hrs)+' h '+Math.round((hrs-Math.floor(hrs))*60)+' min';
+  var hTxt=fmtHours(tripHours(c,total));
   var roadLine='';
   if(c.routeRoads&&c.routeRoads.length){
     roadLine=c.routeRoads.slice(0,3).join(' · ');
@@ -3511,7 +3587,7 @@ function renderTripSummary(el,c,p,ordered,total){
       '<div style="flex:1;min-width:70px"><div style="font-size:0.58rem;color:var(--t3);text-transform:uppercase;letter-spacing:0.03em">Tolls'+(tollExact?'':' (est)')+'</div><div style="font-weight:700;font-size:0.85rem;color:'+(tollExact?'var(--green)':'#B45309')+'">₹'+(c.tollCost||0).toLocaleString()+'</div></div>'+
       '<div style="flex:1;min-width:80px"><div style="font-size:0.58rem;color:var(--t3);text-transform:uppercase;letter-spacing:0.03em">Fuel + Tolls</div><div style="font-weight:700;font-size:0.85rem">₹'+((c.fuelCost||0)+(c.tollCost||0)).toLocaleString()+'</div></div>'+
     '</div>'+
-    (c.tollPlazaList&&c.tollPlazaList.length?'<div style="margin-top:0.5rem;font-size:0.66rem;color:var(--t3)">🅣 '+c.tollPlazaList.length+' toll plaza'+(c.tollPlazaList.length>1?'s':'')+' on this route — shown on the map and listed under Toll tax</div>':'')+
+    (c.tollPlazaList&&c.tollPlazaList.length?'<div style="margin-top:0.5rem;font-size:0.66rem;color:var(--t3)">🅣 '+c.tollPlazaList.length+' toll plaza'+(c.tollPlazaList.length>1?'s':'')+'</div>':'')+
     '</div></div>';
 }
 /* Full toll breakdown popup: every matched plaza with its one-way rate, the
@@ -3576,66 +3652,80 @@ function showTollDetail(c,ordered,isRound,kmUsed){
    straight-line estimate (isEstimate=true) so the operator sees something
    instantly, then called again with real road km/toll and the AI verdict
    once those finish computing — same DOM node, no flicker of missing content. */
+function refreshAltRoutes(){
+  var la=window._lastAlt;
+  if(la)renderAltRoutes(la.p,la.cands,la.verdict,la.isEstimate);
+}
 function renderAltRoutes(p,cands,verdict,isEstimate){
   var host=document.getElementById('altRoutesHost');
-  if(!host)return;
-  var bestKm=Math.min.apply(null,cands.map(function(c){return c.km;}));
-  var vh='';
-  if(verdict&&verdict.notes){
-    vh='<div style="font-size:0.72rem;background:#EFEAFE;color:#6D28D9;font-weight:600;padding:0.5rem 0.6rem;border-radius:8px;margin-bottom:0.5rem;line-height:1.5">'+
-      '🤖 <b>AI recommendation:</b> '+cap2(verdict.best_overall)+' overall'+
-      (verdict.fastest&&verdict.fastest!==verdict.best_overall?' · '+cap2(verdict.fastest)+' is fastest':'')+
-      (verdict.cheapest_toll&&verdict.cheapest_toll!==verdict.best_overall?' · '+cap2(verdict.cheapest_toll)+' has the lowest toll':'')+
-      '</div>';
+  if(!host||!cands||!cands.length)return;
+  window._lastAlt={p:p,cands:cands,verdict:verdict,isEstimate:isEstimate};
+  /* Calibrate every option against the authoritative quote. The option that
+     IS the current quote shows the hero's exact km / time / toll; the others
+     keep their relative difference on the same basis. */
+  var cal=window._fhCal,curIdx=-1,ready=false;
+  var curSeq=null;
+  if(cal&&cands.valid){
+    curSeq=cal.names.map(function(n){for(var z=0;z<cands.valid.length;z++){if(cands.valid[z].c===n)return z;}return -1;});
+    if(curSeq.indexOf(-1)>=0||curSeq.length!==cands.valid.length)curSeq=null;
   }
+  var seqKey=function(q){return q.join('-');};
+  if(curSeq&&cands.kmOf){
+    var est=cands.kmOf(curSeq);
+    var curCand=cands.filter(function(o){return seqKey(o.seq)===seqKey(curSeq);})[0];
+    var fKm=est>0?cal.km/est:1;
+    var hpk=cal.km>0?cal.hrs/cal.km:0;
+    var baseToll=curCand?curCand.toll:0;
+    var fT=(cal.toll!=null&&baseToll>0)?cal.toll/baseToll:1;
+    cands.forEach(function(o,oi){
+      var isCur=seqKey(o.seq)===seqKey(curSeq);
+      if(isCur)curIdx=oi;
+      o.kmS=isCur?cal.km:Math.round(o.km*fKm);
+      o.hrS=isCur?cal.hrs:o.kmS*hpk;
+      o.tollS=isCur&&cal.toll!=null?cal.toll:Math.round(o.toll*fT);
+    });
+    ready=true;
+  }else{
+    cands.forEach(function(o){o.kmS=o.km;o.hrS=o.hours;o.tollS=o.toll;});
+  }
+  var minKm=Math.min.apply(null,cands.map(function(o){return o.kmS;}));
+  var minHr=Math.min.apply(null,cands.map(function(o){return o.hrS;}));
+  var minToll=Math.min.apply(null,cands.map(function(o){return o.tollS;}));
+  var bestIdx=-1;
+  if(verdict&&verdict.best_overall){cands.forEach(function(o,oi){if(o.name===verdict.best_overall)bestIdx=oi;});}
+  if(bestIdx<0)cands.forEach(function(o,oi){if(bestIdx<0&&o.kmS===minKm)bestIdx=oi;});
+  var fmtT=function(v){return '₹'+(v>999?(Math.round(v/100)/10+'k'):v);};
   var oh='';
   cands.forEach(function(o,oi){
-    var diff=o.km-bestKm;
+    var tags=[];
+    if(o.kmS===minKm)tags.push('shortest');
+    if(Math.abs(o.hrS-minHr)<0.01)tags.push('fastest');
+    if(o.tollS===minToll)tags.push('lowest toll');
+    var isBest=oi===bestIdx,isCur=oi===curIdx;
+    var diff=o.kmS-minKm;
     var noteMatch=verdict&&verdict.notes?verdict.notes.filter(function(n){return n.candidate===o.name;})[0]:null;
-    var note=noteMatch?noteMatch.why:'';
-    var isBest=verdict?o.name===verdict.best_overall:diff===0;
-    var tagHtml=(o.tags||[]).map(function(t){
-      return '<span style="font-size:0.58rem;background:var(--green-bg);color:var(--green);font-weight:700;padding:1px 5px;border-radius:6px">'+t+'</span>';
-    }).join(' ');
-    oh+='<div style="padding:0.6rem 0.55rem;border-bottom:1px solid var(--line);margin:0 -0.5rem'+(isBest?';background:var(--green-bg);border-radius:10px':'')+'">'+
-      '<div style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;margin-bottom:0.35rem">'+
-        '<b style="font-size:0.8rem">'+o.name+'</b>'+
-        (isBest?'<span style="font-size:0.56rem;background:var(--green);color:#fff;font-weight:800;padding:2px 6px;border-radius:6px">RECOMMENDED</span>':'')+
+    var path=o.path.map(function(x,k){return '<span class="optn">'+(k+1)+'</span>'+x;}).join(' → ')+(p.isRet?' → '+o.path[0]:'');
+    oh+='<div class="optc'+(isCur?' cur':'')+'">'+
+      '<div class="opth"><b>Option '+(oi+1)+'</b><span class="optl">'+o.name+'</span>'+
+        (isBest?'<span class="optb">RECOMMENDED</span>':'')+'</div>'+
+      '<div class="opts">'+
+        '<div><b'+(diff===0?' style="color:var(--green)"':'')+'>'+o.kmS.toLocaleString()+'</b><span>KM'+(diff>0?' (+'+diff+')':'')+'</span></div>'+
+        '<div><b>'+(ready?fmtHours(o.hrS):(o.hrS+' h'))+'</b><span>DRIVE</span></div>'+
+        '<div><b>'+fmtT(o.tollS)+'</b><span>TOLL</span></div>'+
       '</div>'+
-      /* Three stats side by side so the trade-off reads instantly: an operator
-         comparing "shorter but slower" vs "longer but faster" should not have
-         to parse a sentence to see it. */
-      '<div style="display:flex;gap:0.4rem;margin-bottom:0.35rem">'+
-        '<div style="flex:1;background:rgba(0,0,0,0.03);border-radius:8px;padding:0.35rem 0.4rem;text-align:center">'+
-          '<div style="font-size:0.95rem;font-weight:800;line-height:1.1;color:'+(diff===0?'var(--green)':'var(--t1,#0F172A)')+'">'+o.km+'</div>'+
-          '<div style="font-size:0.54rem;color:var(--t3);letter-spacing:0.04em">KM'+(diff>0?' (+'+diff+')':'')+'</div>'+
-        '</div>'+
-        '<div style="flex:1;background:rgba(0,0,0,0.03);border-radius:8px;padding:0.35rem 0.4rem;text-align:center">'+
-          '<div style="font-size:0.95rem;font-weight:800;line-height:1.1">'+o.hours+'</div>'+
-          '<div style="font-size:0.54rem;color:var(--t3);letter-spacing:0.04em">HOURS</div>'+
-        '</div>'+
-        '<div style="flex:1;background:rgba(0,0,0,0.03);border-radius:8px;padding:0.35rem 0.4rem;text-align:center">'+
-          '<div style="font-size:0.95rem;font-weight:800;line-height:1.1">₹'+(o.toll>999?(Math.round(o.toll/100)/10+'k'):o.toll)+'</div>'+
-          '<div style="font-size:0.54rem;color:var(--t3);letter-spacing:0.04em">TOLL ≈</div>'+
-        '</div>'+
-      '</div>'+
-      (tagHtml?'<div style="margin-bottom:0.3rem">'+tagHtml+'</div>':'')+
-      '<div style="font-size:0.71rem;line-height:1.5;color:var(--t2)">'+o.path.join(' → ')+(p.isRet?' → '+o.path[0]:'')+'</div>'+
-      ((o.why||note)?'<div style="font-size:0.64rem;color:var(--t3);margin-top:3px">'+[o.why,note].filter(Boolean).join(' · ')+'</div>':'')+
-      (!isEstimate&&!isBest?'<button class="cbtn useOptBtn" data-oi="'+oi+'" style="margin-top:0.45rem;font-size:0.71rem;font-weight:700;width:100%">Use this route — verify distance &amp; toll for real</button>':'')+
+      (tags.length?'<div class="optt">'+tags.map(function(t){return '<span>'+t+'</span>';}).join('')+'</div>':'')+
+      '<div class="optp">'+path+'</div>'+
+      (noteMatch&&noteMatch.why?'<div class="optw">'+noteMatch.why+'</div>':'')+
+      (isCur?'<div class="optcur">✓ In your quote</div>'
+            :'<button class="cbtn useOptBtn" data-oi="'+oi+'">Use this route</button>')+
     '</div>';
   });
-  host.innerHTML='<div class="rescard"><div class="rc-h">'+(cands.exhaustive?'🔍 All possible routes checked':'🔀 Other route options')+(isEstimate?' <span style="font-size:0.58rem;color:var(--t3);font-weight:400;margin-left:auto">estimating…</span>':'')+'</div><div class="rc-b">'+
-    vh+
-    '<div style="font-size:0.66rem;color:var(--t3);margin-bottom:0.3rem;line-height:1.5">'+
-      (cands.exhaustive
-        ?'Every possible visiting order for these stops was calculated — this is not a guess, it is the genuine best and next-best options out of all combinations.'
-        :(isEstimate?'Straight-line estimate — refining with real road distance…':'Real road distance for each option.'))+
-      ' Tolls here (≈) are estimated on one common basis so the options can be compared fairly; the quote above already uses the full source chain for its own route — tap "Use this route" on any option to re-run that same full verification for THAT route instead.</div>'+oh+'</div></div>';
+  host.innerHTML='<div class="rescard"><div class="rc-h">🔀 Route options'+
+    ((!ready||(cal&&cal.est))?' <span style="font-size:0.6rem;color:var(--t3);font-weight:400;margin-left:auto">checking roads…</span>':'')+
+    '</div><div class="rc-b">'+oh+'</div></div>';
   host.querySelectorAll('.useOptBtn').forEach(function(btn){
     btn.addEventListener('click',function(){
-      var oi=+btn.getAttribute('data-oi');
-      selectRouteOption(p,cands,oi);
+      selectRouteOption(p,cands,+btn.getAttribute('data-oi'));
     });
   });
 }
@@ -4032,8 +4122,8 @@ function optimizeChain(p,valid,D){
 function languageChain(text){
   var rule=parseTrip(text);
   return runChain('language',[
-    {label:'Gemini 1.5 Flash',tier:'1',note:'understands free-form Hindi, English and mixed text',
-     run:function(){return GKEY?withTimeout(geminiParseTrip(text),6000):null;}},
+    {label:'Gemini AI',tier:'1',note:'understands free-form Hindi, English and mixed text',
+     run:function(){return GKEY?withTimeout(geminiParseTrip(text),9000):null;}},
     {label:'FleetHub rule parser',tier:'2',note:'built-in separators, aliases and Hindi place names',
      run:function(){return (rule&&rule.cities&&rule.cities.length>=2)?rule:null;}}
   ],null,function(v){return v&&v.cities&&v.cities.length>=2;}).then(function(res){
@@ -4045,6 +4135,14 @@ function languageChain(text){
       if(p.pax==null)p.pax=rule.pax;
       if(p.days==null)p.days=rule.days;
       if(!p.isRet&&rule.isRet)p.isRet=true;
+      /* The rule parser is deterministic about places in our verified table —
+         if the model dropped one of them, put it back rather than quote short. */
+      var said=(text||'').toLowerCase();
+      (rule.cities||[]).forEach(function(rc){
+        if(!CC[rc]||p.cities.indexOf(rc)>=0)return;
+        if(rc==='mehendipur balaji'&&!/meh[ae]?n?d?i?pur|mehndipur/.test(said))return;
+        p.cities.push(rc);
+      });
     }
     return p;
   });
@@ -4248,6 +4346,14 @@ function runCalc(){
   if(ub){ub.textContent=text;ub.style.display='block';}
   var av=document.getElementById('chatAvatarRow');
   if(av)av.style.display='flex';
+  /* ChatGPT layout: after the first message the input docks at the bottom,
+     conversation above it. Sticky (in-flow), NOT fixed — see the Android
+     keyboard note on body.calc-fullscreen #calcTool. */
+  try{
+    var gi=document.querySelector('.gem-inp'),ct=document.getElementById('calcTool');
+    if(gi&&ct&&gi.parentNode!==ct){ct.appendChild(gi);gi.classList.add('gem-dock');}
+    if(ub)setTimeout(function(){ub.scrollIntoView({behavior:'smooth',block:'start'});},60);
+  }catch(e){}
   understandTrip(text,function(p){
     p.cities=p.cities.filter(function(c){return !PLACE_SKIP[c];});
     if(p.cities.length<2){showToast('Mention at least 2 places (from and to)');return;}
@@ -4539,8 +4645,25 @@ function estimateStateTax(ordered,days,homeState){
   });
   return{amount:total,hint:states.length?('crosses '+parts.join(', ')+' × '+days+' day(s)'):'stays in home state (UP) — no state tax'};
 }
+/* Days: driving hours at bus/cab speeds plus ~1.5 h darshan/halt per stop,
+   10 h on the road per day. The old flat 400 km/day gave 2 days for a
+   7-stop Rajasthan circuit. */
+function estDays(km,nStops,vtype){
+  var spd=({cab:52,suv:50,tempo:45,minibus:42,bus:40})[vtype]||45;
+  var h=km/spd+Math.max(0,nStops-1)*1.5;
+  return Math.max(1,Math.ceil(h/10));
+}
+/* Google returns CAR driving time; buses and travellers are slower on the same road. */
+var VEH_TIME_FACTOR={cab:1,suv:1.05,tempo:1.15,minibus:1.22,bus:1.3};
+function tripHours(c,km){
+  var f=VEH_TIME_FACTOR[c.vtype]||1.15;
+  if(c.realDurSec>0&&c.realDurKm>0)return c.realDurSec/3600*f*(km/c.realDurKm);
+  if(c.realDurSec>0)return c.realDurSec/3600*f;
+  return km/(({cab:52,suv:50,tempo:45,minibus:42,bus:40})[c.vtype]||45);
+}
+function fmtHours(h){var H=Math.floor(h),M=Math.round((h-H)*60);if(M===60){H++;M=0;}return H+' h '+M+' min';}
 function buildCostObj(p,ordered,legs,total,retKm,realRoads){
-  var seats=p.seats||40,pax=p.pax||seats,days=p.days||Math.max(1,Math.ceil(total/400)),fuel=p.fuel||96;
+  var seats=p.seats||40,pax=p.pax||seats,days=p.days||estDays(total,ordered.length,detectVType(p,seats)),fuel=p.fuel||96;
   var vtype=detectVType(p,seats);
   var mileage=VTYPE_MILEAGE[vtype];
   var tollM=(vtype==='bus')?3.4:(vtype==='minibus'?2.6:(vtype==='tempo'?2.1:(vtype==='suv'?1.5:1.0)));
@@ -4549,7 +4672,7 @@ function buildCostObj(p,ordered,legs,total,retKm,realRoads){
   var driverDay=(vtype==='bus'||vtype==='minibus')?1000:800;
   var litres=Math.round(total/mileage),fuelCost=Math.round(litres*fuel),driverCost=days*driverDay;
   // TOLL: use real NHAI plaza data when route is covered; else per-km estimate
-  var isRound=/round|return|wapas|واپس/i.test(document.getElementById('calcInp').value||'')|| (retKm>0);
+  var isRound=!!p.isRet||(retKm>0);
   var nhai=computeNhaiToll(ordered,vtype,isRound);
   var tollCost, tollSource, tollPlazaList=[];
   if(nhai.learned){
@@ -4580,14 +4703,39 @@ function computeAndRender(p,ordered,realRoads,legsOverride,totalOverride,retOver
   renderCalcResult(p,ordered,legs,retKm,total,c);
 }
 /* Fetch real road distance matrix from OSRM, re-optimize keeping origin fixed, render */
+/* Google Routes distance matrix (metres). The public OSRM demo server often
+   rate-limits phones, which left route options stuck on straight-line guesses. */
+function googleRouteMatrix(valid){
+  if(!GKEY||valid.length<2||valid.length>25)return Promise.resolve(null);
+  var wp=valid.map(function(v){return{waypoint:{location:{latLng:{latitude:v.coord[0],longitude:v.coord[1]}}}};});
+  return fetch('https://routes.googleapis.com/distanceMatrix/v2:computeRouteMatrix',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','X-Goog-Api-Key':GKEY,'X-Goog-FieldMask':'originIndex,destinationIndex,distanceMeters,condition'},
+    body:JSON.stringify({origins:wp,destinations:wp,travelMode:'DRIVE'})
+  }).then(function(r){return r.json();}).then(function(arr){
+    if(!Array.isArray(arr)||!arr.length)return null;
+    var n=valid.length,D=[],got=0;
+    for(var i=0;i<n;i++){D[i]=[];for(var j=0;j<n;j++)D[i][j]=(i===j)?0:hav(valid[i].coord,valid[j].coord)*1270;}
+    arr.forEach(function(e){
+      if(e&&e.distanceMeters>0&&e.originIndex!=null&&e.destinationIndex!=null){D[e.originIndex][e.destinationIndex]=e.distanceMeters;got++;}
+    });
+    return got>=n*(n-1)*0.8?D:null;
+  }).catch(function(){return null;});
+}
+function roadMatrix(valid){
+  return withTimeout(googleRouteMatrix(valid),8000).then(function(G){
+    if(G)return G;
+    var coordStr=valid.map(function(v){return v.coord[1]+','+v.coord[0];}).join(';');
+    return fetch('https://router.project-osrm.org/table/v1/driving/'+coordStr+'?annotations=distance')
+      .then(function(r){return r.json();})
+      .then(function(d){if(!d||!d.distances)throw 'no matrix';return d.distances;});
+  });
+}
 function refineWithRealRoads(p,valid){
   if(valid.length<2)return;
-  var coordStr=valid.map(function(v){return v.coord[1]+','+v.coord[0];}).join(';');
-  fetch('https://router.project-osrm.org/table/v1/driving/'+coordStr+'?annotations=distance')
-    .then(function(r){return r.json();})
-    .then(function(d){
-      if(!d||!d.distances)throw 'no matrix';
-      var D=d.distances; // metres, D[i][j]
+  roadMatrix(valid)
+    .then(function(D){
+      if(!D)throw 'no matrix';
       /* Optimise on REAL road distances with the same NN + 2-opt solver.
          Origin (index 0) stays fixed — it is the pickup point the operator named.
          Round trips close the loop back to it, so the optimiser accounts for the
@@ -4613,7 +4761,7 @@ function refineWithRealRoads(p,valid){
         }
       });
     })
-    .catch(function(e){audit('real_route',false,'OSRM matrix unavailable — straight-line estimate shown');});
+    .catch(function(e){audit('real_route',false,'road matrix unavailable — straight-line estimate shown');});
 }
 // realistic mileage table (km per litre, diesel, loaded, Indian highway+city mix)
 var VTYPE_MILEAGE={cab:14,suv:11,tempo:8.5,minibus:6,bus:4.5};
@@ -4931,7 +5079,7 @@ function drawRouteMap(ordered,isRet){
     ordered.forEach(function(s,i){
       if(!s.coord)return;
       var col=i===0?'#16A34A':(i===ordered.length-1?'#0F172A':'#2563EB');
-      var icon=L.divIcon({className:'',html:'<div style="background:'+col+';color:#fff;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4)">'+String.fromCharCode(65+i)+'</div>',iconSize:[24,24],iconAnchor:[12,12]});
+      var icon=L.divIcon({className:'',html:'<div style="background:'+col+';color:#fff;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4)">'+(i+1)+'</div>',iconSize:[24,24],iconAnchor:[12,12]});
       L.marker([s.coord[0],s.coord[1]],{icon:icon}).addTo(_routeMap).bindPopup(cap(s.c));
     });
     var line=L.polyline(pts,{color:'#FF9F1C',weight:4,opacity:0.85}).addTo(_routeMap);
@@ -4979,7 +5127,7 @@ function drawRouteMap(ordered,isRet){
         /* One dot per CLUSTER, not per plaza. Label is the number (or a range
            like "3-5" when several plazas share a spot), so the map stays clean
            at any zoom and the amounts live in the legend below. */
-        var label=(group.length>1)?(startNum+'-'+plazaNum):String(startNum);
+        var label='T'+((group.length>1)?(startNum+'-'+plazaNum):String(startNum));
         var tIcon=L.divIcon({className:'',
           html:'<div style="background:#0EA5E9;color:#fff;min-width:18px;height:18px;line-height:16px;text-align:center;padding:0 4px;border-radius:9px;font-weight:700;font-size:10px;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.4)">'+label+'</div>',
           iconSize:[26,18],iconAnchor:[13,9]});
@@ -5176,22 +5324,22 @@ function buildTourPlanHTML(p,ordered,legs,retKm,c){
   var lh='';var cum=0;
   ordered.forEach(function(s,i){
     var col=i===0?'#16A34A':(i===ordered.length-1?'#0F172A':'#2563EB');
-    var role=i===0?'START / PICKUP':(i===ordered.length-1&&!p.isRet?'LAST STOP':'Stop '+i);
+    var role=i===0?'Pickup':(i===ordered.length-1&&!p.isRet?'Last stop':'');
     var fct=PLACE_FACTS[s.c];
     var fsub=fct?[fct.district,fct.state].filter(Boolean).join(', '):'';
-    lh+='<div class="legi"><div class="legd" style="background:'+col+'">'+(i+1)+'</div><div><div style="font-weight:700;font-size:0.88rem">'+cap(s.c)+'</div><div style="font-size:0.62rem;color:var(--t3)">'+role+(fsub?' · <span style="color:var(--orange)">'+fsub+'</span>':'')+'</div></div></div>';
+    lh+='<div class="legi"><div class="legd" style="background:'+col+'">'+(i+1)+'</div><div><div style="font-weight:700;font-size:0.88rem">'+cap(s.c)+'</div>'+((role||fsub)?'<div style="font-size:0.62rem;color:var(--t3)">'+[role,fsub].filter(Boolean).join(' · ')+'</div>':'')+'</div></div>';
     if(i<ordered.length-1){
       cum+=legs[i];
-      lh+='<div class="legl">↓ <b>'+legs[i]+' km</b> to next · running '+cum+' km'+
-        (GKEY?' <a href="#" class="legOptToggle" data-leg="'+i+'" style="font-size:0.66rem;color:var(--purple,#6D28D9);font-weight:700;margin-left:6px">view route options ▾</a>':'')+
+      lh+='<div class="legl">↓ <b>'+legs[i]+' km</b>'+
+        (GKEY?' <a href="#" class="legOptToggle" data-leg="'+i+'" style="font-size:0.66rem;color:var(--purple,#6D28D9);font-weight:700;margin-left:6px">roads ▾</a>':'')+
         '</div><div id="legOpt'+i+'" class="legOptBox"></div>';
     }
   });
   if(p.isRet&&retKm){
     var retIdx=ordered.length-1;
     cum+=retKm;
-    lh+='<div class="legl" style="color:#E8880A">↩ <b>'+retKm+' km</b> return to '+cap(ordered[0].c)+' · total '+cum+' km'+
-      (GKEY?' <a href="#" class="legOptToggle" data-leg="ret" style="font-size:0.66rem;color:var(--purple,#6D28D9);font-weight:700;margin-left:6px">view route options ▾</a>':'')+
+    lh+='<div class="legl" style="color:#E8880A">↩ <b>'+retKm+' km</b> back to '+cap(ordered[0].c)+'</div><div class="legi"><div class="legd" style="background:#16A34A">1</div><div><div style="font-weight:700;font-size:0.88rem">'+cap(ordered[0].c)+'</div><div style="font-size:0.62rem;color:var(--t3)">Drop · total '+cum+' km</div></div></div><div style="display:none">'+
+      ''+
       '</div><div id="legOptret" class="legOptBox"></div>';
   }
   var srcBadge=c.realRoads?'<span style="font-size:0.6rem;background:var(--green-bg);color:var(--green);padding:1px 7px;border-radius:10px;font-weight:700">✓ real road km</span>':'<span style="font-size:0.6rem;background:var(--cream2);color:var(--t3);padding:1px 7px;border-radius:10px">estimating…</span>';
@@ -5211,47 +5359,44 @@ function buildTourPlanHTML(p,ordered,legs,retKm,c){
       for(var z3=0;z3<ordered.length-1;z3++)ol+=hav(ordered[z3].coord,ordered[z3+1].coord)*1.27;
       if(p.isRet)ol+=hav(ordered[ordered.length-1].coord,ordered[0].coord)*1.27;
       var savedKm=Math.round(tl-ol);
-      if(savedKm>=5){
-        savedNote='<div style="font-size:0.7rem;background:var(--green-bg);color:var(--green);font-weight:700;padding:0.4rem 0.6rem;border-radius:8px;margin-bottom:0.5rem">✓ This order saves about '+savedKm+' km versus the order you typed</div>';
-      }else{
-        savedNote='<div style="font-size:0.7rem;color:var(--t3);margin-bottom:0.5rem">✓ The order you typed is already the shortest route</div>';
+      if(savedKm>=20){
+        savedNote='<div style="font-size:0.7rem;background:var(--green-bg);color:var(--green);font-weight:700;padding:0.4rem 0.6rem;border-radius:8px;margin-bottom:0.5rem">✓ Saves ≈'+savedKm+' km vs your order</div>';
       }
     }
   }catch(e){}
-  return '<div class="rc-h">🗺️ Tour Plan — Optimized Order '+srcBadge+'</div><div class="rc-b">'+savedNote+'<div style="font-size:0.66rem;color:var(--t3);margin-bottom:0.5rem">Visit in this sequence for least distance</div>'+lh+'</div>';
+  return '<div class="rc-h">🗺️ Stop order</div><div class="rc-b">'+savedNote+lh+'</div>';
 }
 function renderCalcResult(p,ordered,legs,retKm,total,c){
+  window._fhCal=null;window._lastAlt=null;
   var el=document.getElementById('calcResult');
   el.innerHTML='';
   // extracted card
   var ex=document.createElement('div');ex.className='rescard';
   var chips=[];
   if(p.seats)chips.push(p.seats+'-seat');if(p.ac!==null)chips.push(p.ac?'AC':'Non-AC');if(p.pax)chips.push(p.pax+' pax');if(p.days)chips.push(p.days+' days');if(p.fuel)chips.push('Rs'+p.fuel+'/L');if(p.isRet)chips.push('round trip');
-  ex.innerHTML='<div class="rc-h">🤖 Read from your trip<span class="rc-tag">EXTRACTED</span></div><div class="rc-b"><div class="pgrid">'+
-    '<div class="pf"><div class="pl">Cities</div><div class="pv">'+ordered.length+' stops</div><div style="font-size:0.6rem;color:var(--t3);margin-top:2px;line-height:1.3">'+ordered.map(function(o){return cap(o.c);}).join(' · ')+'</div></div>'+
-    /* Vehicle is a GUESS from the text — the operator must be able to correct it
-       here without retyping the whole trip. Each control recalculates the quote. */
-    '<div class="pf"><div class="pl">Vehicle</div>'+
-      '<select class="ci" id="ex-vtype" style="width:100%;margin-top:2px;font-size:0.76rem">'+
+  var typed=(p.cities||[]).filter(function(n){return ordered.some(function(o){return o.c===n;});});
+  if(typed.length!==ordered.length)typed=ordered.map(function(o){return o.c;});
+  var routeTxt=typed.map(cap).join(' → ')+(p.isRet?' → '+cap(ordered[0].c):'');
+  var facts=[VTYPE_LABEL[c.vtype],c.seats+' seats',(p.ac===false?'Non-AC':'AC'),c.pax+' pax','<span id="xDays">'+c.days+'</span> days',(p.isRet?'Round trip':'One way')];
+  ex.className='rescard xcard';
+  ex.innerHTML='<div class="rc-b">'+
+    '<div class="xroute">📍 '+routeTxt+'</div>'+
+    '<div class="xfacts">'+facts.map(function(f){return '<span class="xtag">'+f+'</span>';}).join('')+'</div>'+
+    '<details class="xedit"><summary>Edit</summary>'+
+      '<div class="xedit-row"><select class="ci" id="ex-vtype">'+
         Object.keys(VTYPE_LABEL).map(function(k){return '<option value="'+k+'"'+(k===c.vtype?' selected':'')+'>'+VTYPE_LABEL[k]+'</option>';}).join('')+
-      '</select>'+
-      '<div style="display:flex;gap:0.25rem;margin-top:0.3rem;align-items:center">'+
-        '<input class="ci" id="ex-seats" value="'+c.seats+'" style="width:46px;font-size:0.74rem"><span style="font-size:0.62rem;color:var(--t3)">seats</span>'+
-        '<select class="ci" id="ex-ac" style="width:auto;font-size:0.74rem;margin-left:auto">'+
-          '<option value="1"'+(p.ac===false?'':' selected')+'>AC</option>'+
-          '<option value="0"'+(p.ac===false?' selected':'')+'>Non-AC</option>'+
-        '</select>'+
+      '</select></div>'+
+      '<div class="xedit-row">'+
+        '<label>Seats<input class="ci" id="ex-seats" value="'+c.seats+'"></label>'+
+        '<label>Pax<input class="ci" id="ex-pax" value="'+c.pax+'"></label>'+
+        '<select class="ci" id="ex-ac"><option value="1"'+(p.ac===false?'':' selected')+'>AC</option><option value="0"'+(p.ac===false?' selected':'')+'>Non-AC</option></select>'+
       '</div>'+
-      '<div style="display:flex;gap:0.25rem;margin-top:0.3rem;align-items:center">'+
-        '<input class="ci" id="ex-pax" value="'+c.pax+'" style="width:46px;font-size:0.74rem"><span style="font-size:0.62rem;color:var(--t3)">passengers</span>'+
-      '</div>'+
-    '</div>'+
-    '<div class="pf"><div class="pl">Days</div><div class="pv">'+c.days+'</div></div></div>'+
-    '<div style="display:flex;flex-wrap:wrap;gap:0.35rem;margin-top:0.6rem">'+chips.map(function(x){return '<span class="xtag">✓ '+x+'</span>';}).join('')+'</div></div>';
+    '</details>'+
+  '</div>';
   el.appendChild(ex);
   // hero
   var rh=document.createElement('div');rh.className='reshero';
-  rh.innerHTML='<div class="resgrid"><div><span class="rv" id="heroTotalKm" style="color:#7DD3FC">'+total.toLocaleString()+'</span><div class="rl">TOTAL KM</div></div><div><span class="rv">'+c.days+'d</span><div class="rl">DAYS</div></div><div><span class="rv" id="heroGrand" style="color:#34D399">₹'+c.grand.toLocaleString()+'</span><div class="rl">QUOTE</div></div><div><span class="rv" id="perHeadVal" style="color:#FFB020">₹'+c.perHead+'</span><div class="rl">PER HEAD</div></div></div>';
+  rh.innerHTML='<div class="resgrid"><div><span class="rv" id="heroTotalKm" style="color:#7DD3FC">'+total.toLocaleString()+'</span><div class="rl">TOTAL KM</div></div><div><span class="rv" id="heroDays">'+c.days+'d</span><div class="rl">DAYS</div></div><div><span class="rv" id="heroGrand" style="color:#34D399">₹'+c.grand.toLocaleString()+'</span><div class="rl">QUOTE</div></div><div><span class="rv" id="perHeadVal" style="color:#FFB020">₹'+c.perHead+'</span><div class="rl">PER HEAD</div></div></div>';
   el.appendChild(rh);
   // ROUTE MAP (free OpenStreetMap via Leaflet) + route order
   renderTripSummary(el,c,p,ordered,total);
@@ -5274,6 +5419,9 @@ function renderCalcResult(p,ordered,legs,retKm,total,c){
   if(ordered.length>=3){
     var altHost=document.createElement('div');altHost.id='altRoutesHost';
     el.appendChild(altHost);
+    /* Anchor options to the hero figures from the very first paint; the
+       authoritative distance replaces this anchor when it arrives. */
+    window._fhCal={names:ordered.map(function(o){return o.c;}),km:total,hrs:tripHours(c,total),toll:c.tollCost,c:c,est:true};
     var estCands=buildRouteCandidates(p,ordered,null,c.vtype);
     renderAltRoutes(p,estCands,null,true);
   }
@@ -5283,10 +5431,7 @@ function renderCalcResult(p,ordered,legs,retKm,total,c){
    '<div class="rc-b" id="costBody">'+
     // distance basis + VEHICLE TYPE selector (sets mileage)
     '<div class="cost-basis">📏 <b id="distLabel">'+total+' km</b>'+(p.isRet?' (incl. return)':'')+' · '+c.days+' day(s) · '+c.pax+' pax <span id="distSrc" style="color:var(--t3)">· road est.</span></div>'+
-    '<div style="font-size:0.63rem;color:var(--t3);line-height:1.5;margin:-0.2rem 0 0.5rem">'+
-      (p.days?'Days: '+c.days+' as stated in your enquiry.':'Days: '+c.days+' — estimated at about 400 km of driving per day'+(p.isRet?' including the return leg':'')+'. Edit it below if the trip has rest days or overnight halts.')+
-      '<br>Distance '+(p.isRet?'includes the return to '+cap(ordered[0].c)+'.':'is one way, no return included.')+
-    '</div>'+
+
     '<div class="cost-line" style="border-bottom:2px solid var(--line)"><div class="cl-label">🚐 Vehicle type</div>'+
       '<div class="cl-formula">sets realistic mileage →</div>'+
       '<div class="cl-amt"><select class="ci" id="ed-vtype" style="width:auto;min-width:120px">'+
@@ -5363,7 +5508,7 @@ function renderCalcResult(p,ordered,legs,retKm,total,c){
         var tbg=document.getElementById('tollBadge');
         if(tbg){tbg.textContent=vt==='cab'?'✓ Google':'✓ Google × NHAI class';tbg.className='toll-badge nhai';}
       }else{
-        var isRound2=/round|return|wapas/i.test(document.getElementById('calcInp').value||'')||(retKm>0);
+        var isRound2=!!p.isRet||(retKm>0);
         var nh=computeNhaiToll(ordered,vt,isRound2);
         var newToll;
         if(nh.covered&&nh.total>0)newToll=nh.total;
@@ -5520,7 +5665,7 @@ function renderCalcResult(p,ordered,legs,retKm,total,c){
            than letting it change silently under the operator's eyes. Small
            differences (route-matrix sum vs one continuous route) are normal
            and not worth a note; anything over ~2% is worth explaining. */
-        if(Math.abs(diffKm)>Math.max(5,prevTotal*0.02)&&dl){
+        if(false){
           var noteEl=document.getElementById('distRefineNote');
           if(!noteEl){
             noteEl=document.createElement('div');noteEl.id='distRefineNote';
@@ -5530,7 +5675,20 @@ function renderCalcResult(p,ordered,legs,retKm,total,c){
           noteEl.textContent='Refined from '+prevTotal+' km ('+dres.source+' gives a single continuous route vs. the leg-by-leg matrix used for ordering)';
         }
         c.distSource=d.via;c.realRoads=(d.via!=='estimate');
-        if(d.durSec>0)c.realDurSec=d.durSec;
+        if(d.durSec>0){c.realDurSec=d.durSec;c.realDurKm=d.km;}
+        /* Days follow the real distance unless the operator stated them. */
+        if(!p.days){
+          var nd=estDays(d.km,ordered.length,c.vtype);
+          var edd=document.getElementById('ed-days');if(edd)edd.value=nd;
+          c.days=nd;
+          var hd=document.getElementById('heroDays');if(hd)hd.textContent=nd+'d';
+          var xd=document.getElementById('xDays');if(xd)xd.textContent=nd;
+          recalc();
+        }
+        /* Anchor the route-option cards to the SAME authoritative total, so the
+           option matching this quote shows exactly the km/time on the hero. */
+        window._fhCal={names:ordered.map(function(o){return o.c;}),km:d.km,hrs:tripHours(c,d.km),toll:null,c:c};
+        refreshAltRoutes();
         if(d.desc)c.routeDesc=d.desc;
         if(d.carToll>0)c.googleCarToll=d.carToll;
         /* This is the actual fix for "trust one source end to end": when the
@@ -5565,6 +5723,7 @@ function renderCalcResult(p,ordered,legs,retKm,total,c){
             if(t.plazas&&t.plazas.length)c.tollPlazaList=t.plazas;
             if(t.roads&&t.roads.length)c.routeRoads=t.roads;
             window._tollPlazasForMap=(t.plazas||[]).filter(function(z){return z.lat!=null;});
+            if(window._fhCal){window._fhCal.toll=t.amount;refreshAltRoutes();}
             if(window._tollPlazasForMap.length)drawRouteMap(ordered,!!p.isRet||retKm>0);
             var tb=document.getElementById('tollBadge');
             if(tb){
@@ -5602,7 +5761,7 @@ function renderCalcResult(p,ordered,legs,retKm,total,c){
     }
   },120);
   function buildShareText(){
-    return 'FleetHub Trip Quote\n'+ordered.map(function(o,i){return String.fromCharCode(65+i)+'. '+cap(o.c);}).join('\n')+(p.isRet?'\nReturn included':'')+'\nTotal: '+total+' km | Rs'+c.grand.toLocaleString()+' | Rs'+c.perHead+'/person';
+    return 'FleetHub Trip Quote\n'+ordered.map(function(o,i){return (i+1)+'. '+cap(o.c);}).join('\n')+(p.isRet?'\nReturn included':'')+'\nTotal: '+total+' km | Rs'+c.grand.toLocaleString()+' | Rs'+c.perHead+'/person';
   }
   function buildQuoteMsg(){
     var jdate=(CALC_CONTEXT&&CALC_CONTEXT.date_from)?('Journey: '+CALC_CONTEXT.date_from+(CALC_CONTEXT.date_to?' to '+CALC_CONTEXT.date_to:'')+'\n'):'';
@@ -5621,9 +5780,9 @@ function renderCalcResult(p,ordered,legs,retKm,total,c){
   var cb=document.createElement('button');cb.className='cbtn getnum';cb.textContent='📋 Copy Quote';
   cb.addEventListener('click',function(){copyToClipboard(buildShareText());});
   sr.appendChild(wb);sr.appendChild(cb);
+  el.appendChild(sr);
   renderSourcesCard(el,c);
   renderAuditCard(el,c,p,ordered,total);
-  el.appendChild(sr);
 
   // If quoting for a specific buyer enquiry — show DIRECT REPLY-TO-BUYER CTAs
   if(CALC_CONTEXT && CALC_CONTEXT.user_phone){
@@ -6077,7 +6236,7 @@ function geminiReadRoute(b64,mime){
     'Transliterate Hindi place names to English (e.g. मथुरा→Mathura, वृन्दावन→Vrindavan, बरसाना→Barsana, पुष्कर→Pushkar). '+
     'Return them as a single comma-separated line, nothing else. No dates, no notes, no explanation.';
   var body={contents:[{parts:[{text:prompt},{inline_data:{mime_type:mime||'image/jpeg',data:b64}}]}]};
-  return fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key='+encodeURIComponent(GKEY),{
+  return geminiFetch({
     method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)
   }).then(function(r){return r.json();}).then(function(d){
     try{return d.candidates[0].content.parts[0].text.trim();}catch(e){return '';}
