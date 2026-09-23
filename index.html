@@ -347,6 +347,10 @@ body{font-family:var(--body);background:var(--cream);color:var(--ink);font-size:
 body.calc-fullscreen .city-tabs,
 body.calc-fullscreen .dash-head,
 body.calc-fullscreen .dash-tabs{display:none!important;}
+body.calc-fullscreen #brandTagline,
+body.calc-fullscreen #brandVersion{display:none!important;}
+body.calc-fullscreen .topbar .tb-inner{padding:0.5rem 1rem;}
+body.calc-fullscreen .brand-mark{width:26px;height:26px;font-size:0.9rem;}
 body.calc-fullscreen #calcTool{
   min-height:calc(100vh - 64px);
   background:var(--cream,#FFFBF3);
@@ -525,7 +529,7 @@ body.calc-fullscreen .calc-card{box-shadow:none;border:none;border-radius:0;padd
   <div class="tb-inner">
     <div class="brand" id="brandHome" style="cursor:pointer" title="Go to home">
       <div class="brand-mark">🚌</div>
-      <div><div class="brand-t">Fleet<em>Hub</em></div><div class="brand-s">Bulandshahr · Khurja</div><div style="font-size:0.56rem;color:var(--t3);opacity:0.7;margin-top:1px">v4.4 — Full-screen calculator</div></div>
+      <div><div class="brand-t">Fleet<em>Hub</em></div><div class="brand-s" id="brandTagline">Bulandshahr · Khurja</div><div id="brandVersion" style="font-size:0.56rem;color:var(--t3);opacity:0.7;margin-top:1px">v4.4 — Full-screen calculator</div></div>
     </div>
     <button class="menu-btn" id="menuBtn">☰</button>
   </div>
@@ -731,16 +735,51 @@ body.calc-fullscreen .calc-card{box-shadow:none;border:none;border-radius:0;padd
         </div>
         <button id="tdNew" class="td-new">＋ New trip</button>
         <div id="tdList" class="td-list"></div>
+        <div class="td-settings-wrap" style="padding:0 0.9rem;">
+          <button id="gkeyToggle" style="background:none;border:none;color:var(--t3);font-size:0.7rem;cursor:pointer;font-family:var(--body);padding:0.5rem 0;width:100%;text-align:left;border-top:1px solid var(--line)">⚙️ Accuracy &amp; data settings</button>
+          <div id="gkeyBox" style="display:none;margin:0 0 0.6rem">
+            <div style="font-size:0.66rem;color:var(--t2);margin-bottom:0.35rem">Paste your Google API key for exact Google distances AND accurate Hindi handwriting reading (Gemini). Without it, free road distance + basic OCR are used.</div>
+            <div style="display:flex;gap:0.4rem">
+              <input id="gkeyInput" placeholder="AIzaSy… (Google API key)" style="flex:1;border:1px solid var(--line);border-radius:8px;padding:0.45rem;font-size:0.72rem;outline:none"/>
+              <button id="gkeySave" style="background:var(--saffron);color:var(--navy);border:none;border-radius:8px;padding:0.45rem 0.8rem;font-size:0.72rem;font-weight:700;cursor:pointer">Save</button>
+            </div>
+            <div id="gkeyStatus" style="font-size:0.62rem;margin-top:0.35rem;color:var(--t3)"></div>
+            <div style="margin-top:0.7rem;border-top:1px dashed var(--line);padding-top:0.55rem">
+              <div style="font-size:0.7rem;font-weight:700;margin-bottom:0.2rem">🪙 Accurate toll (optional)</div>
+              <div style="font-size:0.66rem;color:var(--t2);margin-bottom:0.35rem">Without a toll key, FleetHub estimates toll from a per-km assumption — which can be well off on long routes. A TollGuru key gives real plaza-by-plaza rates for your actual vehicle class. Free tier available at tollguru.com.</div>
+              <div style="display:flex;gap:0.4rem">
+                <input id="tgkeyInput" placeholder="TollGuru API key (optional)" style="flex:1;border:1px solid var(--line);border-radius:8px;padding:0.45rem;font-size:0.72rem;outline:none"/>
+                <button id="tgkeySave" style="background:var(--saffron);color:var(--navy);border:none;border-radius:8px;padding:0.45rem 0.8rem;font-size:0.72rem;font-weight:700;cursor:pointer">Save</button>
+              </div>
+              <div id="tgkeyStatus" style="font-size:0.62rem;margin-top:0.35rem;color:var(--t3)"></div>
+            </div>
+            <div style="margin-top:0.7rem;border-top:1px dashed var(--line);padding-top:0.55rem">
+              <div style="font-size:0.7rem;font-weight:700;margin-bottom:0.2rem">🛠️ FleetHub Toll Engine</div>
+              <div style="font-size:0.66rem;color:var(--t2);margin-bottom:0.35rem">Connected by default — 1,254+ NHAI &amp; state-authority plazas nationwide, cross-validated, auto-updated weekly, hosted on Google Cloud Run. Only change this if you deploy your own copy of the service.</div>
+              <div style="display:flex;gap:0.4rem">
+                <input id="tapiUrlInput" placeholder="https://your-toll-api.up.railway.app" style="flex:1;border:1px solid var(--line);border-radius:8px;padding:0.45rem;font-size:0.72rem;outline:none"/>
+                <button id="tapiUrlSave" style="background:var(--saffron);color:var(--navy);border:none;border-radius:8px;padding:0.45rem 0.8rem;font-size:0.72rem;font-weight:700;cursor:pointer">Save</button>
+              </div>
+              <input id="tapiKeyInput" placeholder="X-Api-Key (if the API requires one)" style="width:100%;margin-top:0.35rem;border:1px solid var(--line);border-radius:8px;padding:0.45rem;font-size:0.72rem;outline:none"/>
+              <div id="tapiUrlStatus" style="font-size:0.62rem;margin-top:0.35rem;color:var(--t3)"></div>
+            </div>
+            <div style="margin-top:0.7rem;border-top:1px dashed var(--line);padding-top:0.55rem">
+              <div style="font-size:0.7rem;font-weight:700;margin-bottom:0.2rem">🔔 Toll data updates</div>
+              <div style="font-size:0.66rem;color:var(--t2);margin-bottom:0.4rem">The toll engine checks government sources weekly for rate changes, new plazas, and closures. Nothing is applied automatically — every change waits here for you to review and approve.</div>
+              <button id="checkUpdatesBtn" class="cbtn" style="width:100%;font-size:0.74rem;font-weight:700">Check for updates</button>
+              <div id="pendingUpdatesBox" style="margin-top:0.5rem"></div>
+            </div>
+          </div>
+        </div>
         <div class="td-foot">Trips are saved on this device only.</div>
       </aside>
       <div id="calcTool" class="hidden">
         <div class="calc-card">
           <div style="display:flex;align-items:center;gap:0.5rem">
             <button id="tdOpen" class="hamb-trips" title="Saved trips">☰</button>
-            <h3 style="margin:0;flex:1">🧮 Trip Cost Calculator</h3>
+            <h3 style="margin:0;flex:1;font-size:1rem">FleetHub</h3>
             <button id="tdNewHeader" class="hamb-trips" title="New trip" style="font-size:1.3rem">＋</button>
           </div>
-          <div class="cc-sub">Type, speak, or add a photo of the route. We calculate the full cost.</div>
           <div id="calcEnqPanel" style="display:none"></div>
           <!-- Gemini-style unified input bar -->
           <div class="gem-inp">
@@ -760,42 +799,6 @@ body.calc-fullscreen .calc-card{box-shadow:none;border:none;border-radius:0;padd
             <img id="calcImgEl" alt="route"/>
             <button class="calc-img-x" id="calcImgX">✕</button>
             <div class="calc-img-status" id="calcImgStatus"></div>
-          </div>
-          <div style="margin-top:0.7rem;border-top:1px dashed var(--line);padding-top:0.6rem">
-            <button id="gkeyToggle" style="background:none;border:none;color:var(--t3);font-size:0.66rem;cursor:pointer;font-family:var(--body);padding:0">⚙️ Accuracy settings (Google distance + Hindi photo reading)</button>
-            <div id="gkeyBox" style="display:none;margin-top:0.5rem">
-              <div style="font-size:0.66rem;color:var(--t2);margin-bottom:0.35rem">Paste your Google API key for exact Google distances AND accurate Hindi handwriting reading (Gemini). Without it, free road distance + basic OCR are used.</div>
-              <div style="display:flex;gap:0.4rem">
-                <input id="gkeyInput" placeholder="AIzaSy… (Google API key)" style="flex:1;border:1px solid var(--line);border-radius:8px;padding:0.45rem;font-size:0.72rem;outline:none"/>
-                <button id="gkeySave" style="background:var(--saffron);color:var(--navy);border:none;border-radius:8px;padding:0.45rem 0.8rem;font-size:0.72rem;font-weight:700;cursor:pointer">Save</button>
-              </div>
-              <div id="gkeyStatus" style="font-size:0.62rem;margin-top:0.35rem;color:var(--t3)"></div>
-              <div style="margin-top:0.7rem;border-top:1px dashed var(--line);padding-top:0.55rem">
-                <div style="font-size:0.7rem;font-weight:700;margin-bottom:0.2rem">🪙 Accurate toll (optional)</div>
-                <div style="font-size:0.66rem;color:var(--t2);margin-bottom:0.35rem">Without a toll key, FleetHub estimates toll from a per-km assumption — which can be well off on long routes. A TollGuru key gives real plaza-by-plaza rates for your actual vehicle class. Free tier available at tollguru.com.</div>
-                <div style="display:flex;gap:0.4rem">
-                  <input id="tgkeyInput" placeholder="TollGuru API key (optional)" style="flex:1;border:1px solid var(--line);border-radius:8px;padding:0.45rem;font-size:0.72rem;outline:none"/>
-                  <button id="tgkeySave" style="background:var(--saffron);color:var(--navy);border:none;border-radius:8px;padding:0.45rem 0.8rem;font-size:0.72rem;font-weight:700;cursor:pointer">Save</button>
-                </div>
-                <div id="tgkeyStatus" style="font-size:0.62rem;margin-top:0.35rem;color:var(--t3)"></div>
-              </div>
-              <div style="margin-top:0.7rem;border-top:1px dashed var(--line);padding-top:0.55rem">
-                <div style="font-size:0.7rem;font-weight:700;margin-bottom:0.2rem">🛠️ FleetHub Toll Engine</div>
-                <div style="font-size:0.66rem;color:var(--t2);margin-bottom:0.35rem">Connected by default — 1,254+ NHAI & state-authority plazas nationwide, cross-validated, auto-updated weekly, hosted on Google Cloud Run. Only change this if you deploy your own copy of the service.</div>
-                <div style="display:flex;gap:0.4rem">
-                  <input id="tapiUrlInput" placeholder="https://your-toll-api.up.railway.app" style="flex:1;border:1px solid var(--line);border-radius:8px;padding:0.45rem;font-size:0.72rem;outline:none"/>
-                  <button id="tapiUrlSave" style="background:var(--saffron);color:var(--navy);border:none;border-radius:8px;padding:0.45rem 0.8rem;font-size:0.72rem;font-weight:700;cursor:pointer">Save</button>
-                </div>
-                <input id="tapiKeyInput" placeholder="X-Api-Key (if the API requires one)" style="width:100%;margin-top:0.35rem;border:1px solid var(--line);border-radius:8px;padding:0.45rem;font-size:0.72rem;outline:none"/>
-                <div id="tapiUrlStatus" style="font-size:0.62rem;margin-top:0.35rem;color:var(--t3)"></div>
-              </div>
-              <div style="margin-top:0.7rem;border-top:1px dashed var(--line);padding-top:0.55rem">
-                <div style="font-size:0.7rem;font-weight:700;margin-bottom:0.2rem">🔔 Toll data updates</div>
-                <div style="font-size:0.66rem;color:var(--t2);margin-bottom:0.4rem">The toll engine checks government sources weekly for rate changes, new plazas, and closures. Nothing is applied automatically — every change waits here for you to review and approve.</div>
-                <button id="checkUpdatesBtn" class="cbtn" style="width:100%;font-size:0.74rem;font-weight:700">Check for updates</button>
-                <div id="pendingUpdatesBox" style="margin-top:0.5rem"></div>
-              </div>
-            </div>
           </div>
         </div>
         <div id="chatUserBubble" class="chat-bubble-user" style="display:none"></div>
