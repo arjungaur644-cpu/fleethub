@@ -1,5 +1,36 @@
 # FleetHub — Version History
 
+## v3.3 — Toll RCA: missed Luharali plaza (Sep 2026)
+
+**Incident:** "Pahasu se rithala delhi" (bus) showed toll ₹785. The route runs
+on NH-34 through the Luharali plaza (between Sikandrabad and Dadri, bus ₹495),
+which was not listed. ₹785 = 132 km × ₹1.75 × 3.4 — the per-km guess (tier 5).
+
+**Root cause — every tier above the guess failed silently:**
+1. Toll API (Cloud Run) gave no usable answer within 9 s — most likely a cold
+   start (the service scales to zero).
+2. The in-browser fallback held only ~40 hand-seeded plazas. Luharali was not
+   one of them. A loader for a full table existed but was never wired up.
+3. Google returned no toll price: the request did not include the FASTag pass.
+4. The per-km guess was shown as "TOLLS (EST)" without saying no plaza was found.
+
+**Fixes:**
+- `data/plazas.json`: national table (NHAI official FY26-27 rates + FleetHub
+  merged set, 1,235 plazas, de-duplicated) built by
+  `scripts/build_browser_plazas.py`, loaded by the app from the same site.
+- Duplicate guard: the same plaza within 2.5 km (or 8 km with a shared name) is
+  counted once, so a bigger table cannot double-charge.
+- Toll API answer is rejected if it sees fewer plazas than the national table.
+- Toll API woken on page load; timeout 12 s.
+- Google requests ask for the FASTag price (retry without if rejected).
+- Guess now labelled "estimate — no plaza data for this road, verify".
+- Two-stop trips now show real road options (e.g. GT Road vs expressway), each
+  with its own plaza-matched toll.
+- Regression test: Luharali must match on the NH-34 corridor.
+
+**To refresh the table:** run `python3 scripts/build_browser_plazas.py` after
+the weekly toll sync, then commit `data/plazas.json`.
+
 ## v3.0 — National Toll Engine (current)
 **Commit:** `75cf457`
 

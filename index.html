@@ -1322,6 +1322,22 @@ function googleGeocode(place){
    used, and a TollGuru key replaces it with real plaza data. */
 var TOLL_PER_KM_CAR=1.75;
 var NHAI_CLASS_MULT={cab:1.0,suv:1.5,tempo:2.1,minibus:2.6,bus:3.4};
+/* Same as fetch(), but if Google rejects the FASTag toll-pass option, retry
+   once without it so distance and time never fail because of the toll ask. */
+function googleRoutesFetch(url,opts){
+  return fetch(url,opts).then(function(r){
+    if(r.status!==400)return r;
+    try{
+      var b=JSON.parse(opts.body);
+      if(b.routeModifiers&&b.routeModifiers.tollPasses){
+        delete b.routeModifiers.tollPasses;
+        var o2={};for(var k in opts)o2[k]=opts[k];o2.body=JSON.stringify(b);
+        return fetch(url,o2);
+      }
+    }catch(e){}
+    return r;
+  });
+}
 function googleFullRoute(pts,optimize){
   if(!GKEY||!pts||pts.length<2)return Promise.resolve(null);
   var origin=pts[0], dest=pts[pts.length-1];
@@ -1332,10 +1348,11 @@ function googleFullRoute(pts,optimize){
     travelMode:'DRIVE',
     routingPreference:'TRAFFIC_AWARE',   // realistic driving time, not free-flow
     extraComputations:['TOLLS'],
-    routeModifiers:{vehicleInfo:{emissionType:'DIESEL'}}
+    /* FASTag is mandatory in India; without a pass Google often returns no toll price */
+    routeModifiers:{vehicleInfo:{emissionType:'DIESEL'},tollPasses:['IN_FASTAG']}
   };
   if(mids.length){body.intermediates=mids;if(optimize)body.optimizeWaypointOrder=true;}
-  return fetch('https://routes.googleapis.com/directions/v2:computeRoutes',{
+  return googleRoutesFetch('https://routes.googleapis.com/directions/v2:computeRoutes',{
     method:'POST',
     headers:{'Content-Type':'application/json','X-Goog-Api-Key':GKEY,
       /* routes.legs.* is the piece that was missing: this is what a person
@@ -1397,9 +1414,9 @@ function googleRouteAlternatives(fromCoord,toCoord){
     routingPreference:'TRAFFIC_AWARE',
     computeAlternativeRoutes:true,
     extraComputations:['TOLLS'],
-    routeModifiers:{vehicleInfo:{emissionType:'DIESEL'}}
+    routeModifiers:{vehicleInfo:{emissionType:'DIESEL'},tollPasses:['IN_FASTAG']}
   };
-  return fetch('https://routes.googleapis.com/directions/v2:computeRoutes',{
+  return googleRoutesFetch('https://routes.googleapis.com/directions/v2:computeRoutes',{
     method:'POST',
     headers:{'Content-Type':'application/json','X-Goog-Api-Key':GKEY,
       /* routes.description is what makes this readable — Google's own
@@ -1409,7 +1426,7 @@ function googleRouteAlternatives(fromCoord,toCoord){
          operator recognises — they think in towns. legs.steps.navigationInstruction
          carries the actual turn-by-turn text, which names the places the route
          passes through, so we can show "via Mathura, Bharatpur" instead. */
-      'X-Goog-FieldMask':'routes.distanceMeters,routes.duration,routes.travelAdvisory.tollInfo,routes.routeLabels,routes.description,routes.legs.steps.navigationInstruction'},
+      'X-Goog-FieldMask':'routes.distanceMeters,routes.duration,routes.travelAdvisory.tollInfo,routes.routeLabels,routes.description,routes.legs.steps.navigationInstruction,routes.polyline.encodedPolyline'},
     body:JSON.stringify(body)
   }).then(function(r){return r.json();}).then(function(d){
     if(!d||!d.routes||!d.routes.length)return null;
@@ -1422,6 +1439,7 @@ function googleRouteAlternatives(fromCoord,toCoord){
         if(tp&&tp.length){var inr=tp.filter(function(x){return x.currencyCode==='INR';})[0]||tp[0];tollINR=Math.round(parseFloat(inr.units||0)+(inr.nanos?inr.nanos/1e9:0));}
       }catch(e){}
       return{km:km,durSec:durSec,tollINR:tollINR,desc:rt.description||'',
+             poly:(rt.polyline&&rt.polyline.encodedPolyline)?decodePolyline(rt.polyline.encodedPolyline):null,
              via:extractViaTowns(rt),
              isDefault:(rt.routeLabels||[]).indexOf('DEFAULT_ROUTE')>=0};
     });
@@ -3707,6 +3725,60 @@ function showTollDetail(c,ordered,isRound,kmUsed){
    straight-line estimate (isEstimate=true) so the operator sees something
    instantly, then called again with real road km/toll and the AI verdict
    once those finish computing — same DOM node, no flicker of missing content. */
+function renderRoadOptions(host,p,ordered,c){
+  host.innerHTML='<div class="rescard"><div class="rc-h">🔀 Route options <span style="font-size:0.6rem;color:var(--t3);font-weight:400;margin-left:auto">checking roads…</span></div></div>';
+  var mult=p.isRet?2:1;
+  googleRouteAlternatives(ordered[0].coord,ordered[1].coord).then(function(routes){
+    return withTimeout(_plazaDbReady,5000).then(function(){return routes;});
+  }).then(function(routes){
+    if(!routes||!routes.length){host.innerHTML='';return;}
+    var vt=(document.getElementById('ed-vtype')||{}).value||c.vtype;
+    var f=VEH_TIME_FACTOR[vt]||1.15;
+    var opts=routes.map(function(r){
+      var t=r.poly?computeRouteToll(r.poly,vt,!!p.isRet):null;
+      var toll=t?t.amount:(r.tollINR>0?googleTollForClass(r.tollINR,vt)*mult:0);
+      return{r:r,km:r.km*mult,hrs:r.durSec/3600*f*mult,toll:toll,plazas:t?t.plazas:[],
+             via:(r.via&&r.via.length)?'via '+r.via.join(', '):(r.desc?'via '+r.desc:'')};
+    });
+    if(opts.length<2){host.innerHTML='';return;}
+    var minKm=Math.min.apply(null,opts.map(function(o){return o.km;}));
+    var minH=Math.min.apply(null,opts.map(function(o){return o.hrs;}));
+    var minT=Math.min.apply(null,opts.map(function(o){return o.toll;}));
+    var cur=window._roadPick!=null&&window._roadPick<opts.length?window._roadPick:
+      Math.max(0,opts.findIndex(function(o){return o.r.isDefault;}));
+    var fmtT=function(v){return v?'₹'+v.toLocaleString():'No toll';};
+    host.innerHTML='<div class="rescard"><div class="rc-h">🔀 Route options</div><div class="rc-b">'+
+      opts.map(function(o,i){
+        var tags=[];
+        if(o.km===minKm)tags.push('shortest');
+        if(o.hrs===minH)tags.push('fastest');
+        if(o.toll===minT)tags.push(o.toll?'lowest toll':'no toll');
+        return '<div class="optc'+(i===cur?' cur':'')+'">'+
+          '<div class="opth"><b>Option '+(i+1)+'</b><span class="optl">'+o.via+'</span></div>'+
+          '<div class="opts"><div><b>'+o.km.toLocaleString()+'</b><span>KM</span></div>'+
+          '<div><b>'+fmtHours(o.hrs)+'</b><span>DRIVE</span></div>'+
+          '<div><b>'+fmtT(o.toll)+'</b><span>TOLL</span></div></div>'+
+          (tags.length?'<div class="optt">'+tags.map(function(t){return '<span>'+t+'</span>';}).join('')+'</div>':'')+
+          (o.plazas.length?'<div class="optp">🅣 '+o.plazas.map(function(z){return z.name;}).join(', ')+'</div>':'')+
+          (i===cur?'<div class="optcur">✓ In your quote</div>':'<button class="cbtn useOptBtn" data-i="'+i+'">Use this route</button>')+
+        '</div>';
+      }).join('')+'</div></div>';
+    host.querySelectorAll('.useOptBtn').forEach(function(b){
+      b.addEventListener('click',function(){
+        var o=opts[+b.getAttribute('data-i')];
+        window._roadPick=+b.getAttribute('data-i');
+        setTripDistance(o.km,'your chosen road',false);
+        var et=document.getElementById('ed-toll');if(et){et.value=o.toll;c.tollCost=o.toll;}
+        c.tollPlazaList=o.plazas;
+        window._tollPlazasForMap=(o.plazas||[]).filter(function(z){return z.lat!=null;});
+        try{drawRouteMap(ordered,!!p.isRet);}catch(e){}
+        if(window._fhSetLiveTotal)window._fhSetLiveTotal(o.km);
+        showToast('✓ Route changed — '+o.km+' km, toll '+fmtT(o.toll));
+        renderRoadOptions(host,p,ordered,c);
+      });
+    });
+  }).catch(function(){host.innerHTML='';});
+}
 function refreshAltRoutes(){
   var la=window._lastAlt;
   if(la)renderAltRoutes(la.p,la.cands,la.verdict,la.isEstimate);
@@ -4068,14 +4140,25 @@ function tollChain(ordered,vtype,isRound,googleCarToll,totalKm,routePoly){
     {label:'FleetHub Toll API',tier:'2',note:'government-sourced plaza data, cross-validated, weekly auto-updated',
      run:function(){
        if(!TAPI_URL)return null;
-       return withTimeout(fleethubTollApi(ordered,vtype,tripType,routePoly,totalKm,googleCarToll),9000).then(function(r){
+       return withTimeout(fleethubTollApi(ordered,vtype,tripType,routePoly,totalKm,googleCarToll),12000).then(function(r){
          if(r&&r.confidence==='conflict')return null;
+         /* Never accept an API answer that sees FEWER plazas than the national
+            table does on the same road — that is how a plaza goes missing. */
+         if(r&&routePoly&&routePoly.length>1){
+           var local=computeRouteToll(routePoly,vtype,isRound);
+           var apiCount=(r.plazas||[]).length;
+           if(local&&local.count>apiCount){
+             audit('toll_api',false,'API matched '+apiCount+' plaza(s), national table matched '+local.count+' — using the table');
+             return null;
+           }
+         }
          return r;
        });
      }},
-    {label:'FleetHub toll engine (in-browser)',tier:'3',note:'plazas matched geometrically to the actual route polyline',
+    {label:'FleetHub toll engine (in-browser)',tier:'3',note:'national NHAI plaza table matched to the actual route polyline',
      run:function(){
        if(!routePoly||routePoly.length<2)return null;
+       return withTimeout(_plazaDbReady,5000).then(function(){
        var r=computeRouteToll(routePoly,vtype,isRound);
        /* Only accept the engine's answer when it found a credible number of
           plazas spanning a real portion of the route. A single plaza matched on
@@ -4085,6 +4168,7 @@ function tollChain(ordered,vtype,isRound,googleCarToll,totalKm,routePoly){
        if(r.count<2&&totalKm>200)return null;
        if(r.coverage<40&&totalKm>300)return null;
        return r;
+       });
      }},
     {label:'Google Routes API x NHAI class',tier:'4',note:'Google gives the car rate; scaled to this vehicle class',
      run:function(){
@@ -5133,11 +5217,44 @@ var PLAZA_DB=[
 ];
 /* Operators can point the app at an updated plaza file without a redeploy.
    Cached locally so it works offline after the first load. */
+/* RCA Sep 2026 (Pahasu → Rithala): the browser engine held only the ~40
+   plazas above, so when the Toll API did not answer, Luharali (NH-34, between
+   Sikandrabad and Dadri) was missed and the quote fell to a per-km guess.
+   The full national table (NHAI official + FleetHub merged, ~1,260 plazas,
+   built by scripts/build_browser_plazas.py) now loads from this same site and
+   is merged with the hand-verified seed — the seed wins where both exist,
+   because those rates were checked against real FASTag receipts. */
+var SEED_PLAZAS=PLAZA_DB.slice();
+var PLAZA_DB_URL='data/plazas.json';
+/* Same physical plaza = within 2.5 km, or within 8 km sharing a name.
+   Counting one plaza twice doubles the toll, so this check matters as much
+   as finding the plaza at all. The national table wins (official coordinates
+   and current-FY rates); a seed plaza is only added where it has no twin. */
+var _PZ_STOP={toll:1,plaza:1,side:1,bypass:1,approach:1,expwy:1,close:1,loop:1,road:1,the:1};
+function _pzWords(n,mainOnly){
+  n=String(n||'').toLowerCase();if(mainOnly)n=n.replace(/\(.*?\)/g,' ');
+  return (n.match(/[a-z]+/g)||[]).filter(function(w){return w.length>3&&!_PZ_STOP[w];});
+}
+function samePlaza(a,b){
+  var d=hav([a.lat,a.lng],[b.lat,b.lng]);
+  if(d<2.5)return true;
+  if(d>=8)return false;
+  var am=_pzWords(a.name,true),aa=_pzWords(a.name),bm=_pzWords(b.name,true),ba=_pzWords(b.name);
+  return am.some(function(w){return ba.indexOf(w)>=0;})||bm.some(function(w){return aa.indexOf(w)>=0;});
+}
+function mergePlazas(national){
+  var out=national.slice();
+  SEED_PLAZAS.forEach(function(sd){
+    for(var i=0;i<national.length;i++){if(samePlaza(sd,national[i]))return;}
+    out.push(sd);
+  });
+  return out;
+}
 function loadPlazaDb(url){
   if(!url)return Promise.resolve(false);
-  return fetch(url).then(function(r){return r.json();}).then(function(d){
+  return fetch(url,{cache:'no-cache'}).then(function(r){return r.json();}).then(function(d){
     if(d&&d.plazas&&d.plazas.length){
-      PLAZA_DB=d.plazas;
+      PLAZA_DB=mergePlazas(d.plazas);
       PLAZA_DB_VERSION=d.version||'custom';
       try{localStorage.setItem('fh_plazadb',JSON.stringify(d));}catch(e){}
       return true;
@@ -5147,8 +5264,12 @@ function loadPlazaDb(url){
 }
 try{
   var _pdb=JSON.parse(localStorage.getItem('fh_plazadb')||'null');
-  if(_pdb&&_pdb.plazas&&_pdb.plazas.length){PLAZA_DB=_pdb.plazas;PLAZA_DB_VERSION=_pdb.version||'cached';}
+  if(_pdb&&_pdb.plazas&&_pdb.plazas.length){PLAZA_DB=mergePlazas(_pdb.plazas);PLAZA_DB_VERSION=_pdb.version||'cached';}
 }catch(e){}
+var _plazaDbReady=(typeof fetch==='function')?loadPlazaDb(PLAZA_DB_URL):Promise.resolve(false);
+/* Cloud Run scales to zero; a cold start can exceed the quote timeout, which is
+   one way a quote silently fell through to the per-km guess. Wake it on load. */
+try{if(typeof TAPI_URL!=='undefined'&&TAPI_URL)setTimeout(function(){fetch(TAPI_URL+'/v1/health').catch(function(){});},300);}catch(e){}
 
 /* Google returns the route as an encoded polyline; decode to lat/lng pairs. */
 function decodePolyline(str){
@@ -5653,7 +5774,7 @@ function buildTourPlanHTML(p,ordered,legs,retKm,c){
   return '<div class="rc-h">🗺️ Stop order</div><div class="rc-b">'+savedNote+lh+'</div>';
 }
 function renderCalcResult(p,ordered,legs,retKm,total,c){
-  window._fhCal=null;window._lastAlt=null;
+  window._fhCal=null;window._lastAlt=null;window._roadPick=null;
   var el=document.getElementById('calcResult');
   el.innerHTML='';
   // extracted card
@@ -5718,6 +5839,14 @@ function renderCalcResult(p,ordered,legs,retKm,total,c){
      overnight halts and customer preference matter. Show a straight-line estimate
      immediately; renderAltRoutes() overwrites this with real road km, real toll,
      and the AI agent's verdict as soon as those finish computing. */
+  /* Two stops have only one ORDER, but usually two or three ROADS
+     (GT Road vs expressway vs peripheral). Show those as the options, each
+     with its own plaza-matched toll. */
+  if(ordered.length===2&&GKEY){
+    var roadHost=document.createElement('div');roadHost.id='altRoutesHost';
+    el.appendChild(roadHost);
+    renderRoadOptions(roadHost,p,ordered,c);
+  }
   if(ordered.length>=3){
     var altHost=document.createElement('div');altHost.id='altRoutesHost';
     el.appendChild(altHost);
@@ -5796,6 +5925,7 @@ function renderCalcResult(p,ordered,legs,retKm,total,c){
   el.appendChild(co);
   // LIVE RECALC — any edited input recomputes the whole chain
   var liveTotal=total; // updated when OSRM returns real km
+  window._fhSetLiveTotal=function(km){liveTotal=km;recalc();};
   var profitMode='pct'; // 'pct' or 'abs'
   function recalc(vtypeChanged){
     // if vehicle type changed, refresh mileage AND recompute NHAI toll for new class
@@ -6029,7 +6159,7 @@ function renderCalcResult(p,ordered,legs,retKm,total,c){
             if(window._tollPlazasForMap.length)drawRouteMap(ordered,!!p.isRet||retKm>0);
             var tb=document.getElementById('tollBadge');
             if(tb){
-              tb.textContent=tres.tier==='1'?'★ your saved rate':tres.tier==='2'?('✓ FleetHub API · '+(t.plazas?t.plazas.length:0)+' plazas'):tres.tier==='3'?('✓ '+(t.count||(t.plazas?t.plazas.length:0))+' plazas matched'):tres.tier==='4'?(vtNow==='cab'?'✓ Google':'✓ Google × NHAI class'):'⚠ estimate only';
+              tb.textContent=tres.tier==='1'?'★ your saved rate':tres.tier==='2'?('✓ FleetHub API · '+(t.plazas?t.plazas.length:0)+' plazas'):tres.tier==='3'?('✓ '+(t.count||(t.plazas?t.plazas.length:0))+' plazas matched'):tres.tier==='4'?(vtNow==='cab'?'✓ Google':'✓ Google × NHAI class'):'⚠ estimate — no plaza data for this road, verify';
               tb.className='toll-badge '+(tres.tier==='5'?'est':tres.tier==='4'?'mixed':'nhai');
             }
             /* Cross-check against TollGuru AFTER the real answer is settled —

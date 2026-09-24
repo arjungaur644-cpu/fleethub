@@ -148,6 +148,14 @@ console.log('\n[5] Rajasthan circuit enquiry');
       w.decidePlace('rampur',[{title:'Rampur',sim:1,score:0.9,km:120,co:[28.8,79.0]},{title:'Rampur',sim:1,score:0.85,km:300,co:[31.4,77.6]}]).status, 'ask');
     check('nothing matching well → ask "did you mean"',
       w.decidePlace('xyzpur',[{title:'Ajaypur',sim:0.5,score:0.4,km:50,co:[28,78]}]).kind, 'spelling');
+    /* RCA Sep 2026: Pahasu → Rithala missed Luharali (NH-34, Sikandrabad–Dadri) */
+    const nat = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'data', 'plazas.json'), 'utf8'));
+    w.eval('PLAZA_DB = mergePlazas(' + JSON.stringify(nat.plazas) + ')');
+    const nh34 = [[28.2536,77.855],[28.407,77.8498],[28.451,77.695],[28.552,77.553],[28.62,77.42]];
+    const t = w.computeRouteToll(nh34, 'bus', false);
+    check('Luharali matched on the GT Road (NH-34) corridor', !!(t && t.plazas.some(z => /luhar/i.test(z.name))), true);
+    check('national plaza table loaded (1,000+ plazas)', w.eval('PLAZA_DB.length') > 1000, true);
+    check('hand-verified Yamuna Expwy plazas kept', w.eval("PLAZA_DB.some(function(z){return z.id==='ye_jewar';})"), true);
     check('"mehandipur balaji" still resolves', dom.window.parseTrip('khurja se mehandipur balaji').cities, ['khurja','mehendipur balaji']);
     dom.window.close();
   }
