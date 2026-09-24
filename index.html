@@ -290,6 +290,17 @@ body{font-family:var(--body);background:var(--cream);color:var(--ink);font-size:
 .pf .pv{font-weight:700;font-size:0.85rem;margin-top:0.05rem;}
 .xtag{font-size:0.66rem;background:var(--blue-bg);color:var(--blue);padding:2px 8px;border-radius:20px;font-weight:600;}
 .xcard .rc-b{padding:0.8rem 0.9rem;}
+.cmp-btn{width:100%;margin:0 0 0.8rem;font-size:0.78rem;font-weight:700;padding:0.6rem;}
+.cmp-h{font-size:0.62rem;letter-spacing:0.06em;color:var(--t3);font-weight:800;margin:0.4rem 0 0.3rem;}
+.cmp-row{display:flex;gap:0.5rem;justify-content:space-between;padding:0.45rem 0;border-bottom:1px solid var(--line);}
+.cmp-m{flex:1;min-width:0;font-size:0.76rem;font-weight:700;}
+.cmp-r{display:inline-block;min-width:22px;font-size:0.62rem;color:#fff;background:#2563EB;border-radius:6px;text-align:center;padding:1px 3px;margin-right:2px;}
+.cmp-n{font-size:0.62rem;color:var(--t3);font-weight:400;margin-top:2px;line-height:1.35;}
+.cmp-v{text-align:right;font-size:0.8rem;max-width:42%;}
+.cmp-na{font-size:0.64rem;color:var(--t3);}
+.cmp-diff{display:block;font-size:0.6rem;color:#B45309;}
+.cmp-foot{font-size:0.62rem;color:var(--t3);margin-top:0.5rem;}
+.cmp-wait{font-size:0.74rem;color:var(--t3);}
 .gwarn{background:#FFF7ED;border:1.5px solid #FDBA74;color:#9A3412;border-radius:12px;padding:0.6rem 0.75rem;font-size:0.74rem;line-height:1.45;margin:0 0 0.8rem;}
 .gwarn a{color:#C2410C;font-weight:700;}
 .xcorrs{margin:-0.2rem 0 0.5rem;display:flex;flex-direction:column;gap:0.15rem;}
@@ -3796,6 +3807,121 @@ function renderRoadOptions(host,p,ordered,c){
     });
   }).catch(function(){host.innerHTML='';});
 }
+/* ═══════════════════════════════════════════════════════════════
+   METHOD COMPARISON — runs EVERY distance and toll method independently
+   (not first-answer-wins) and shows each result side by side, so the
+   operator can see where the methods agree and which one is trusted.
+   ═══════════════════════════════════════════════════════════════ */
+var DIST_METHODS=[
+  {id:'g_route',name:'Google Routes (full trip)',rank:1,note:'Real roads + traffic, same route Google Maps shows. Most accurate.'},
+  {id:'g_matrix',name:'Google Route Matrix (leg by leg)',rank:2,note:'Google road km for each A→B leg, added up. Close to #1.'},
+  {id:'osrm_route',name:'OpenStreetMap / OSRM (full trip)',rank:3,note:'Free map. Real roads but no traffic; picks shortest road, may take expressway detours.'},
+  {id:'osrm_table',name:'OSRM matrix (leg by leg)',rank:4,note:'Same data as #3, leg by leg.'},
+  {id:'op_km',name:'Your corrected km (saved)',rank:0,note:'What you told FleetHub earlier for this route. Ground truth if set.'},
+  {id:'geo',name:'Straight line × 1.27',rank:5,note:'Formula guess. Often ±15–25% off.'},
+  {id:'crow',name:'Straight line (as the crow flies)',rank:6,note:'Reference only — no road is this short.'}
+];
+var TOLL_METHODS=[
+  {id:'fastag',name:'FASTag statement',rank:0,note:'Ground truth. Not available in app — compare manually.'},
+  {id:'saved',name:'Your saved toll (this route)',rank:0,note:'Your own correction for this route & vehicle.'},
+  {id:'engine_g',name:'Plaza list on Google route',rank:1,note:'1,235 NHAI plazas (official FY26-27 rates) matched to Google’s road line. Most accurate.'},
+  {id:'api_g',name:'FleetHub Toll API on Google route',rank:2,note:'Our Cloud Run server, own plaza data, same Google line.'},
+  {id:'google_x',name:'Google toll (car) × NHAI class',rank:3,note:'Google’s car FASTag price scaled to bus/tempo. Class ratio is approximate.'},
+  {id:'engine_o',name:'Plaza list on OSRM route',rank:4,note:'Same plaza list on the OSRM road line — only right if OSRM took the same road.'},
+  {id:'api_o',name:'FleetHub Toll API on OSRM route',rank:5,note:'API on the OSRM line.'},
+  {id:'tollguru',name:'TollGuru (3rd party)',rank:6,note:'Commercial service; needs its own key. Audit only.'},
+  {id:'legacy',name:'Old fixed-leg table',rank:7,note:'Hand-typed city-pair tolls (few routes). Being retired.'},
+  {id:'perkm',name:'Per-km guess',rank:8,note:'km × ₹1.75 × vehicle class. Last resort, often far off.'}
+];
+function runAllMethods(ordered,isRet,vtype){
+  var pts=ordered.map(function(o){return o.coord;});
+  var loop=isRet?pts.concat([pts[0]]):pts.slice();
+  var D={},T={},t0=Date.now();
+  function timed(p){var s=Date.now();return Promise.resolve(p).then(function(v){return{v:v,ms:Date.now()-s};},function(e){return{v:null,ms:Date.now()-s,err:String(e&&e.message||e)};});}
+  function legSum(M){var s=0;for(var i=0;i<loop.length-1;i++)s+=M[i][i+1];return s;}
+  var crow=0;for(var i=0;i<loop.length-1;i++)crow+=hav(loop[i],loop[i+1]);
+  D.crow={km:Math.round(crow)};
+  D.geo={km:Math.round(crow*1.27)};
+  // operator's own corrected km for these stops (any source)
+  var names=ordered.map(function(o){return (o.c||'').toLowerCase();}).join('>')+'|';
+  var fb=(typeof ROUTE_FEEDBACK!=='undefined'?ROUTE_FEEDBACK:[]).filter(function(r){return r.sig&&r.sig.indexOf(names)===0&&r.correctedKm;});
+  D.op_km=fb.length?{km:fb[fb.length-1].correctedKm}:{na:'not set — use “Report an issue” to save your real km'};
+  var saved=TOLL_LEARNED[tollLearnKey(ordered,vtype)];
+  T.saved=(saved!=null)?{amt:saved}:{na:'not set'};
+  T.fastag={na:'check your FASTag statement'};
+  var gP=GKEY?timed(withTimeout(googleFullRoute(loop,false),12000)):Promise.resolve({v:null,skip:'no Google key on this site'});
+  var oP=timed(withTimeout(fetch('https://router.project-osrm.org/route/v1/driving/'+loop.map(function(p){return p[1]+','+p[0];}).join(';')+'?overview=full&geometries=geojson')
+     .then(function(r){return r.json();}).then(function(d){
+       if(!d||!d.routes||!d.routes[0])return null;
+       return{km:Math.round(d.routes[0].distance/1000),durSec:d.routes[0].duration,
+              poly:d.routes[0].geometry.coordinates.map(function(x){return [x[1],x[0]];})};
+     }),12000));
+  var gmP=GKEY?timed(withTimeout(googleRouteMatrix(ordered),12000)):Promise.resolve({v:null,skip:'no Google key on this site'});
+  var otP=timed(withTimeout(fetch('https://router.project-osrm.org/table/v1/driving/'+pts.map(function(p){return p[1]+','+p[0];}).join(';')+'?annotations=distance')
+     .then(function(r){return r.json();}).then(function(d){return d&&d.distances?d.distances:null;}),12000));
+  return Promise.all([gP,oP,gmP,otP,withTimeout(_plazaDbReady,5000)]).then(function(r){
+    var g=r[0],o=r[1],gm=r[2],ot=r[3];
+    function mat(res){ // matrix over stops → sum along the trip order (+ return)
+      if(!res.v)return null;
+      var n=ordered.length,s=0;
+      for(var i=0;i<n-1;i++)s+=res.v[i][i+1];
+      if(isRet)s+=res.v[n-1][0];
+      return Math.round(s/1000);
+    }
+    D.g_route=g.v&&g.v.km?{km:g.v.km,ms:g.ms,hrs:g.v.durSec/3600}:{na:g.skip||('failed'+(window._gErr?': '+window._gErr:''))};
+    D.osrm_route=o.v?{km:o.v.km,ms:o.ms,hrs:o.v.durSec/3600}:{na:'failed / timed out'};
+    var gmk=mat(gm);D.g_matrix=gmk?{km:gmk,ms:gm.ms}:{na:gm.skip||'failed'};
+    var otk=mat(ot);D.osrm_table=otk?{km:otk,ms:ot.ms}:{na:'failed / timed out'};
+    var gPoly=g.v&&g.v.poly,oPoly=o.v&&o.v.poly;
+    var eg=gPoly?computeRouteToll(gPoly,vtype,isRet,true):null;
+    T.engine_g=gPoly?{amt:eg?eg.amount:0,plazas:eg?eg.plazas:[]}:{na:'needs Google route'};
+    var eo=oPoly?computeRouteToll(oPoly,vtype,isRet,true):null;
+    T.engine_o=oPoly?{amt:eo?eo.amount:0,plazas:eo?eo.plazas:[]}:{na:'needs OSRM route'};
+    T.google_x=(g.v&&g.v.tollINR>0)?{amt:googleTollForClass(g.v.tollINR,vtype),car:g.v.tollINR}:{na:g.v?'Google gave no toll price':'needs Google route'};
+    var km=(D.g_route.km||D.osrm_route.km||D.geo.km);
+    T.perkm={amt:Math.round(km*TOLL_PER_KM_CAR*(NHAI_CLASS_MULT[vtype]||1)),basis:km};
+    var lg=computeNhaiToll(ordered,vtype,isRet);
+    T.legacy=(lg&&lg.total>0&&!lg.learned)?{amt:lg.total}:{na:'no hand-typed legs for this route'};
+    var trip=isRet?'roundtrip':'oneway';
+    var apiG=gPoly&&TAPI_URL?timed(withTimeout(fleethubTollApi(ordered,vtype,trip,gPoly,g.v.km,g.v.tollINR),15000)):Promise.resolve({v:null,skip:gPoly?'Toll API not set':'needs Google route'});
+    var apiO=oPoly&&TAPI_URL?timed(withTimeout(fleethubTollApi(ordered,vtype,trip,oPoly,o.v.km,0),15000)):Promise.resolve({v:null,skip:'needs OSRM route'});
+    var tg=TGKEY?timed(withTimeout(tollGuruRoute(loop,vtype),15000)):Promise.resolve({v:null,skip:'no TollGuru key'});
+    return Promise.all([apiG,apiO,tg]).then(function(a){
+      T.api_g=a[0].v?{amt:a[0].v.amount,plazas:a[0].v.plazas}:{na:a[0].skip||'no answer / timed out'};
+      T.api_o=a[1].v?{amt:a[1].v.amount,plazas:a[1].v.plazas}:{na:a[1].skip||'no answer / timed out'};
+      T.tollguru=a[2].v&&a[2].v.amount>0?{amt:a[2].v.amount}:{na:a[2].skip||'no answer'};
+      return{D:D,T:T,ms:Date.now()-t0};
+    });
+  });
+}
+function renderMethodComparison(host,ordered,isRet,vtype){
+  host.innerHTML='<div class="rescard"><div class="rc-h">🔬 Every method, side by side</div><div class="rc-b"><div class="cmp-wait">Running all methods… (up to 30 s)</div></div></div>';
+  runAllMethods(ordered,isRet,vtype).then(function(res){
+    var kmRef=res.D.g_route.km||null,tRef=res.T.engine_g.amt!=null&&!res.T.engine_g.na?res.T.engine_g.amt:null;
+    function row(m,val,unit,ref,extra){
+      var v=val||{};
+      var cell=v.na?'<span class="cmp-na">'+v.na+'</span>':
+        '<b>'+(unit==='₹'?'₹'+Number(v.amt).toLocaleString():Number(v.km).toLocaleString()+' km')+'</b>'+
+        (ref&&!v.na&&(unit==='₹'?v.amt:v.km)!=null&&m.rank>1?' <span class="cmp-diff">'+diffTxt(unit==='₹'?v.amt:v.km,ref,unit)+'</span>':'');
+      return '<div class="cmp-row"><div class="cmp-m"><span class="cmp-r">'+(m.rank?('#'+m.rank):'★')+'</span> '+m.name+
+        '<div class="cmp-n">'+m.note+(extra||'')+'</div></div><div class="cmp-v">'+cell+'</div></div>';
+    }
+    function diffTxt(v,ref,unit){var d=v-ref;if(!d)return 'same as #1';var pct=ref?Math.round(d/ref*100):0;
+      return (d>0?'+':'')+(unit==='₹'?'₹'+d:d+' km')+' ('+(pct>0?'+':'')+pct+'%)';}
+    function plz(v){return v&&v.plazas&&v.plazas.length?'<br>🅣 '+v.plazas.map(function(z){return z.name+' ₹'+z.amt;}).join(' · '):'';}
+    var dh=DIST_METHODS.map(function(m){
+      var v=res.D[m.id];var x=v&&v.hrs?' · drive '+fmtHours(v.hrs*(VEH_TIME_FACTOR[vtype]||1.15)):'';
+      return row(m,v,'km',kmRef,x);}).join('');
+    var th=TOLL_METHODS.map(function(m){
+      var v=res.T[m.id];var x=plz(v)+(v&&v.car?' · car ₹'+v.car:'')+(m.id==='perkm'&&v&&v.basis?' · on '+v.basis+' km':'');
+      return row(m,v,'₹',tRef,x);}).join('');
+    host.innerHTML='<div class="rescard"><div class="rc-h">🔬 Every method, side by side</div><div class="rc-b">'+
+      '<div class="cmp-h">DISTANCE ('+(isRet?'round trip':'one way')+')</div>'+dh+
+      '<div class="cmp-h">TOLL — '+VTYPE_LABEL[vtype]+' ('+(isRet?'round trip':'one way')+')</div>'+th+
+      '<div class="cmp-foot">★ = ground truth when you have it. #1 is what FleetHub trusts; differences are shown against #1.</div>'+
+    '</div></div>';
+  });
+}
 function refreshAltRoutes(){
   var la=window._lastAlt;
   if(la)renderAltRoutes(la.p,la.cands,la.verdict,la.isEstimate);
@@ -6255,6 +6381,14 @@ function renderCalcResult(p,ordered,legs,retKm,total,c){
   cb.addEventListener('click',function(){copyToClipboard(buildShareText());});
   sr.appendChild(wb);sr.appendChild(cb);
   el.appendChild(sr);
+  var cmpBtn=document.createElement('button');cmpBtn.className='cbtn cmp-btn';cmpBtn.textContent='🔬 Compare every distance & toll method';
+  var cmpHost=document.createElement('div');
+  el.appendChild(cmpBtn);el.appendChild(cmpHost);
+  cmpBtn.addEventListener('click',function(){
+    var vt=(document.getElementById('ed-vtype')||{}).value||c.vtype;
+    cmpBtn.style.display='none';
+    renderMethodComparison(cmpHost,ordered,!!p.isRet,vt);
+  });
   renderSourcesCard(el,c);
   renderAuditCard(el,c,p,ordered,total);
 
