@@ -139,7 +139,15 @@ console.log('\n[5] Rajasthan circuit enquiry');
     check('Ghabhana spelling → Gabhana, "hindon ghaziabad" = one stop',
       dom.window.parseTrip('Ghabhana se hindon ghaziabad Traveller 20 seater').cities, ['gabhana','hindon']);
     check('locality + city = one stop', dom.window.parseTrip('Gabhana se raj nagar ghaziabad').cities, ['gabhana','raj nagar']);
-    checkTrue('unlocated stop stops the quote (no silent drop)', /askPlaceChoice\(stillMissing\[0\],null,function\(\)\{runCalc\(\);\}\);\s*return;/.test(html));
+    checkTrue('unlocated stop stops the quote (no silent drop)', /askPlaceQuestion\(stillMissing\[0\],\{status:'missing',opts:\[\]\},function\(\)\{runCalc\(\);\}\);\s*return;/.test(html));
+    const w=dom.window;
+    check('spelling normaliser: Ghabhana ≈ Gabhana', w.nameSim('ghabhana','Gabhana') >= 0.9, true);
+    check('clear winner is used, not asked',
+      w.decidePlace('ghabhana',[{title:'Gabhana',sim:1,score:0.95,km:30,co:[28.05,77.96]},{title:'Gobana',sim:0.7,score:0.5,km:600,co:[25,80]}]).status, 'ok');
+    check('two real matches → ask with options',
+      w.decidePlace('rampur',[{title:'Rampur',sim:1,score:0.9,km:120,co:[28.8,79.0]},{title:'Rampur',sim:1,score:0.85,km:300,co:[31.4,77.6]}]).status, 'ask');
+    check('nothing matching well → ask "did you mean"',
+      w.decidePlace('xyzpur',[{title:'Ajaypur',sim:0.5,score:0.4,km:50,co:[28,78]}]).kind, 'spelling');
     check('"mehandipur balaji" still resolves', dom.window.parseTrip('khurja se mehandipur balaji').cities, ['khurja','mehendipur balaji']);
     dom.window.close();
   }

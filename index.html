@@ -290,6 +290,21 @@ body{font-family:var(--body);background:var(--cream);color:var(--ink);font-size:
 .pf .pv{font-weight:700;font-size:0.85rem;margin-top:0.05rem;}
 .xtag{font-size:0.66rem;background:var(--blue-bg);color:var(--blue);padding:2px 8px;border-radius:20px;font-weight:600;}
 .xcard .rc-b{padding:0.8rem 0.9rem;}
+.xcorrs{margin:-0.2rem 0 0.5rem;display:flex;flex-direction:column;gap:0.15rem;}
+.xcorr{font-size:0.7rem;color:var(--orange);text-decoration:none;}
+.askq .rc-b{padding:0.9rem;}
+.askq-t{font-weight:700;font-size:0.95rem;margin-bottom:0.65rem;line-height:1.4;}
+.askq-o{display:flex;flex-direction:column;gap:0.45rem;}
+.askq-btn{display:flex;flex-direction:column;align-items:flex-start;text-align:left;width:100%;padding:0.65rem 0.8rem;border:1.5px solid var(--line);border-radius:12px;background:#fff;cursor:pointer;font:inherit;color:inherit;}
+.askq-btn:active{border-color:var(--orange);background:#FFF7ED;}
+.askq-btn b{font-size:0.88rem;}
+.askq-btn span{font-size:0.72rem;color:var(--t2);margin-top:1px;}
+.askq-btn em{font-style:normal;font-size:0.64rem;color:var(--t3);margin-top:2px;}
+.askq-none{font-size:0.76rem;color:var(--t3);}
+.askq-more{display:flex;gap:0.35rem;margin-top:0.6rem;}
+.askq-more input{flex:1;min-width:0;font-size:0.8rem;}
+.askq-more button{flex:0 0 auto;width:auto;padding:0 1rem;font-size:0.76rem;white-space:nowrap;}
+.askq-skip{display:inline-block;margin-top:0.55rem;font-size:0.7rem;color:var(--t3);}
 .gem-inp.gem-dock{position:sticky;bottom:calc(4.6rem + env(safe-area-inset-bottom));z-index:20;margin-top:0.7rem;box-shadow:0 -4px 18px rgba(15,23,42,0.10);background:#fff;}
 .optc{padding:0.65rem;border:1.5px solid var(--line);border-radius:12px;margin-bottom:0.55rem;}
 .optc.cur{border-color:var(--green);background:var(--green-bg);}
@@ -3205,7 +3220,7 @@ function geminiParseTrip(text){
   var prompt='You read trip enquiries sent to a bus and taxi operator in North India. '+
     'The text may be Hindi, English, Hinglish, or Devanagari, often with no punctuation.\n'+
     'Extract the trip and return STRICT JSON only — no markdown, no backticks, no explanation.\n'+
-    'Schema: {"pickup":string,"stops":[string],"returnsToStart":boolean,"vehicle":"cab"|"suv"|"tempo"|"minibus"|"bus","seats":number|null,"ac":true|false|null,"days":number|null,"pax":number|null}\n'+
+    'Schema: {"pickup":string,"stops":[string],"corrections":[{"typed":string,"likely":"Town, District"}],"returnsToStart":boolean,"vehicle":"cab"|"suv"|"tempo"|"minibus"|"bus","seats":number|null,"ac":true|false|null,"days":number|null,"pax":number|null}\n'+
     'Rules:\n'+
     '- "pickup" is the first place named, unless the text clearly names a different starting/pickup point.\n'+
     '- "stops" lists every OTHER place to visit, in the order mentioned. Do not repeat the pickup.\n'+
@@ -3214,6 +3229,7 @@ function geminiParseTrip(text){
     '- "jeen mata", "jeenmata", "jeernamata" = Jeen Mata (Sikar, Rajasthan).\n'+
     '- If the pickup place is named again later ("... vapis khurja"), returnsToStart=true and do NOT list it as a stop.\n'+
     '- Verbs like jaegi, jayegi, jaana hai, chalegi are NOT places.\n'+
+    '- corrections: for any place that looks misspelled or informal, give what you think it really is with its district (Ghabhana -> Gabhana, Aligarh). In pickup/stops keep the name as typed. Empty list if none.\n'+
     '- A locality followed by its city ("hindon ghaziabad", "raj nagar ghaziabad", "sector 62 noida") is ONE stop: write it as "Hindon, Ghaziabad".\n'+
     '- Keep the spelling of small towns/villages you do not recognise exactly as typed (e.g. Ghabhana); never drop them.\n'+
     '- Words like back, wapas, vapis, वापस, return, round trip mean returnsToStart=true. They are NOT places.\n'+
@@ -3232,6 +3248,9 @@ function geminiParseTrip(text){
       raw=raw.replace(/```json/gi,'').replace(/```/g,'').trim();
       var j=JSON.parse(raw);
       if(!j||!j.pickup)return null;
+      (j.corrections||[]).forEach(function(cr){
+        if(cr&&cr.typed&&cr.likely)GEM_CORR[snapToKnown(String(cr.typed).trim().toLowerCase())]=String(cr.likely);
+      });
       var names=[j.pickup].concat(j.stops||[]);
       // normalise to the app's internal lowercase + alias form
       names=names.map(function(x){
@@ -3342,7 +3361,7 @@ function buildRouteCandidates(p,valid,D,vtype){
     var uncovered=Math.max(0,km-coveredKm);
     var toll=Math.round(matched+uncovered*TOLL_PER_KM_CAR*(NHAI_CLASS_MULT[vtype]||1));
     var hours=Math.round((km/(AVG_SPEED[vtype]||45)+seq.length*0.25)*10)/10; // +15min/stop
-    return{name:name,why:why||'',seq:seq,path:ord.map(function(o){return cap(o.c);}),km:km,toll:toll,hours:hours};
+    return{name:name,why:why||'',seq:seq,path:ord.map(function(o){return placeLabel(o.c);}),km:km,toll:toll,hours:hours};
   }
   var matrix=D||(function(){
     var M=[];for(var i=0;i<n;i++){M[i]=[];for(var j=0;j<n;j++){M[i][j]=(i===j)?0:hav(valid[i].coord,valid[j].coord)*1270;}}
@@ -3654,7 +3673,7 @@ function showTollDetail(c,ordered,isRound,kmUsed){
       '<button id="tollClose" style="margin-left:auto;border:none;background:var(--line);border-radius:50%;width:28px;height:28px;font-size:1rem;cursor:pointer">×</button>'+
     '</div>'+
     '<div style="font-size:0.7rem;color:var(--t3);margin-bottom:0.6rem">'+
-      (VTYPE_LABEL[vt]||vt)+' · '+ordered.map(function(o){return cap(o.c);}).join(' → ')+(isRound?' → back':'')+'</div>'+
+      (VTYPE_LABEL[vt]||vt)+' · '+ordered.map(function(o){return placeLabel(o.c);}).join(' → ')+(isRound?' → back':'')+'</div>'+
     '<div style="font-size:0.78rem;font-weight:700;margin:0.5rem 0 0.2rem">Toll plazas on this route'+(plazas.length?' ('+plazas.length+')':'')+'</div>'+
     (c.tollSource==='engine'&&c.tollCoverage!=null?
       '<div style="font-size:0.66rem;color:'+(c.tollCoverage>=70?'var(--green)':'#B45309')+';margin-bottom:0.35rem">'+
@@ -4435,9 +4454,9 @@ function runCalc(){
     if(p._ai)showToast('🔍 Finding all locations…');
     /* STEP 1 — confirm any genuinely ambiguous place name BEFORE calculating,
        so the route, distance and quote are never built on the wrong town. */
-    checkAmbiguous(p.cities,function(ambig){
-      if(ambig.length){
-        askPlaceChoice(ambig[0].name,ambig[0].cands,function(){runCalc();});
+    understandPlaces(p.cities,function(q){
+      if(q){
+        askPlaceQuestion(q.name,q.decision,function(){runCalc();});
         return;
       }
       // STEP 2 — resolve coordinates
@@ -4448,7 +4467,7 @@ function runCalc(){
         /* Never quote a trip with a stop silently missing — the question card
            used to be wiped by the result that rendered right after it. */
         if(stillMissing.length){
-          askPlaceChoice(stillMissing[0],null,function(){runCalc();});
+          askPlaceQuestion(stillMissing[0],{status:'missing',opts:[]},function(){runCalc();});
           return;
         }
         if(valid.length<2){showToast('Add at least 2 places so I can build the route');return;}
@@ -4559,6 +4578,196 @@ function askPlaceChoice(name,preCands,onPicked){
   if(preCands&&preCands.length){render(preCands);return;}
   findCandidates(name).then(render);
 }
+/* ═══════════════════════════════════════════════════════════════
+   PLACE UNDERSTANDING AGENT
+   Works like a person reading an enquiry:
+   1. Gather candidates for every unfamiliar name — Google Places for what was
+      typed, for Gemini's spelling correction, and for common Hindi-English
+      spelling variants; plus close matches in our verified table.
+   2. Score each by how well the NAME matches (after normalising gh/g, aa/a,
+      w/v…) and how close it is to the REST OF THE TRIP.
+   3. One clear winner → use it, and show the correction ("Ghabhana → Gabhana,
+      Aligarh") so the operator can see and change it.
+      Two or three real options → ask, Claude-style, with tappable choices.
+      Nothing → ask, with the nearest spellings found.
+   ═══════════════════════════════════════════════════════════════ */
+var GEM_CORR={};
+var CORRECTIONS={};
+try{CORRECTIONS=JSON.parse(localStorage.getItem('fh_corrections')||'{}');}catch(e){CORRECTIONS={};}
+function saveCorrections(){try{localStorage.setItem('fh_corrections',JSON.stringify(CORRECTIONS));}catch(e){}}
+function translitKey(s){
+  return String(s||'').toLowerCase().replace(/[^a-z ]/g,'')
+    .replace(/ph/g,'f').replace(/([bcdgjkpt])h/g,'$1').replace(/(.)\1+/g,'$1')
+    .replace(/ee|ii/g,'i').replace(/oo|uu/g,'u').replace(/w/g,'v').replace(/z/g,'j')
+    .replace(/\s+/g,' ').trim();
+}
+function nameSim(typed,cand){
+  var a=translitKey(typed),full=translitKey(cand);
+  if(!a||!full)return 0;
+  var n=a.split(' ').length,words=full.split(' ');
+  var b=words.slice(0,n).join(' ');           // "hindon airport" vs typed "hindon"
+  var best=0;
+  [b,full].forEach(function(x){
+    if(x===a){best=1;return;}
+    var d=_lev(a,x),s=1-d/Math.max(a.length,x.length);
+    if(s>best)best=s;
+  });
+  return Math.max(0,best);
+}
+function tripContext(cities,skip){
+  var pts=cities.filter(function(c){return c!==skip;})
+    .map(function(c){return CC[c]||GEO_CACHE[c]||null;}).filter(Boolean);
+  if(!pts.length)return [28.25,77.85];
+  var la=0,lo=0;pts.forEach(function(p){la+=p[0];lo+=p[1];});
+  return [la/pts.length,lo/pts.length];
+}
+function gatherPlaceCands(name,cities){
+  var ctx=tripContext(cities,name);
+  var hint=PLACE_HINTS[name];
+  var qs=[hint?name+', '+hint:name];
+  if(GEM_CORR[name])qs.push(GEM_CORR[name]);
+  spellingVariants(name).slice(0,2).forEach(function(v){qs.push(hint?v+', '+hint:v);});
+  var jobs=qs.map(function(q){
+    return GKEY?withTimeout(googlePlacesText(q,5),6000).then(function(l){return l||[];})
+               :nominatimCandidates(q).then(function(g){return (g||[]).map(function(x){
+                  return{name:x.title,addr:x.label,state:x.state,district:x.district,coord:x.co};});});
+  });
+  return Promise.all(jobs).then(function(lists){
+    var raw=[];
+    lists.forEach(function(l){(l||[]).forEach(function(x){if(x&&x.coord)raw.push(x);});});
+    // verified table: close spellings
+    CN.forEach(function(k){
+      var s=nameSim(name,k);
+      if(s>=0.8)raw.push({name:cap(k),addr:'',state:'',district:'',coord:CC[k],verified:true});
+    });
+    var hub=PLACE_HUB[name];
+    var cands=[];
+    raw.forEach(function(x){
+      if(hub&&CC[hub]&&hav(CC[hub],x.coord)>45)return;
+      var sim=nameSim(name,x.name);
+      if(GEM_CORR[name])sim=Math.max(sim,nameSim(GEM_CORR[name].split(',')[0],x.name)*0.97);
+      var km=hav(ctx,x.coord);
+      var c={title:x.name,co:x.coord,district:x.district||'',state:x.state||'',label:x.addr||'',
+             sim:sim,km:Math.round(km),verified:!!x.verified,
+             score:sim*0.75+0.25*Math.exp(-km/250)+(x.verified?0.05:0)};
+      // same place found twice (within 25 km) → keep the better-scored one
+      for(var i=0;i<cands.length;i++){
+        if(hav(cands[i].co,c.co)<25){if(c.score>cands[i].score)cands[i]=c;return;}
+      }
+      cands.push(c);
+    });
+    return cands.sort(function(a,b){return b.score-a.score;});
+  });
+}
+function decidePlace(name,cands){
+  if(!cands.length)return{status:'missing',opts:[]};
+  var good=cands.filter(function(c){return c.sim>=0.75;});
+  var top=cands[0];
+  if(!good.length)return{status:'ask',kind:'spelling',opts:cands.slice(0,3)};
+  if(AMBIG_NAMES[name]&&good.length>1)return{status:'ask',kind:'which',opts:good.slice(0,3)};
+  if(good.length===1||(top.sim>=0.9&&good[1].score<top.score-0.18)){
+    var pick=good[0];
+    /* far from the rest of the trip AND not an exact name → confirm, don't assume */
+    if(pick.km>450&&pick.sim<1)return{status:'ask',kind:'which',opts:good.slice(0,3)};
+    return{status:'ok',pick:pick};
+  }
+  return{status:'ask',kind:'which',opts:good.slice(0,3)};
+}
+function applyPlacePick(name,pick,confirmed){
+  GEO_CACHE[name]=pick.co;
+  try{localStorage.setItem('fh_geocache',JSON.stringify(GEO_CACHE));}catch(e){}
+  PLACE_FACTS[name]={name:pick.title,addr:pick.label,state:pick.state,district:pick.district};
+  if(translitKey(pick.title.split(/[,(]/)[0])!==translitKey(name)){
+    CORRECTIONS[name]={to:pick.title,where:[pick.district,pick.state].filter(Boolean).join(', ')};
+  }else delete CORRECTIONS[name];
+  saveCorrections();
+  if(confirmed)markPlaceConfirmed(name);
+}
+/* Runs over every stop; calls done(null) when all are understood, or
+   done({name,decision}) for the first one that needs the operator. */
+function understandPlaces(cities,done){
+  var todo=cities.filter(function(c){
+    if(PLACE_OK[c]&&(CC[c]||GEO_CACHE[c]))return false;
+    if(CC[c]&&!AMBIG_NAMES[c])return false;
+    if(GEO_CACHE[c]&&!AMBIG_NAMES[c])return false;
+    return true;
+  });
+  if(!todo.length){done(null);return;}
+  var results={},pending=todo.length;
+  todo.forEach(function(n){
+    gatherPlaceCands(n,cities).then(function(c){return c;},function(){return [];}).then(function(c){
+      results[n]=decidePlace(n,c);
+      if(--pending===0){
+        for(var i=0;i<todo.length;i++){
+          var r=results[todo[i]];
+          if(r.status==='ok'){applyPlacePick(todo[i],r.pick,false);audit('geocode',true,todo[i]+' → '+r.pick.title);}
+        }
+        for(var j=0;j<todo.length;j++){
+          var q=results[todo[j]];
+          if(q.status!=='ok'){done({name:todo[j],decision:q});return;}
+        }
+        done(null);
+      }
+    });
+  });
+}
+/* Claude-style question: one short line, 2–3 tappable answers, "something
+   else" to type, "skip" to leave the stop out. */
+function askPlaceQuestion(name,decision,onDone){
+  var host=document.getElementById('calcResult');if(!host)return;
+  host.innerHTML='';
+  var card=document.createElement('div');card.className='rescard askq';
+  var typed=cap(name);
+  var q=decision.status==='missing'?'I couldn\'t find “'+typed+'”. Where is it?'
+       :decision.kind==='spelling'?'Did you mean one of these for “'+typed+'”?'
+       :'Which “'+typed+'” do you mean?';
+  card.innerHTML='<div class="rc-b"><div class="askq-t">'+q+'</div><div class="askq-o"></div>'+
+    '<div class="askq-more"><input class="ci" placeholder="Something else…"><button class="cbtn">Search</button></div>'+
+    '<a href="#" class="askq-skip">Skip this stop</a></div>';
+  host.appendChild(card);
+  var box=card.querySelector('.askq-o');
+  function draw(opts){
+    box.innerHTML='';
+    if(!opts.length){box.innerHTML='<div class="askq-none">No match yet — add the district or a nearby town below.</div>';return;}
+    opts.forEach(function(o){
+      var b=document.createElement('button');b.className='askq-btn';
+      var where=[o.district,o.state].filter(Boolean).join(', ');
+      b.innerHTML='<b>'+o.title+'</b>'+(where?'<span>'+where+'</span>':'')+'<em>'+o.km+' km from the trip</em>';
+      b.addEventListener('click',function(){
+        applyPlacePick(name,o,true);
+        card.remove();
+        showToast('✓ '+o.title+(where?' — '+where:''));
+        onDone();
+      });
+      box.appendChild(b);
+    });
+  }
+  draw(decision.opts||[]);
+  var inp=card.querySelector('.askq-more input'),go=card.querySelector('.askq-more button');
+  var search=function(){
+    var v=(inp.value||'').trim();if(!v)return;
+    go.textContent='…';
+    PLACE_HINTS[name]=null;
+    var saved=GEM_CORR[name];GEM_CORR[name]=v;
+    gatherPlaceCands(name,[]).then(function(c){
+      GEM_CORR[name]=saved;go.textContent='Search';
+      /* what the operator typed is the answer — rank by that, not the old spelling */
+      c.forEach(function(x){x.sim=Math.max(x.sim,nameSim(v.split(',')[0],x.title));});
+      draw(c.sort(function(a,b){return b.sim-a.sim||a.km-b.km;}).slice(0,3));
+    });
+  };
+  go.addEventListener('click',search);
+  inp.addEventListener('keydown',function(e){if(e.key==='Enter')search();});
+  card.querySelector('.askq-skip').addEventListener('click',function(e){
+    e.preventDefault();
+    PLACE_SKIP[name]=1;
+    try{localStorage.setItem('fh_place_skip',JSON.stringify(PLACE_SKIP));}catch(er){}
+    card.remove();onDone();
+  });
+  setTimeout(function(){card.scrollIntoView({behavior:'smooth',block:'center'});},50);
+}
+/* Name shown to the operator: the corrected one, if we corrected it. */
+function placeLabel(n){return CORRECTIONS[n]?CORRECTIONS[n].to:cap(n);}
 /* Resolve a list of place names to coordinates.
    Known places use the built-in table (instant). Unknown places are looked up
    live via free OpenStreetMap Nominatim — so ANY place works, not just a fixed list. */
@@ -5157,7 +5366,7 @@ function drawRouteMap(ordered,isRet){
       if(!s.coord)return;
       var col=i===0?'#16A34A':(i===ordered.length-1?'#0F172A':'#2563EB');
       var icon=L.divIcon({className:'',html:'<div style="background:'+col+';color:#fff;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4)">'+(i+1)+'</div>',iconSize:[24,24],iconAnchor:[12,12]});
-      L.marker([s.coord[0],s.coord[1]],{icon:icon}).addTo(_routeMap).bindPopup(cap(s.c));
+      L.marker([s.coord[0],s.coord[1]],{icon:icon}).addTo(_routeMap).bindPopup(placeLabel(s.c));
     });
     var line=L.polyline(pts,{color:'#FF9F1C',weight:4,opacity:0.85}).addTo(_routeMap);
     /* Toll plaza pins, TollGuru-style: a small 🅣 marker at each plaza showing
@@ -5404,7 +5613,7 @@ function buildTourPlanHTML(p,ordered,legs,retKm,c){
     var role=i===0?'Pickup':(i===ordered.length-1&&!p.isRet?'Last stop':'');
     var fct=PLACE_FACTS[s.c];
     var fsub=fct?[fct.district,fct.state].filter(Boolean).join(', '):'';
-    lh+='<div class="legi"><div class="legd" style="background:'+col+'">'+(i+1)+'</div><div><div style="font-weight:700;font-size:0.88rem">'+cap(s.c)+'</div>'+((role||fsub)?'<div style="font-size:0.62rem;color:var(--t3)">'+[role,fsub].filter(Boolean).join(' · ')+'</div>':'')+'</div></div>';
+    lh+='<div class="legi"><div class="legd" style="background:'+col+'">'+(i+1)+'</div><div><div style="font-weight:700;font-size:0.88rem">'+placeLabel(s.c)+'</div>'+((role||fsub)?'<div style="font-size:0.62rem;color:var(--t3)">'+[role,fsub].filter(Boolean).join(' · ')+'</div>':'')+'</div></div>';
     if(i<ordered.length-1){
       cum+=legs[i];
       lh+='<div class="legl">↓ <b>'+legs[i]+' km</b>'+
@@ -5415,7 +5624,7 @@ function buildTourPlanHTML(p,ordered,legs,retKm,c){
   if(p.isRet&&retKm){
     var retIdx=ordered.length-1;
     cum+=retKm;
-    lh+='<div class="legl" style="color:#E8880A">↩ <b>'+retKm+' km</b> back to '+cap(ordered[0].c)+'</div><div class="legi"><div class="legd" style="background:#16A34A">1</div><div><div style="font-weight:700;font-size:0.88rem">'+cap(ordered[0].c)+'</div><div style="font-size:0.62rem;color:var(--t3)">Drop · total '+cum+' km</div></div></div><div style="display:none">'+
+    lh+='<div class="legl" style="color:#E8880A">↩ <b>'+retKm+' km</b> back to '+placeLabel(ordered[0].c)+'</div><div class="legi"><div class="legd" style="background:#16A34A">1</div><div><div style="font-weight:700;font-size:0.88rem">'+placeLabel(ordered[0].c)+'</div><div style="font-size:0.62rem;color:var(--t3)">Drop · total '+cum+' km</div></div></div><div style="display:none">'+
       ''+
       '</div><div id="legOptret" class="legOptBox"></div>';
   }
@@ -5453,11 +5662,15 @@ function renderCalcResult(p,ordered,legs,retKm,total,c){
   if(p.seats)chips.push(p.seats+'-seat');if(p.ac!==null)chips.push(p.ac?'AC':'Non-AC');if(p.pax)chips.push(p.pax+' pax');if(p.days)chips.push(p.days+' days');if(p.fuel)chips.push('Rs'+p.fuel+'/L');if(p.isRet)chips.push('round trip');
   var typed=(p.cities||[]).filter(function(n){return ordered.some(function(o){return o.c===n;});});
   if(typed.length!==ordered.length)typed=ordered.map(function(o){return o.c;});
-  var routeTxt=typed.map(cap).join(' → ')+(p.isRet?' → '+cap(ordered[0].c):'');
+  var routeTxt=typed.map(placeLabel).join(' → ')+(p.isRet?' → '+placeLabel(ordered[0].c):'');
+  var corrNotes=typed.filter(function(n){return CORRECTIONS[n];}).map(function(n){
+    var cr=CORRECTIONS[n];
+    return '<a href="#" class="xcorr" data-n="'+n+'">✎ Read “'+cap(n)+'” as <b>'+cr.to+'</b>'+(cr.where?', '+cr.where:'')+' · change</a>';
+  }).join('');
   var facts=[VTYPE_LABEL[c.vtype],c.seats+' seats',(p.ac===false?'Non-AC':'AC'),c.pax+' pax','<span id="xDays">'+c.days+' day'+(c.days>1?'s':'')+'</span>',(p.isRet?'Round trip':'One way')];
   ex.className='rescard xcard';
   ex.innerHTML='<div class="rc-b">'+
-    '<div class="xroute">📍 '+routeTxt+'</div>'+
+    '<div class="xroute">📍 '+routeTxt+'</div>'+(corrNotes?'<div class="xcorrs">'+corrNotes+'</div>':'')+
     '<div class="xfacts">'+facts.map(function(f){return '<span class="xtag">'+f+'</span>';}).join('')+'</div>'+
     '<details class="xedit"><summary>Edit</summary>'+
       '<div class="xedit-row"><select class="ci" id="ex-vtype">'+
@@ -5471,6 +5684,18 @@ function renderCalcResult(p,ordered,legs,retKm,total,c){
     '</details>'+
   '</div>';
   el.appendChild(ex);
+  /* "change" on a correction: forget it and ask with the real options */
+  ex.querySelectorAll('.xcorr').forEach(function(a){
+    a.addEventListener('click',function(e){
+      e.preventDefault();
+      var n=a.getAttribute('data-n');
+      delete GEO_CACHE[n];delete CORRECTIONS[n];delete PLACE_OK[n];saveCorrections();
+      try{localStorage.setItem('fh_geocache',JSON.stringify(GEO_CACHE));localStorage.setItem('fh_place_ok',JSON.stringify(PLACE_OK));}catch(er){}
+      gatherPlaceCands(n,p.cities).then(function(c){
+        askPlaceQuestion(n,{status:c.length?'ask':'missing',kind:'which',opts:c.slice(0,3)},function(){runCalc();});
+      });
+    });
+  });
   // hero
   var rh=document.createElement('div');rh.className='reshero';
   rh.innerHTML='<div class="resgrid"><div><span class="rv" id="heroTotalKm" style="color:#7DD3FC">'+total.toLocaleString()+'</span><div class="rl">TOTAL KM</div></div><div><span class="rv" id="heroDays">'+c.days+'d</span><div class="rl">DAYS</div></div><div><span class="rv" id="heroGrand" style="color:#34D399">₹'+c.grand.toLocaleString()+'</span><div class="rl">QUOTE</div></div><div><span class="rv" id="perHeadVal" style="color:#FFB020">₹'+c.perHead+'</span><div class="rl">PER HEAD</div></div></div>';
@@ -5838,12 +6063,12 @@ function renderCalcResult(p,ordered,legs,retKm,total,c){
     }
   },120);
   function buildShareText(){
-    return 'FleetHub Trip Quote\n'+ordered.map(function(o,i){return (i+1)+'. '+cap(o.c);}).join('\n')+(p.isRet?'\nReturn included':'')+'\nTotal: '+total+' km | Rs'+c.grand.toLocaleString()+' | Rs'+c.perHead+'/person';
+    return 'FleetHub Trip Quote\n'+ordered.map(function(o,i){return (i+1)+'. '+placeLabel(o.c);}).join('\n')+(p.isRet?'\nReturn included':'')+'\nTotal: '+total+' km | Rs'+c.grand.toLocaleString()+' | Rs'+c.perHead+'/person';
   }
   function buildQuoteMsg(){
     var jdate=(CALC_CONTEXT&&CALC_CONTEXT.date_from)?('Journey: '+CALC_CONTEXT.date_from+(CALC_CONTEXT.date_to?' to '+CALC_CONTEXT.date_to:'')+'\n'):'';
     return 'Namaste '+((CALC_CONTEXT&&CALC_CONTEXT.user_name)||'')+'! Your trip quote from '+(SELLER?SELLER.biz:'us')+':\n'+
-      'Route: '+((CALC_CONTEXT&&CALC_CONTEXT.route)||ordered.map(function(o){return cap(o.c);}).join(' → '))+'\n'+
+      'Route: '+((CALC_CONTEXT&&CALC_CONTEXT.route)||ordered.map(function(o){return placeLabel(o.c);}).join(' → '))+'\n'+
       jdate+
       'Distance: '+total+' km · '+c.days+' day(s)\n'+
       'Fuel: Rs'+c.fuelCost.toLocaleString()+' · Toll: Rs'+c.tollCost.toLocaleString()+(c.stateTax?' · State tax: Rs'+c.stateTax.toLocaleString():'')+'\n'+
@@ -5887,7 +6112,7 @@ function renderCalcResult(p,ordered,legs,retKm,total,c){
     function logSellerReply(channel){
       var rec={action:'logReply',seller_name:SELLER?SELLER.biz:'',seller_phone:SELLER?SELLER.phone:'',
         buyer_name:CALC_CONTEXT.user_name||'',buyer_phone:CALC_CONTEXT.user_phone||'',
-        route:(CALC_CONTEXT.route||ordered.map(function(o){return cap(o.c);}).join(' → ')),
+        route:(CALC_CONTEXT.route||ordered.map(function(o){return placeLabel(o.c);}).join(' → ')),
         total_km:total,total_cost:c.grand,per_head:c.perHead,channel:channel};
       // Firestore primary, Apps Script fallback
       if(FB_READY){fbDB.collection('replies').add(Object.assign({ts:new Date().toISOString()},rec)).catch(function(){apiPost(rec);});}
