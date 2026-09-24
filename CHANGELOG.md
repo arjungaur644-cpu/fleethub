@@ -1,5 +1,32 @@
 # FleetHub — Version History
 
+## v3.4 — RCA: Khurja → Aurangabad → Gurugram → Khurja (Sep 2026)
+
+**Reported:** toll ₹3,836 and 275 km looked wrong vs Google Maps; the maths
+underneath did not match the totals.
+
+**Root causes:**
+1. **No Google on the new site.** The Google key is saved in the browser per
+   website. After moving from Netlify to GitHub Pages the key was not there,
+   so distance came from free OpenStreetMap (OSRM) — shown only as a small
+   "OSRM ✓". OSRM takes the shortest road, which here was the EPE → KMP →
+   Sohna detour through 5 tolled plazas, not the Delhi road Google picks
+   (car toll ₹155 vs ₹620).
+2. **Round-trip toll doubled a full loop.** The route line already included
+   the return leg, and the engine still multiplied by 2.
+3. **Stale formula text.** "274 km × ₹5.95/km — no NHAI route match" was
+   written at first paint and never updated after 5 plazas were found.
+4. **Legs did not add up.** 35 + 121 + 118 = 274 vs 275 total (each leg
+   rounded separately); fuel line kept the first-paint km.
+5. **Gurgaon was not in the verified places table** (nor Faridabad, Sonipat …).
+6. Changing vehicle type re-priced tolls from an old fixed-leg table.
+
+**Fixes:** loud warning with a Fix button whenever Google is not used
+(names the reason, incl. Google's own error text); plaza engine counts each
+separate pass and never doubles a full-trip line; toll/fuel formula text
+follows the live numbers; legs always sum to the total; NCR hubs added;
+vehicle change re-prices from the real route. 4 new regression tests.
+
 ## v3.3 — Toll RCA: missed Luharali plaza (Sep 2026)
 
 **Incident:** "Pahasu se rithala delhi" (bus) showed toll ₹785. The route runs

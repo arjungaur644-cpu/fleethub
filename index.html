@@ -290,6 +290,8 @@ body{font-family:var(--body);background:var(--cream);color:var(--ink);font-size:
 .pf .pv{font-weight:700;font-size:0.85rem;margin-top:0.05rem;}
 .xtag{font-size:0.66rem;background:var(--blue-bg);color:var(--blue);padding:2px 8px;border-radius:20px;font-weight:600;}
 .xcard .rc-b{padding:0.8rem 0.9rem;}
+.gwarn{background:#FFF7ED;border:1.5px solid #FDBA74;color:#9A3412;border-radius:12px;padding:0.6rem 0.75rem;font-size:0.74rem;line-height:1.45;margin:0 0 0.8rem;}
+.gwarn a{color:#C2410C;font-weight:700;}
 .xcorrs{margin:-0.2rem 0 0.5rem;display:flex;flex-direction:column;gap:0.15rem;}
 .xcorr{font-size:0.7rem;color:var(--orange);text-decoration:none;}
 .askq .rc-b{padding:0.9rem;}
@@ -1363,7 +1365,9 @@ function googleFullRoute(pts,optimize){
       'X-Goog-FieldMask':'routes.distanceMeters,routes.duration,routes.description,routes.polyline.encodedPolyline,routes.travelAdvisory.tollInfo,routes.optimizedIntermediateWaypointIndex,routes.legs.distanceMeters,routes.legs.duration'},
     body:JSON.stringify(body)
   }).then(function(r){return r.json();}).then(function(d){
+    if(d&&d.error){window._gErr=(d.error.status||'')+' '+(d.error.message||'');}
     if(!d||!d.routes||!d.routes[0])return null;
+    window._gErr=null;
     var rt=d.routes[0];
     var km=rt.distanceMeters?Math.round(rt.distanceMeters/1000):0;
     var durSec=rt.duration?parseInt(String(rt.duration).replace('s',''),10):0;
@@ -2786,7 +2790,7 @@ document.addEventListener('click',function(ev){
 });
 
 /* ═══ CALCULATOR ═══ */
-var CC={'gabhana':[28.0492,77.9610],'hindon':[28.7077,77.3586],'salasar balaji':[27.6090,74.7271],'salasar dham':[27.6090,74.7271],'jeen mata':[27.4442,75.1945],'bulandshahr':[28.4070,77.8498],'khurja':[28.2536,77.8556],'sikandrabad':[28.4500,77.7000],'anupshahr':[28.3600,78.2700],'jewar':[28.1200,77.5600],'delhi':[28.6139,77.2090],'noida':[28.5355,77.3910],'ghaziabad':[28.6692,77.4538],'agra':[27.1767,78.0081],'mathura':[27.4924,77.6737],'vrindavan':[27.5650,77.6593],'govardhan':[27.4969,77.4636],'goverdhan':[27.4969,77.4636],'barsana':[27.6463,77.3766],'gokul':[27.4380,77.7170],'nandgaon':[27.7167,77.3833],'aligarh':[27.8974,78.0880],'meerut':[28.9845,77.7064],'jaipur':[26.9124,75.7873],'khatu shyam':[27.3964,75.3997],'khatu':[27.3964,75.3997],'salasar':[27.6090,74.7271],'ranisati':[28.1353,75.4036],'rani sati':[28.1353,75.4036],'ranisati dadi':[28.1353,75.4036],'rani sati dadi':[28.1353,75.4036],'jhunjhunu':[28.1290,75.3998],'pushkar':[26.4899,74.5511],'ajmer':[26.4499,74.6399],'nathdwara':[24.9387,73.8231],'sawariya seth':[24.6600,74.4000],'sanwariya seth':[24.6600,74.4000],'sawariya':[24.6600,74.4000],'sanwariya':[24.6600,74.4000],'sanwaliya ji':[24.6600,74.4000],'sanwaliya':[24.6600,74.4000],'sanwariya ji':[24.6600,74.4000],'mandphiya':[24.6600,74.4000],'mandfiya':[24.6600,74.4000],'chittorgarh':[24.8800,74.6300],'bhilwara':[25.3463,74.6364],'haridwar':[29.9457,78.1642],'rishikesh':[30.0869,78.2676],'dehradun':[30.3165,78.0322],'katra':[32.9916,74.9319],'vaishno devi':[33.0299,74.9490],'varanasi':[25.3176,82.9739],'ayodhya':[26.7922,82.1998],'lucknow':[26.8467,80.9462],'kanpur':[26.4499,80.3319],'mumbai':[19.0760,72.8777],'shirdi':[19.7645,74.4769],'gwalior':[26.2183,78.1828],'ujjain':[23.1765,75.7885],'amritsar':[31.6340,74.8723],'shimla':[31.1048,77.1734],'manali':[32.2396,77.1887],'chandigarh':[30.7333,76.7794],'mehandipur':[26.8000,76.5500],'mehandipur balaji':[26.8000,76.5500],'sambhar':[26.9100,75.1900],'deshnok':[27.7990,73.3410],'karni mata':[27.7990,73.3410],'bikaner':[28.0229,73.3119],'jodhpur':[26.2389,73.0243],'udaipur':[24.5854,73.7125],'kota':[25.2138,75.8648],'bharatpur':[27.2152,77.5030],'deeg':[27.4710,77.3250],'fatehpur sikri':[27.0940,77.6610],'sikandra':[27.2210,77.9500],'kasganj':[27.8090,78.6470],'etah':[27.5580,78.6620],'hathras':[27.5950,78.0530],'firozabad':[27.1591,78.3958],'moradabad':[28.8386,78.7733],'rampur':[28.7900,79.0250],'bareilly':[28.3670,79.4304],'badrinath':[30.7433,79.4938],'kedarnath':[30.7346,79.0669],'gangotri':[30.9947,78.9398],'yamunotri':[31.0118,78.4600],'dwarka':[22.2442,68.9685],'somnath':[20.8880,70.4010],'tirupati':[13.6288,79.4192]};
+var CC={'gurgaon':[28.4595,77.0266],'faridabad':[28.4089,77.3178],'manesar':[28.3570,76.9380],'rewari':[28.1970,76.6170],'sonipat':[28.9931,77.0151],'kundli':[28.8720,77.1200],'bahadurgarh':[28.6925,76.9350],'ballabhgarh':[28.3410,77.3200],'gabhana':[28.0492,77.9610],'hindon':[28.7077,77.3586],'salasar balaji':[27.6090,74.7271],'salasar dham':[27.6090,74.7271],'jeen mata':[27.4442,75.1945],'bulandshahr':[28.4070,77.8498],'khurja':[28.2536,77.8556],'sikandrabad':[28.4500,77.7000],'anupshahr':[28.3600,78.2700],'jewar':[28.1200,77.5600],'delhi':[28.6139,77.2090],'noida':[28.5355,77.3910],'ghaziabad':[28.6692,77.4538],'agra':[27.1767,78.0081],'mathura':[27.4924,77.6737],'vrindavan':[27.5650,77.6593],'govardhan':[27.4969,77.4636],'goverdhan':[27.4969,77.4636],'barsana':[27.6463,77.3766],'gokul':[27.4380,77.7170],'nandgaon':[27.7167,77.3833],'aligarh':[27.8974,78.0880],'meerut':[28.9845,77.7064],'jaipur':[26.9124,75.7873],'khatu shyam':[27.3964,75.3997],'khatu':[27.3964,75.3997],'salasar':[27.6090,74.7271],'ranisati':[28.1353,75.4036],'rani sati':[28.1353,75.4036],'ranisati dadi':[28.1353,75.4036],'rani sati dadi':[28.1353,75.4036],'jhunjhunu':[28.1290,75.3998],'pushkar':[26.4899,74.5511],'ajmer':[26.4499,74.6399],'nathdwara':[24.9387,73.8231],'sawariya seth':[24.6600,74.4000],'sanwariya seth':[24.6600,74.4000],'sawariya':[24.6600,74.4000],'sanwariya':[24.6600,74.4000],'sanwaliya ji':[24.6600,74.4000],'sanwaliya':[24.6600,74.4000],'sanwariya ji':[24.6600,74.4000],'mandphiya':[24.6600,74.4000],'mandfiya':[24.6600,74.4000],'chittorgarh':[24.8800,74.6300],'bhilwara':[25.3463,74.6364],'haridwar':[29.9457,78.1642],'rishikesh':[30.0869,78.2676],'dehradun':[30.3165,78.0322],'katra':[32.9916,74.9319],'vaishno devi':[33.0299,74.9490],'varanasi':[25.3176,82.9739],'ayodhya':[26.7922,82.1998],'lucknow':[26.8467,80.9462],'kanpur':[26.4499,80.3319],'mumbai':[19.0760,72.8777],'shirdi':[19.7645,74.4769],'gwalior':[26.2183,78.1828],'ujjain':[23.1765,75.7885],'amritsar':[31.6340,74.8723],'shimla':[31.1048,77.1734],'manali':[32.2396,77.1887],'chandigarh':[30.7333,76.7794],'mehandipur':[26.8000,76.5500],'mehandipur balaji':[26.8000,76.5500],'sambhar':[26.9100,75.1900],'deshnok':[27.7990,73.3410],'karni mata':[27.7990,73.3410],'bikaner':[28.0229,73.3119],'jodhpur':[26.2389,73.0243],'udaipur':[24.5854,73.7125],'kota':[25.2138,75.8648],'bharatpur':[27.2152,77.5030],'deeg':[27.4710,77.3250],'fatehpur sikri':[27.0940,77.6610],'sikandra':[27.2210,77.9500],'kasganj':[27.8090,78.6470],'etah':[27.5580,78.6620],'hathras':[27.5950,78.0530],'firozabad':[27.1591,78.3958],'moradabad':[28.8386,78.7733],'rampur':[28.7900,79.0250],'bareilly':[28.3670,79.4304],'badrinath':[30.7433,79.4938],'kedarnath':[30.7346,79.0669],'gangotri':[30.9947,78.9398],'yamunotri':[31.0118,78.4600],'dwarka':[22.2442,68.9685],'somnath':[20.8880,70.4010],'tirupati':[13.6288,79.4192]};
 /* ── EXTRA PLACES + COMMON SPELLING VARIANTS ──
    Operators type place names phonetically (jhangirabad / jahangirabad,
    mehandipur / mehendipur). Every variant maps to the same real coords. */
@@ -3637,6 +3641,19 @@ function auditDistanceConsistency(){
   }catch(e){}
   return true;
 }
+/* The line under "Toll tax" must describe the number next to it — it used
+   to be written once at first paint ("no NHAI route match, using estimate")
+   and never updated when real plazas were found. */
+function tollFormulaText(c,total){
+  if(c.tollSource==='google')return 'Google toll for a car, scaled ×'+(NHAI_CLASS_MULT[c.vtype]||1)+' to the '+VTYPE_LABEL[c.vtype]+' NHAI class';
+  if(c.tollSource==='learned')return 'Your own saved figure for this exact route and vehicle';
+  if(c.tollPlazaList&&c.tollPlazaList.length){
+    var named=c.tollPlazaList.slice(0,3).map(function(x){return x.name+' ₹'+x.amt;}).join(' · ');
+    var more=c.tollPlazaList.length>3?(' +'+(c.tollPlazaList.length-3)+' more'):'';
+    return c.tollPlazaList.length+' plaza'+(c.tollPlazaList.length>1?'s':'')+(c.tollFullTrip?' (whole trip)':'')+': '+named+more;
+  }
+  return total+' km × ₹'+c.tollPerKm+'/km — estimate, no plaza data for this road';
+}
 function renderTripSummary(el,c,p,ordered,total){
   var host=document.getElementById('tripSummaryHost');
   if(!host){
@@ -4145,7 +4162,7 @@ function tollChain(ordered,vtype,isRound,googleCarToll,totalKm,routePoly){
          /* Never accept an API answer that sees FEWER plazas than the national
             table does on the same road — that is how a plaza goes missing. */
          if(r&&routePoly&&routePoly.length>1){
-           var local=computeRouteToll(routePoly,vtype,isRound);
+           var local=computeRouteToll(routePoly,vtype,isRound,true);
            var apiCount=(r.plazas||[]).length;
            if(local&&local.count>apiCount){
              audit('toll_api',false,'API matched '+apiCount+' plaza(s), national table matched '+local.count+' — using the table');
@@ -4159,7 +4176,7 @@ function tollChain(ordered,vtype,isRound,googleCarToll,totalKm,routePoly){
      run:function(){
        if(!routePoly||routePoly.length<2)return null;
        return withTimeout(_plazaDbReady,5000).then(function(){
-       var r=computeRouteToll(routePoly,vtype,isRound);
+       var r=computeRouteToll(routePoly,vtype,isRound,true);
        /* Only accept the engine's answer when it found a credible number of
           plazas spanning a real portion of the route. A single plaza matched on
           a 700 km trip is not a toll total, it is a fragment - and presenting a
@@ -4468,6 +4485,12 @@ function renderTripDrawer(){
       persistTrips();renderTripDrawer();
     });
   });
+}
+/* "Fix" on the no-Google warning: open the drawer straight at the key box. */
+function openAccuracySettings(){
+  openTripDrawer();
+  var b=document.getElementById('gkeyBox');if(b)b.style.display='block';
+  var i=document.getElementById('gkeyInput');if(i)setTimeout(function(){i.focus();},250);
 }
 function openTripDrawer(){
   renderTripDrawer();
@@ -5304,31 +5327,42 @@ function pointToSegKm(p,a,b){
 function matchPlazasToRoute(poly,tolKm){
   if(!poly||poly.length<2)return [];
   tolKm=tolKm||1.2;
-  // coarse bounding box first so we only test plazas near the route at all
   var minLat=90,maxLat=-90,minLng=180,maxLng=-180;
   poly.forEach(function(pt){
     if(pt[0]<minLat)minLat=pt[0];if(pt[0]>maxLat)maxLat=pt[0];
     if(pt[1]<minLng)minLng=pt[1];if(pt[1]>maxLng)maxLng=pt[1];
   });
-  var pad=0.25;
-  var hits=[];
+  var cum=[0];
+  for(var k=1;k<poly.length;k++)cum.push(cum[k-1]+hav(poly[k-1],poly[k]));
+  var pad=0.25,hits=[];
   PLAZA_DB.forEach(function(pz){
     if(pz.lat<minLat-pad||pz.lat>maxLat+pad||pz.lng<minLng-pad||pz.lng>maxLng+pad)return;
-    var best=1e9,bestIdx=0;
+    /* A route can cross the same plaza more than once (out and back on the
+       same highway). Each separate pass — more than 5 km of driving apart —
+       is a separate charge. */
+    var pass=null;
     for(var i=0;i<poly.length-1;i++){
       var d=pointToSegKm([pz.lat,pz.lng],poly[i],poly[i+1]);
-      if(d<best){best=d;bestIdx=i;}
-      if(best<0.05)break;
+      if(d>tolKm)continue;
+      if(pass&&cum[i]-cum[pass.last]<=5){
+        pass.last=i;if(d<pass.dist){pass.dist=d;pass.at=i;}
+      }else{
+        if(pass)hits.push({pz:pz,dist:pass.dist,at:pass.at});
+        pass={dist:d,at:i,last:i};
+      }
     }
-    if(best<=tolKm)hits.push({pz:pz,dist:best,at:bestIdx});
+    if(pass)hits.push({pz:pz,dist:pass.dist,at:pass.at});
   });
-  // order plazas along the direction of travel
   hits.sort(function(a,b){return a.at-b.at;});
   return hits;
 }
 /* Full toll for a route polyline and vehicle class. Returns the matched
    plazas, the total, and an honest coverage figure. */
-function computeRouteToll(poly,vtype,isRound){
+/* fullTrip=true: the polyline already covers the whole journey, return leg
+   included, so every pass is counted and nothing is doubled. Doubling a
+   one-way figure is only right for a one-way polyline. (RCA Sep 2026:
+   Khurja–Aurangabad–Gurugram round trip doubled a full-loop toll.) */
+function computeRouteToll(poly,vtype,isRound,fullTrip){
   var hits=matchPlazasToRoute(poly);
   if(!hits.length)return null;
   var cls=(vtype==='cab')?'car':(vtype==='suv')?'suv':(vtype==='tempo')?'tempo':(vtype==='minibus')?'minibus':'bus';
@@ -5338,14 +5372,14 @@ function computeRouteToll(poly,vtype,isRound){
            lat:h.pz.lat,lng:h.pz.lng,offRouteKm:Math.round(h.dist*1000)/1000};
   });
   var oneWay=plazas.reduce(function(s,x){return s+x.amt;},0);
-  var total=isRound?oneWay*2:oneWay;
+  var total=(isRound&&!fullTrip)?oneWay*2:oneWay;
   /* Coverage: how much of the route length sits between the first and last
      matched plaza. Low coverage means whole stretches have no plaza data,
      and the operator is told rather than left to assume completeness. */
   var span=hits.length?((hits[hits.length-1].at-hits[0].at)/Math.max(1,poly.length-1)):0;
   return{amount:total,plazas:plazas,roads:plazas.map(function(x){return x.hw;})
            .filter(function(v,i,a){return v&&a.indexOf(v)===i;}),
-         coverage:Math.round(span*100),count:plazas.length,exact:true};
+         coverage:Math.round(span*100),count:plazas.length,exact:true,fullTrip:!!fullTrip};
 }
 var NHAI_PLAZAS={
   // ===== YAMUNA EXPRESSWAY (closed system; Greater Noida→Agra, covers Mathura/Vrindavan) =====
@@ -5553,7 +5587,7 @@ function drawRouteMap(ordered,isRet){
             return '<span style="font-size:0.63rem;background:var(--cream2,#F5F1E8);border-radius:8px;padding:2px 7px;white-space:nowrap">'+
               '<b style="color:#0EA5E9">'+z.n+'</b> '+(z.name||'Plaza').replace(/\s*\(.*?\)\s*/g,' ').trim()+' <b>₹'+z.amt+'</b></span>';
           }).join('')+'</div>'+
-          '<div style="font-size:0.63rem;color:var(--t3);margin-top:0.35rem">Total of listed plazas: <b>₹'+legTotal.toLocaleString()+'</b> (one way) · tap any dot on the map for details</div>';
+          '<div style="font-size:0.63rem;color:var(--t3);margin-top:0.35rem">Total of listed plazas: <b>₹'+legTotal.toLocaleString()+'</b> ('+(c.tollFullTrip?'whole trip':'one way')+') · tap any dot on the map for details</div>';
       }
     }catch(e){}
     _routeMap.fitBounds(line.getBounds(),{padding:[30,30]});
@@ -5870,28 +5904,13 @@ function renderCalcResult(p,ordered,legs,retKm,total,c){
       '</select></div></div>'+
     // FUEL
     '<div class="cost-line"><div class="cl-label">⛽ Fuel</div>'+
-      '<div class="cl-formula">'+total+' km ÷ <input class="ci" id="ed-mileage" value="'+c.mileage+'"> km/L × ₹<input class="ci" id="ed-fuel" value="'+c.fuel+'">/L = <b>'+c.litres+' L</b></div>'+
+      '<div class="cl-formula"><span id="fuelKm">'+total+'</span> km ÷ <input class="ci" id="ed-mileage" value="'+c.mileage+'"> km/L × ₹<input class="ci" id="ed-fuel" value="'+c.fuel+'">/L = <b id="fuelL">'+c.litres+' L</b></div>'+
       '<div class="cl-amt" id="amt-fuel">₹'+c.fuelCost.toLocaleString()+'</div></div>'+
     // TOLL — real NHAI plaza data when available, else per-km estimate
     '<div class="cost-line"><div class="cl-label">🪙 Toll tax'+
       (c.tollSource==='learned'?' <span class="toll-badge nhai" id="tollBadge">★ your saved rate</span>':(c.tollSource==='google'?' <span class="toll-badge nhai" id="tollBadge">✓ Google</span>':(c.tollSource==='nhai'?' <span class="toll-badge nhai" id="tollBadge">✓ NHAI</span>':(c.tollSource==='mixed'?' <span class="toll-badge mixed" id="tollBadge">NHAI+est</span>':' <span class="toll-badge est" id="tollBadge">est.</span>'))))+
       '</div>'+
-      '<div class="cl-formula">'+
-        (function(){
-          /* When the figure came from Google, do NOT print the NHAI plaza list —
-             that list did not produce this number, and showing it implies a
-             precision the figure does not have. */
-          if(c.tollSource==='google'){
-            return 'Google toll for a car, scaled ×'+(NHAI_CLASS_MULT[c.vtype]||1)+' to the '+VTYPE_LABEL[c.vtype]+' NHAI class';
-          }
-          if(c.tollSource==='learned'){return 'Your own saved figure for this exact route and vehicle';}
-          if(c.tollPlazaList&&c.tollPlazaList.length){
-            var named=c.tollPlazaList.slice(0,3).map(function(x){return x.name+' ₹'+x.amt;}).join(' · ');
-            var more=c.tollPlazaList.length>3?(' +'+(c.tollPlazaList.length-3)+' more'):'';
-            return 'Real plazas: '+named+more+(c.tollSource==='mixed'?' + estimate for rest':'');
-          }
-          return total+' km × ₹'+c.tollPerKm+'/km ('+VTYPE_LABEL[c.vtype]+') — no NHAI route match, using estimate';
-        })()+
+      '<div class="cl-formula"><span id="tollFormula">'+tollFormulaText(c,total)+'</span>'+
         '<br><a href="#" id="tollDetailBtn" style="font-size:0.68rem;color:var(--purple,#6D28D9);font-weight:700;text-decoration:underline">See all tolls →</a>'+
       '</div>'+
       '<div class="cl-amt"><span>₹</span><input class="ci ci-amt" id="ed-toll" value="'+c.tollCost+'"></div></div>'+
@@ -5939,6 +5958,9 @@ function renderCalcResult(p,ordered,legs,retKm,total,c){
         document.getElementById('ed-toll').value=googleTollForClass(c.googleCarToll,vt);
         var tbg=document.getElementById('tollBadge');
         if(tbg){tbg.textContent=vt==='cab'?'✓ Google':'✓ Google × NHAI class';tbg.className='toll-badge nhai';}
+      }else if(c.routePoly&&c.routePoly.length>1&&c.tollPlazaList&&c.tollPlazaList.length){
+        var rt2=computeRouteToll(c.routePoly,vt,!!p.isRet||(retKm>0),true);
+        if(rt2){document.getElementById('ed-toll').value=rt2.amount;c.tollPlazaList=rt2.plazas;}
       }else{
         var isRound2=!!p.isRet||(retKm>0);
         var nh=computeNhaiToll(ordered,vt,isRound2);
@@ -5960,6 +5982,9 @@ function renderCalcResult(p,ordered,legs,retKm,total,c){
     var profitInput=+document.getElementById('profitPct').value||0;
     var litres=Math.round(liveTotal/mileage);
     var fuelCost=Math.round(litres*fuel);
+    var fk=document.getElementById('fuelKm');if(fk)fk.textContent=liveTotal;
+    var fl=document.getElementById('fuelL');if(fl)fl.textContent=litres+' L';
+    var tf=document.getElementById('tollFormula');if(tf)tf.innerHTML=tollFormulaText(c,liveTotal);
     var driverCost=days*driverDay;
     var base=fuelCost+tollCost+driverCost+stateTax+parking+misc;
     // profit: percent OR absolute value
@@ -6076,6 +6101,17 @@ function renderCalcResult(p,ordered,legs,retKm,total,c){
          in PROVENANCE for the sources card. */
       distanceChain(pts,total).then(function(dres){
         var d=dres.value;
+        /* Google is the only source that routes the way operators drive (it
+           knows traffic and which roads buses actually take). When it is not
+           used, the quote must say so — OSRM picks the shortest road, which
+           can be a tolled expressway detour. */
+        if(dres.tier!=='1'){
+          var why=!GKEY?'No Google Maps key on this site':('Google Maps error: '+String(window._gErr||'no answer').slice(0,90));
+          var wn=document.createElement('div');wn.className='gwarn';
+          wn.innerHTML='⚠ <b>'+why+'.</b> Distance, route and tolls are from free OpenStreetMap and can differ from Google Maps. <a href="#" class="gwarn-fix">Fix</a>';
+          el.insertBefore(wn,el.children[1]||null);
+          wn.querySelector('.gwarn-fix').addEventListener('click',function(e){e.preventDefault();try{openAccuracySettings();}catch(er){showToast('Menu → Accuracy settings → Google API key');}});
+        }
         if(!d||!d.km){audit('real_km',false,'all distance sources unavailable');return;}
         var prevTotal=total,diffKm=d.km-prevTotal;
         liveTotal=d.km;
@@ -6135,6 +6171,10 @@ function renderCalcResult(p,ordered,legs,retKm,total,c){
           if(d.legs.length===expectedLegCount){
             legs=d.legs.slice(0,ordered.length-1).map(function(lg){return lg.km;});
             if(p.isRet)retKm=d.legs[d.legs.length-1].km;
+            /* each leg is rounded separately (35+121+118=274 vs 275 total):
+               give the rounding difference to the last leg so they add up */
+            var legSum=legs.reduce(function(a,b){return a+b;},0)+(p.isRet?retKm:0);
+            if(legSum!==d.km){if(p.isRet)retKm+=d.km-legSum;else legs[legs.length-1]+=d.km-legSum;}
             var tpCard=document.getElementById('tourPlanCard');
             if(tpCard){tpCard.innerHTML=buildTourPlanHTML(p,ordered,legs,retKm,c);wireLegOptions(tpCard,p,ordered,legs,retKm,c,function(nt){liveTotal=nt;recalc();});}
           }
@@ -6153,6 +6193,8 @@ function renderCalcResult(p,ordered,legs,retKm,total,c){
             c.tollRateVersion=t.rateVersion||null;
             c.tollCoverage=(t.coveragePct!=null)?t.coveragePct:(t.coverage!=null?t.coverage:null);
             if(t.plazas&&t.plazas.length)c.tollPlazaList=t.plazas;
+            c.tollFullTrip=!!t.fullTrip;
+            var tf2=document.getElementById('tollFormula');if(tf2)tf2.innerHTML=tollFormulaText(c,d.km);
             if(t.roads&&t.roads.length)c.routeRoads=t.roads;
             window._tollPlazasForMap=(t.plazas||[]).filter(function(z){return z.lat!=null;});
             if(window._fhCal){window._fhCal.toll=t.amount;refreshAltRoutes();}

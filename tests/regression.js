@@ -156,6 +156,18 @@ console.log('\n[5] Rajasthan circuit enquiry');
     check('Luharali matched on the GT Road (NH-34) corridor', !!(t && t.plazas.some(z => /luhar/i.test(z.name))), true);
     check('national plaza table loaded (1,000+ plazas)', w.eval('PLAZA_DB.length') > 1000, true);
     check('hand-verified Yamuna Expwy plazas kept', w.eval("PLAZA_DB.some(function(z){return z.id==='ye_jewar';})"), true);
+    /* RCA Sep 2026: round-trip toll doubled a polyline that already had the return leg */
+    const out = [[28.451,77.695],[28.552,77.553]], back = [[28.552,77.553],[28.451,77.695]];
+    const loopSame = out.concat(back.slice(1));                       // out and back on NH-34
+    const loopOther = out.concat([[28.40,77.40],[28.30,77.60],[28.451,77.695]]); // return on another road
+    const lu = z => /luhar/i.test(z.name);
+    check('full-trip polyline, same road back: Luharali charged twice',
+      w.computeRouteToll(loopSame,'bus',true,true).plazas.filter(lu).length, 2);
+    check('full-trip polyline, other road back: Luharali charged once',
+      w.computeRouteToll(loopOther,'bus',true,true).plazas.filter(lu).length, 1);
+    const oneWay = w.computeRouteToll(out,'bus',true,false), fullT = w.computeRouteToll(loopSame,'bus',true,true);
+    check('one-way polyline + round trip = doubled; equals the full-trip count', oneWay.amount, fullT.amount);
+    check('NCR hubs are verified places (Gurgaon was missing)', w.eval("['gurgaon','faridabad','noida','ghaziabad','delhi'].every(function(k){return !!CC[k];})"), true);
     check('"mehandipur balaji" still resolves', dom.window.parseTrip('khurja se mehandipur balaji').cities, ['khurja','mehendipur balaji']);
     dom.window.close();
   }
