@@ -136,6 +136,10 @@ console.log('\n[5] Rajasthan circuit enquiry');
     check('stops parsed', r.cities, ['khurja','khatu shyam','salasar','jeen mata','jaipur','pushkar','vrindavan']);
     check('"vapis khurja" = round trip', r.isRet, true);
     check('seats', r.seats, 54);
+    check('Ghabhana spelling → Gabhana, "hindon ghaziabad" = one stop',
+      dom.window.parseTrip('Ghabhana se hindon ghaziabad Traveller 20 seater').cities, ['gabhana','hindon']);
+    check('locality + city = one stop', dom.window.parseTrip('Gabhana se raj nagar ghaziabad').cities, ['gabhana','raj nagar']);
+    checkTrue('unlocated stop stops the quote (no silent drop)', /askPlaceChoice\(stillMissing\[0\],null,function\(\)\{runCalc\(\);\}\);\s*return;/.test(html));
     check('"mehandipur balaji" still resolves', dom.window.parseTrip('khurja se mehandipur balaji').cities, ['khurja','mehendipur balaji']);
     dom.window.close();
   }
