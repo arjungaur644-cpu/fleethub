@@ -109,8 +109,14 @@ console.log('\n[4] Toll constants');
     const M = eval('(' + multMatch[0].replace(/^var NHAI_CLASS_MULT=/, '') + ')');
     check('car multiplier is 1.0 (baseline)', M.cab, 1.0);
     checkTrue('bus multiplier in NHAI band 3.0-4.0', M.bus >= 3.0 && M.bus <= 4.0, `got ${M.bus}`);
-    checkTrue('multipliers increase with vehicle size',
-      M.cab < M.suv && M.suv < M.tempo && M.tempo < M.minibus && M.minibus < M.bus);
+    /* RCA Sep 2026: NH Fee Rules 2008 Rule 4(2) has ONE rate for Car/Jeep/Van
+       (SUVs register as this class) and ONE rate for LCV/Mini Bus (covers
+       both "tempo" and "minibus" here) -- confirmed against all 1,235 real
+       plaza rates (suv==car and tempo==minibus in every single one), so
+       these two pairs must be EQUAL, not stepped, in the estimate fallback. */
+    check('suv shares the car/jeep/van class (Rule 4(2), and 1235/1235 real plazas)', M.suv, M.cab);
+    check('minibus shares the tempo/LCV class (Rule 4(2), and 1235/1235 real plazas)', M.minibus, M.tempo);
+    checkTrue('multipliers increase with vehicle size', M.cab <= M.suv && M.suv < M.tempo && M.tempo <= M.minibus && M.minibus < M.bus);
   }
   const perKm = html.match(/var TOLL_PER_KM_CAR=([\d.]+)/);
   checkTrue('per-km fallback rate is plausible (Rs1-3/km for a car)',
@@ -169,6 +175,24 @@ console.log('\n[5] Rajasthan circuit enquiry');
     check('one-way polyline + round trip = doubled; equals the full-trip count', oneWay.amount, fullT.amount);
     check('NCR hubs are verified places (Gurgaon was missing)', w.eval("['gurgaon','faridabad','noida','ghaziabad','delhi'].every(function(k){return !!CC[k];})"), true);
     check('"mehandipur balaji" still resolves', dom.window.parseTrip('khurja se mehandipur balaji').cities, ['khurja','mehendipur balaji']);
+    /* Every plaza sourced from NHAI's own table (id "nhai_<TollPlazaID>") should
+       carry a live tis.nhai.gov.in verify link so an operator can check FleetHub's
+       number against the government source itself, not just trust it. */
+    check('NHAI verify-URL helper builds the real tis.nhai.gov.in link',
+      w.nhaiVerifyUrl({id:'nhai_200'}), 'https://tis.nhai.gov.in/TollInformation?TollPlazaID=200');
+    check('non-NHAI (community) plazas get no fabricated verify link',
+      w.nhaiVerifyUrl({id:'ye_jewar'}), null);
+    const tNh34 = w.computeRouteToll(nh34, 'bus', false);
+    check('matched route plazas carry a working NHAI verify link',
+      tNh34.plazas.every(z => !z.nhaiUrl || /^https:\/\/tis\.nhai\.gov\.in\/TollInformation\?TollPlazaID=\d+$/.test(z.nhaiUrl)), true);
+    check('at least one NH-34 plaza in this test route resolves to a real NHAI id',
+      tNh34.plazas.some(z => !!z.nhaiId), true);
+    /* RCA Sep 2026: user asked for the official government roster to be used
+       for coverage auditing, not just the community-merged priced table. */
+    const roster = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'data', 'nh_official_roster.json'), 'utf8'));
+    check('official NHAI roster loaded (1,200+ plazas, identity only)', roster.plazas.length > 1200, true);
+    check('roster entries carry state + highway for coverage auditing',
+      roster.plazas.every(r => 'state' in r && 'nh' in r), true);
     dom.window.close();
   }
 }

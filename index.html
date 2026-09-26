@@ -1334,7 +1334,20 @@ function googleGeocode(place){
    than a best case. It remains an ASSUMPTION — the app says so wherever it is
    used, and a TollGuru key replaces it with real plaza data. */
 var TOLL_PER_KM_CAR=1.75;
-var NHAI_CLASS_MULT={cab:1.0,suv:1.5,tempo:2.1,minibus:2.6,bus:3.4};
+/* Vehicle-class multipliers, straight from the law, not a guess.
+   National Highways Fee (Determination of Rates and Collection) Rules,
+   2008, Rule 4(2) sets base rate per km by class (2007-08, Rs/km):
+     Car/Jeep/Van/LMV ......................... 0.65  -> 1.00x (baseline)
+     LCV/Light Goods Vehicle/Mini Bus ......... 1.05  -> 1.615x
+     Bus or Truck (2-axle) .................... 2.20  -> 3.385x
+   An SUV is registered as a "Car/Jeep/Van" under the Motor Vehicles Act,
+   so it shares the car class -- and "tempo" (LCV) and "minibus" share ONE
+   rule-4(2) row, not two. Checked against all 1,235 real plaza rates in
+   data/plazas.json: suv==car in 1235/1235 plazas, tempo==minibus in
+   1235/1235 -- so this isn't just the law on paper, it's what NHAI
+   actually charges everywhere. (Ratios stay valid across the annual WPI
+   revision in Rule 5(3), since every class is scaled by the same factor.) */
+var NHAI_CLASS_MULT={cab:1.0,suv:1.0,tempo:1.615,minibus:1.615,bus:3.385};
 /* Same as fetch(), but if Google rejects the FASTag toll-pass option, retry
    once without it so distance and time never fail because of the toll ask. */
 function googleRoutesFetch(url,opts){
@@ -3705,9 +3718,11 @@ function showTollDetail(c,ordered,isRound,kmUsed){
   ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;display:flex;align-items:flex-end;justify-content:center';
   var rows=plazas.length?plazas.map(function(x){
     var one=x.amt||0;
+    var verifyUrl=x.nhaiUrl||(x.id?nhaiVerifyUrl({id:x.id}):null);
     return '<div style="display:flex;gap:0.5rem;padding:0.5rem 0;border-bottom:1px solid var(--line);font-size:0.75rem">'+
       '<div style="flex:1"><b>🅣 '+(x.name||'Plaza')+'</b>'+
-      ((x.hw||x.state)?'<div style="font-size:0.64rem;color:var(--t3)">'+[x.hw,x.state].filter(Boolean).join(' · ')+'</div>':'')+'</div>'+
+      ((x.hw||x.state)?'<div style="font-size:0.64rem;color:var(--t3)">'+[x.hw,x.state].filter(Boolean).join(' · ')+'</div>':'')+
+      (verifyUrl?'<div style="font-size:0.64rem;margin-top:0.15rem"><a href="'+verifyUrl+'" target="_blank" rel="noopener" style="color:var(--accent,#2563eb);text-decoration:none">✓ Verify on NHAI ↗</a></div>':'')+'</div>'+
       '<div style="text-align:right;white-space:nowrap">₹'+one.toLocaleString()+
       (x.cash&&x.cash!==one?'<div style="font-size:0.62rem;color:var(--t3)">cash ₹'+x.cash.toLocaleString()+'</div>':'')+
       (isRound?'<div style="font-size:0.63rem;color:var(--t3)">×2 both ways</div>':'<div style="font-size:0.63rem;color:var(--t3)">one way</div>')+
@@ -5488,6 +5503,20 @@ function matchPlazasToRoute(poly,tolKm){
    included, so every pass is counted and nothing is doubled. Doubling a
    one-way figure is only right for a one-way polyline. (RCA Sep 2026:
    Khurja–Aurangabad–Gurugram round trip doubled a full-loop toll.) */
+/* Every NHAI-sourced plaza in data/plazas.json carries its real
+   tis.nhai.gov.in TollPlazaID inside id ("nhai_1088" -> 1088). That page is
+   NHAI's own live, government rate table for that exact plaza, so it's the
+   one link an operator (or Arjun) can click to check FleetHub's number
+   against the root source itself — not a re-derived figure from us. */
+function nhaiIdOf(pz){
+  if(!pz||!pz.id)return null;
+  var m=/^nhai_(\d+)$/.exec(pz.id);
+  return m?m[1]:null;
+}
+function nhaiVerifyUrl(pz){
+  var id=nhaiIdOf(pz);
+  return id?('https://tis.nhai.gov.in/TollInformation?TollPlazaID='+id):null;
+}
 function computeRouteToll(poly,vtype,isRound,fullTrip){
   var hits=matchPlazasToRoute(poly);
   if(!hits.length)return null;
@@ -5495,7 +5524,8 @@ function computeRouteToll(poly,vtype,isRound,fullTrip){
   var plazas=hits.map(function(h){
     var rate=h.pz[cls]||h.pz.car||0;
     return{name:h.pz.name,hw:h.pz.hw,state:h.pz.st,amt:rate,cash:Math.round(rate*1.05),
-           lat:h.pz.lat,lng:h.pz.lng,offRouteKm:Math.round(h.dist*1000)/1000};
+           lat:h.pz.lat,lng:h.pz.lng,offRouteKm:Math.round(h.dist*1000)/1000,
+           nhaiId:nhaiIdOf(h.pz),nhaiUrl:nhaiVerifyUrl(h.pz)};
   });
   var oneWay=plazas.reduce(function(s,x){return s+x.amt;},0);
   var total=(isRound&&!fullTrip)?oneWay*2:oneWay;

@@ -1,5 +1,124 @@
 # FleetHub — Version History
 
+## v3.7 — Primary law read; SUV/minibus multiplier bug fixed (Sep 2026)
+
+**Ask:** stop trusting secondhand summaries of how toll is calculated —
+read the actual law and rebuild the estimate engine on it.
+
+**What was supplied:** the full National Highways Fee (Determination of
+Rates and Collection) Rules, 2008 (with every amendment footnote through
+2026), the Ministry's own "Formula for Toll Collection" PIB press release,
+and the April 2026 Fourth Amendment gazette notification (overloading fee
+via FASTag/UPI — recorded but not wired in; FleetHub doesn't model
+overload weight).
+
+**What it found — a real bug:** Rule 4(2) sets ONE base rate for the
+"Car/Jeep/Van/Light Motor Vehicle" class and ONE for "Light Commercial
+Vehicle/Light Goods Vehicle/Mini Bus" — there is no separate SUV or
+minibus row in the law (an SUV registers as a car under the Motor
+Vehicles Act). FleetHub's estimate-mode multipliers
+(`NHAI_CLASS_MULT` — only used when no real plaza is matched) had
+invented in-between values instead: `suv:1.5` and `minibus:2.6`, both
+wrong. Checked against all 1,235 real plaza rates already in
+`data/plazas.json`: **`suv == car` in 1235/1235 plazas, `tempo == minibus`
+in 1235/1235** — so this isn't a legal technicality, it's what NHAI
+actually charges everywhere, and the app's own real data already knew it.
+
+**Fixed:** `NHAI_CLASS_MULT` is now `{cab:1.0, suv:1.0, tempo:1.615,
+minibus:1.615, bus:3.385}` — the exact Rule 4(2) ratios, matching the
+2026 real-data ratios (suv/car = 1.000, tempo-minibus/car = 1.609–1.616,
+bus/car = 3.371–3.375) almost exactly. Every place in the app that reads
+this constant (toll-breakdown explainer, Google-scaling estimate, per-km
+fallback, live recalculation on vehicle-type change) picks it up
+automatically — no separate hardcoded copies existed.
+
+**Added:** `data/nh-fee-legal-basis.md` — the rule numbers, base rates,
+expressway multiplier (1.25x), exempt vehicle classes, and the Rule 5(3)
+annual-revision formula, as a permanent citation trail. The absolute
+rupee numbers still come from NHAI's own live-published rates (already in
+`data/plazas.json`) rather than FleetHub re-deriving 18 years of WPI
+compounding itself — the law is used here to validate the *ratios*
+between vehicle classes, which is what the estimate fallback needs and
+what the bug was in.
+
+2 regression tests replaced the old (accidentally-wrong) "multipliers
+strictly increase" assertion with the correct legal/empirical equalities.
+
+## v3.6 — Official NHAI roster loaded; real state-wise coverage (Sep 2026)
+
+**Ask:** load the official NH toll-plaza source list and use it to build a
+proper, auditable toll structure — not another guess at coverage.
+
+**What was supplied:** a government-format "National Highway (NH) Fee
+Plazas" master list (NETC Plaza Code, State, District, Section of Highway,
+NH no., PIU, NHAI Regional Office) — 1,221 rows, extracted cleanly from the
+PDF's own text layer (not OCR, so no transcription errors).
+
+**What shipped:**
+1. `data/nh_official_roster.json` — the cleaned 1,221-row roster, state
+   names normalised (fixed ALL-CAPS variants, "Panjab"→Punjab,
+   "Odisa"→Odisha, three rows where the source PDF had a district name
+   sitting in the State column). This is identity/location data only — no
+   rates — and is kept separate from `data/plazas.json` (the priced table)
+   so it can never silently zero-out a real toll.
+2. `scripts/coverage_report.py` — matches every roster plaza against the
+   priced table (same-state name match first, nationwide fallback second,
+   since the two datasets share no common ID) and prints real per-state
+   coverage. Re-run any time the priced table changes.
+3. **Real, computed coverage — not estimated:** 1,049 of 1,221 official
+   plazas (85.9%) are priced in FleetHub today. By state: Telangana,
+   West Bengal, Chhattisgarh, Jammu & Kashmir, Goa at 100%; Bihar 98%;
+   most major states 80–95%; weakest are Delhi (25% — mostly unpriced
+   Delhi-Meerut Expressway closed-loop plazas), Haryana (64%) and Gujarat
+   (75%). Full table in `scripts/coverage_report.py` output.
+4. `scripts/nh_fee_plazas_truly_missing.json` — the 172 roster plazas with
+   no priced match yet, as the worklist for the next rate-table expansion.
+2 new regression tests lock in that the roster loads and every row carries
+the fields coverage-auditing needs.
+
+## v3.5 — NHAI verify links: proving the toll source, plaza by plaza (Sep 2026)
+
+**Ask:** confirm the single root source everyone (Google, TollGuru, FleetHub)
+ultimately traces back to for Indian toll data, and give a concrete way to
+check any specific plaza against it.
+
+**Finding:** that root is NHAI itself — legally the National Highways Fee
+(Determination of Rates and Collection) Rules, 2008 (revised every April 1),
+operationally exposed live at `tis.nhai.gov.in`. Neither Google nor TollGuru
+claims an independent dataset; TollGuru's own site links back to NHAI's own
+portal rather than describing its own survey. FleetHub's plaza table was
+itself built from NHAI's own official raw export, so it shares that same
+root rather than a re-derived copy of it.
+
+**What shipped:**
+1. Every plaza already carried its real NHAI `TollPlazaID` inside its
+   internal id (`nhai_1088` → `1088`) — it just wasn't surfaced. Added
+   `nhaiIdOf()` / `nhaiVerifyUrl()` and wired them through
+   `computeRouteToll()`, so each matched plaza now carries a live
+   `tis.nhai.gov.in/TollInformation?TollPlazaID=<N>` link.
+2. The toll-breakdown drawer (`showTollDetail`) shows a **"✓ Verify on
+   NHAI ↗"** link under every plaza that has one — opens NHAI's own live
+   rate table for that exact plaza, in a new tab.
+3. Coverage check: **1,126 of 1,235 plazas (91%)** in `data/plazas.json`
+   are NHAI-sourced and now carry a working verify link; the remaining 109
+   are hand-verified community entries (expressway zones, etc.) with no
+   single NHAI TollPlazaID and intentionally show no link rather than a
+   fabricated one.
+4. Confirmed the underlying raw NHAI dataset FleetHub already uses
+   (`toll-api/data/india_tolls_raw_1674.json`) is identical, record for
+   record, to the freshest available pull as of this release (same 1,674
+   IDs, same `last_updated` timestamp) — so no data refresh was needed,
+   only the ID → link plumbing.
+5. Attempted to reach NHAI's own bulk "Toll Plazas at a Glance" listing
+   page directly — it times out to automated fetches (only individual
+   per-plaza pages are reachable that way), so the verify link is
+   per-plaza rather than a bulk cross-check page; that per-plaza link is
+   still the same government page a person would land on manually.
+4 new regression tests lock in: the URL builder's exact output, that
+non-NHAI community plazas never get a fabricated link, that every link on
+a matched route is well-formed, and that a real route resolves at least
+one true NHAI id.
+
 ## v3.4 — RCA: Khurja → Aurangabad → Gurugram → Khurja (Sep 2026)
 
 **Reported:** toll ₹3,836 and 275 km looked wrong vs Google Maps; the maths

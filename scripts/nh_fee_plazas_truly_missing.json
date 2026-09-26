@@ -1,0 +1,1722 @@
+[
+ {
+  "netc_code": "2005",
+  "name": "Ahmedabad Toll Plaza",
+  "state": "Gujarat",
+  "district": "Ahmedabad",
+  "nh": "NE-1",
+  "section": "A V Expressway Phase 1 & 2",
+  "piu": "Ahmedabad",
+  "regional_office": "Gandhinagar"
+ },
+ {
+  "netc_code": "2006",
+  "name": "Ahmedabad (Ring Road) Toll Plaza",
+  "state": "Gujarat",
+  "district": "Ahmedabad",
+  "nh": "NE-1",
+  "section": "A V Expressway Phase 1 & 2",
+  "piu": "Ahmedabad",
+  "regional_office": "Gandhinagar"
+ },
+ {
+  "netc_code": "2007",
+  "name": "Nadiad Toll Plaza",
+  "state": "Gujarat",
+  "district": "Kheda",
+  "nh": "NE-1",
+  "section": "A V Expressway Phase 1 & 2",
+  "piu": "Ahmedabad",
+  "regional_office": "Gandhinagar"
+ },
+ {
+  "netc_code": "2010",
+  "name": "Ahmedabad Ring Road 2",
+  "state": "Gujarat",
+  "district": "Ahmedabad",
+  "nh": "NE-1",
+  "section": "Ahmedabad-Vadodara Expressway(Km 0.00 to Km 93.302 )",
+  "piu": "Ahmedabad",
+  "regional_office": "Gandhinagar"
+ },
+ {
+  "netc_code": "14001",
+  "name": "Ambala Chandigarh",
+  "state": "Punjab",
+  "district": "Ambala",
+  "nh": "22 & 21",
+  "section": "Ambala - Zirakpur",
+  "piu": "Chandigarh",
+  "regional_office": "Chandigarh"
+ },
+ {
+  "netc_code": "16001",
+  "name": "Vanagiri",
+  "state": "Karnataka",
+  "district": "Koppal",
+  "nh": "13",
+  "section": "Hungund - Hospet",
+  "piu": "Hospet",
+  "regional_office": "Bangalore"
+ },
+ {
+  "netc_code": "24002",
+  "name": "Kamptee Kanhan Bypass Check Toll Plaza",
+  "state": "Maharashtra",
+  "district": "Nagpur",
+  "nh": "7",
+  "section": "MP/Maharashtra Border - Nagpur & Nagpur Bypass and operation and maintenance of already four\nlaned (Nagpur - Hyderabad)",
+  "piu": "Nagpur",
+  "regional_office": "Nagpur"
+ },
+ {
+  "netc_code": "35001",
+  "name": "ELECTRONIC CITY Phase 1",
+  "state": "Karnataka",
+  "district": "Bangalore Urban",
+  "nh": "7",
+  "section": "Silk Board Junction - Hosur",
+  "piu": "Bangalore Expressway",
+  "regional_office": "Bangalore"
+ },
+ {
+  "netc_code": "39001",
+  "name": "L&T PANIPAT",
+  "state": "Haryana",
+  "district": "Panipat",
+  "nh": "44 (old NH-1)",
+  "section": "Panipat Elevated Highway",
+  "piu": "Ambala",
+  "regional_office": "Chandigarh"
+ },
+ {
+  "netc_code": "48003",
+  "name": "Nellore Plaza (NH- 16), (old NH-5)",
+  "state": "Andhra Pradesh",
+  "district": "Nellore",
+  "nh": "5",
+  "section": "Tada - Nellore",
+  "piu": "Nellore",
+  "regional_office": "Vijayawada"
+ },
+ {
+  "netc_code": "53001",
+  "name": "Gondkhairi Plaza",
+  "state": "Maharashtra",
+  "district": "Nagpur",
+  "nh": "6",
+  "section": "Nagpur - Kondhali",
+  "piu": "Amravati - NGP",
+  "regional_office": "Nagpur"
+ },
+ {
+  "netc_code": "56001",
+  "name": "Kozhinjiipatti Plaza",
+  "state": "Tamil Nadu",
+  "district": "Thrissur",
+  "nh": "7",
+  "section": "Dindigul Bypass - Samyanallore",
+  "piu": "Madurai",
+  "regional_office": "Madurai"
+ },
+ {
+  "netc_code": "73003",
+  "name": "Musunur Toll Plaza",
+  "state": "Andhra Pradesh",
+  "district": "Nellore",
+  "nh": "5",
+  "section": "Chilakaluripet - Nellore",
+  "piu": "Ongole",
+  "regional_office": "Vijayawada"
+ },
+ {
+  "netc_code": "103001",
+  "name": "Jat Gangaicha Toll Plaza",
+  "state": "Haryana",
+  "district": "Rewari",
+  "nh": "71",
+  "section": "Rohtak - Bawal",
+  "piu": "Sonepat",
+  "regional_office": "Chandigarh"
+ },
+ {
+  "netc_code": "118001",
+  "name": "Nelamangala Toll Plaza",
+  "state": "Karnataka",
+  "district": "Bagalore Rural",
+  "nh": "75 (old 45)",
+  "section": "Neelamangla Junction - Devihalli",
+  "piu": "Hasan",
+  "regional_office": "Bangalore"
+ },
+ {
+  "netc_code": "118002",
+  "name": "Bellur Toll Plaza",
+  "state": "Karnataka",
+  "district": "Mandya",
+  "nh": "75 (old 45)",
+  "section": "Neelamangla Junction - Devihalli",
+  "piu": "Hasan",
+  "regional_office": "Bangalore"
+ },
+ {
+  "netc_code": "125003",
+  "name": "Baretha or Jajau",
+  "state": "Uttar Pradesh",
+  "district": "Agra (UP)",
+  "nh": "44",
+  "section": "Agra-Gwalior NH44 (Ch 13.000 to Ch 59.000)",
+  "piu": "Gwalior",
+  "regional_office": "Bhopal"
+ },
+ {
+  "netc_code": "142001",
+  "name": "Ghoti toll plaza",
+  "state": "Maharashtra",
+  "district": "Nashik",
+  "nh": "3",
+  "section": "Vadape - Gonde",
+  "piu": "Nashik",
+  "regional_office": "Mumbai"
+ },
+ {
+  "netc_code": "151001",
+  "name": "Sambalpur Baragarh Tollways",
+  "state": "Odisha",
+  "district": "SAMBALPUR",
+  "nh": "6",
+  "section": "Sambalpur – Baragarh – Orissa / Chhatisgarh Border",
+  "piu": "Sambalpur",
+  "regional_office": "Bhubaneswar"
+ },
+ {
+  "netc_code": "176001",
+  "name": "Valvanthankottai",
+  "state": "Tamil Nadu",
+  "district": "Valvanthankottai",
+  "nh": "67",
+  "section": "Thanjavur - Trichy",
+  "piu": "Thanjavur",
+  "regional_office": "Madurai"
+ },
+ {
+  "netc_code": "177001",
+  "name": "Pondicherry Tindivanam Toll Plaza",
+  "state": "Tamil Nadu",
+  "district": "Viluppuram",
+  "nh": "32/NH-66",
+  "section": "Pondicherry - Tindivanam",
+  "piu": "Puducherry",
+  "regional_office": "Chennai"
+ },
+ {
+  "netc_code": "199004",
+  "name": "SORAON Toll Plaza",
+  "state": "Uttar Pradesh",
+  "district": "Prayagraj",
+  "nh": "2 ( new NH-19)",
+  "section": "Allahabad Bypass",
+  "piu": "Prayagraj",
+  "regional_office": "varanasi"
+ },
+ {
+  "netc_code": "199005",
+  "name": "SAHSON Toll Plaza",
+  "state": "Uttar Pradesh",
+  "district": "Prayagraj",
+  "nh": "2 ( new NH-19)",
+  "section": "Allahabad Bypass",
+  "piu": "Prayagraj",
+  "regional_office": "varanasi"
+ },
+ {
+  "netc_code": "239100",
+  "name": "Luhari Village",
+  "state": "Uttar Pradesh",
+  "district": "Alighar",
+  "nh": "91",
+  "section": "Ghaziabad-Aligarh Section",
+  "piu": "Aligarh",
+  "regional_office": "Lucknow - West"
+ },
+ {
+  "netc_code": "239301",
+  "name": "Eethakota at Km.946.300",
+  "state": "Andhra Pradesh",
+  "district": "Dr. B. R. Ambedkar Konaseema",
+  "nh": "216A(Old 5)",
+  "section": "Diwancheruvu - Siddhantham",
+  "piu": "Rajahmundry",
+  "regional_office": "Vijayawada"
+ },
+ {
+  "netc_code": "239700",
+  "name": "PamPamPallam Toll Plaza",
+  "state": "Kerala",
+  "district": "Palakkad",
+  "nh": "544",
+  "section": "Walayar-Vadakkancherry",
+  "piu": "Palakkad",
+  "regional_office": "Kerala"
+ },
+ {
+  "netc_code": "242001",
+  "name": "Mayar Toll Plaza",
+  "state": "Haryana",
+  "district": "Hisar",
+  "nh": "10 (New NH-09)",
+  "section": "Rohtak-Hissar",
+  "piu": "Hisar",
+  "regional_office": "Chandigarh"
+ },
+ {
+  "netc_code": "257001",
+  "name": "Sasthan Toll Plaza",
+  "state": "Karnataka",
+  "district": "Udupi",
+  "nh": "66 (Old 17)",
+  "section": "Kundapur-Suratkhal & Nantur Circle to Mahaveer Circle & Mahaveer circle to Kerala Border\n(Talapady)",
+  "piu": "Mangalore",
+  "regional_office": "Bangalore"
+ },
+ {
+  "netc_code": "311001",
+  "name": "Akshardham Plaza DME KM 2500",
+  "state": "Delhi",
+  "district": "New Delhi",
+  "nh": "9",
+  "section": "DELHI MEERUT EXPRESSWAY",
+  "piu": "Ghaziabad",
+  "regional_office": "Delhi"
+ },
+ {
+  "netc_code": "311002",
+  "name": "Ghazipur Plaza DME KM 7500",
+  "state": "Delhi",
+  "district": "New Delhi",
+  "nh": "9",
+  "section": "DELHI MEERUT EXPRESSWAY",
+  "piu": "Ghaziabad",
+  "regional_office": "Delhi"
+ },
+ {
+  "netc_code": "311003",
+  "name": "Sarai Kalen Khan",
+  "state": "Delhi",
+  "district": "New Delhi",
+  "nh": "334",
+  "section": "Delhi-Meerut Expressway (EPE)",
+  "piu": "Ghaziabad",
+  "regional_office": "Delhi"
+ },
+ {
+  "netc_code": "311004",
+  "name": "CWG Flyover Plaza DME KM 1500",
+  "state": "Delhi",
+  "district": "New Delhi",
+  "nh": "9",
+  "section": "DELHI MEERUT EXPRESSWAY",
+  "piu": "Ghaziabad",
+  "regional_office": "Delhi"
+ },
+ {
+  "netc_code": "311005",
+  "name": "Indirapuram Plaza DME KM 9500",
+  "state": "Delhi",
+  "district": "New Delhi",
+  "nh": "334",
+  "section": "Delhi-Meerut Expressway (EPE)",
+  "piu": "Ghaziabad",
+  "regional_office": "Delhi"
+ },
+ {
+  "netc_code": "312017",
+  "name": "Bhavdeen Plaza",
+  "state": "Haryana",
+  "district": "Sirsa",
+  "nh": "10 (New -9)",
+  "section": "Hissar-dabwali (Pkg-II)",
+  "piu": "Hisar",
+  "regional_office": "Chandigarh"
+ },
+ {
+  "netc_code": "312019",
+  "name": "Main Plaza Village Jakhauli",
+  "state": "Haryana",
+  "district": "Sonipat",
+  "nh": "NE-II",
+  "section": "NH NE -II(National Highway on NE-II) (EPE) Eastern peripheral Expressway",
+  "piu": "EPE",
+  "regional_office": "Delhi"
+ },
+ {
+  "netc_code": "312021",
+  "name": "Chhajju Nagar",
+  "state": "Haryana",
+  "district": "Palwal",
+  "nh": "NE-II",
+  "section": "NH NE -II(National Highway on NE-II) (EPE) Eastern peripheral Expressway",
+  "piu": "EPE",
+  "regional_office": "Delhi"
+ },
+ {
+  "netc_code": "312027",
+  "name": "Badarpur Faridabad Toll plaza",
+  "state": "Haryana",
+  "district": "South East",
+  "nh": "2",
+  "section": "Badarpur Elevated Highways",
+  "piu": "Mathura",
+  "regional_office": "Delhi"
+ },
+ {
+  "netc_code": "312030",
+  "name": "Thana Village Toll Plaza",
+  "state": "Haryana",
+  "district": "Kurukshetra",
+  "nh": "152 (old NH-65)",
+  "section": "Pehowa-Kaithal",
+  "piu": "Ambala",
+  "regional_office": "Chandigarh"
+ },
+ {
+  "netc_code": "312047",
+  "name": "Ghamroj Sohna Road Toll Plaza",
+  "state": "Haryana",
+  "district": "Gurugram",
+  "nh": "248A",
+  "section": "Gurgaon-Sohna Section",
+  "piu": "Rewari",
+  "regional_office": "Delhi"
+ },
+ {
+  "netc_code": "312051",
+  "name": "Chandlana Toll Plaza",
+  "state": "Haryana",
+  "district": "Kaithal",
+  "nh": "152D",
+  "section": "Ismailabad-Gangheri",
+  "piu": "Bhiwani",
+  "regional_office": "Delhi"
+ },
+ {
+  "netc_code": "312053",
+  "name": "Kheri Sharaf Ali Toll Plaza",
+  "state": "Haryana",
+  "district": "Karnal",
+  "nh": "152D",
+  "section": "Ismailabad-Gangheri",
+  "piu": "Bhiwani",
+  "regional_office": "Delhi"
+ },
+ {
+  "netc_code": "312056",
+  "name": "Chabri Toll Plaza",
+  "state": "Haryana",
+  "district": "Jind",
+  "nh": "152D",
+  "section": "Ismailabad-Gangheri",
+  "piu": "Bhiwani",
+  "regional_office": "Delhi"
+ },
+ {
+  "netc_code": "312057",
+  "name": "Kilazafargarh Toll Plaza",
+  "state": "Haryana",
+  "district": "Jind",
+  "nh": "152D",
+  "section": "Ismailabad-Gangheri",
+  "piu": "Bhiwani",
+  "regional_office": "Delhi"
+ },
+ {
+  "netc_code": "312058",
+  "name": "Bainsi Toll Plaza",
+  "state": "Haryana",
+  "district": "Rohtak",
+  "nh": "152D",
+  "section": "Ismailabad-Gangheri",
+  "piu": "Bhiwani",
+  "regional_office": "Delhi"
+ },
+ {
+  "netc_code": "312060",
+  "name": "Kherari Toll Plaza",
+  "state": "Haryana",
+  "district": "Rohtak",
+  "nh": "152D",
+  "section": "Ismailabad-Gangheri",
+  "piu": "Bhiwani",
+  "regional_office": "Delhi"
+ },
+ {
+  "netc_code": "312062",
+  "name": "Buchawas Toll Plaza",
+  "state": "Haryana",
+  "district": "Mahendragarh",
+  "nh": "152D",
+  "section": "Ismailabad-Gangheri",
+  "piu": "Bhiwani",
+  "regional_office": "Delhi"
+ },
+ {
+  "netc_code": "312063",
+  "name": "Bhalkhi Toll Plaza",
+  "state": "Haryana",
+  "district": "Mahendragarh",
+  "nh": "152D",
+  "section": "Ismailabad-Gangheri",
+  "piu": "Bhiwani",
+  "regional_office": "Delhi"
+ },
+ {
+  "netc_code": "312064",
+  "name": "Jat Guwana Toll Plaza",
+  "state": "Haryana",
+  "district": "Mahendragarh",
+  "nh": "152D",
+  "section": "Ismailabad-Gangheri",
+  "piu": "Bhiwani",
+  "regional_office": "Delhi"
+ },
+ {
+  "netc_code": "312065",
+  "name": "Pabanawa Toll Plaza",
+  "state": "Haryana",
+  "district": "Kaithal",
+  "nh": "152D",
+  "section": "Ismailabad-Gangheri",
+  "piu": "Bhiwani",
+  "regional_office": "Delhi"
+ },
+ {
+  "netc_code": "312069",
+  "name": "Kalinger Fee Plaza",
+  "state": "Haryana",
+  "district": "Nuh",
+  "nh": "NE-4",
+  "section": "Delhi-Vadodra Expressway in the states of Haryana and Rajasthan on EPC Mode",
+  "piu": "Sohna",
+  "regional_office": "Delhi"
+ },
+ {
+  "netc_code": "312073",
+  "name": "Kiranj Toll Plaza",
+  "state": "Haryana",
+  "district": "Nuh",
+  "nh": "148NA",
+  "section": "DND- Faridabad - Sohna / 6 Lane",
+  "piu": "Mathura",
+  "regional_office": "Delhi"
+ },
+ {
+  "netc_code": "314029",
+  "name": "Chaukiman/Gurhe",
+  "state": "Punjab",
+  "district": "Ludhiana",
+  "nh": "5(Old-95)",
+  "section": "Ludhiana - Talwandi NHDP-III",
+  "piu": "Ludhiana",
+  "regional_office": "Chandigarh"
+ },
+ {
+  "netc_code": "317002",
+  "name": "Dolhu Nallah Fee Plaza",
+  "state": "Himachal Pradesh",
+  "district": "Kullu",
+  "nh": "21 (new-3)",
+  "section": "Kullu - Manali-2LPS",
+  "piu": "Mandi",
+  "regional_office": "Shimla"
+ },
+ {
+  "netc_code": "320071",
+  "name": "Ukasa (Chamari) Toll Plaza",
+  "state": "Uttar Pradesh",
+  "district": "Baghpat",
+  "nh": "25",
+  "section": "Bara-Orai section",
+  "piu": "Kanpur",
+  "regional_office": "Lucknow - West"
+ },
+ {
+  "netc_code": "320079",
+  "name": "Sayyad Mazra",
+  "state": "Uttar Pradesh",
+  "district": "Saharanpur",
+  "nh": "73 & 72A",
+  "section": "Roorkee-Chutmalpur-Gagalheri and Chutmalpur-Ganeshpur NHDP-IV",
+  "piu": "Roorkee",
+  "regional_office": "Dehradun"
+ },
+ {
+  "netc_code": "320086",
+  "name": "Sabli Toll Plaza",
+  "state": "Uttar Pradesh",
+  "district": "Puranpur",
+  "nh": "730A",
+  "section": "Powayan - Puranpur 2-LPS",
+  "piu": "Bareilly",
+  "regional_office": "Lucknow - West"
+ },
+ {
+  "netc_code": "320100",
+  "name": "Dundahera",
+  "state": "Uttar Pradesh",
+  "district": "Ghaziabad",
+  "nh": "334",
+  "section": "Delhi-Meerut Expressway (EPE)",
+  "piu": "Ghaziabad",
+  "regional_office": "Delhi"
+ },
+ {
+  "netc_code": "320102",
+  "name": "Rasoolpur",
+  "state": "Uttar Pradesh",
+  "district": "Ghaziabad",
+  "nh": "334",
+  "section": "Delhi-Meerut Expressway (EPE)",
+  "piu": "Ghaziabad",
+  "regional_office": "Delhi"
+ },
+ {
+  "netc_code": "320103",
+  "name": "Bhojpur Plaza DME KM 4570",
+  "state": "Uttar Pradesh",
+  "district": "Ghaziabad",
+  "nh": "334",
+  "section": "Delhi-Meerut Expressway (EPE)",
+  "piu": "Ghaziabad",
+  "regional_office": "Delhi"
+ },
+ {
+  "netc_code": "320104",
+  "name": "DME KM 5200",
+  "state": "Uttar Pradesh",
+  "district": "Meerut",
+  "nh": "9",
+  "section": "DELHI MEERUT EXPRESSWAY",
+  "piu": "Ghaziabad",
+  "regional_office": "Delhi"
+ },
+ {
+  "netc_code": "320105",
+  "name": "Partapur Plaza DME KM 5900",
+  "state": "Uttar Pradesh",
+  "district": "Meerut",
+  "nh": "9",
+  "section": "DELHI MEERUT EXPRESSWAY",
+  "piu": "Ghaziabad",
+  "regional_office": "Delhi"
+ },
+ {
+  "netc_code": "320106",
+  "name": "Noida Plaza DME KM 1400",
+  "state": "Uttar Pradesh",
+  "district": "Ghaziabad",
+  "nh": "9",
+  "section": "DELHI MEERUT EXPRESSWAY",
+  "piu": "Ghaziabad",
+  "regional_office": "Delhi"
+ },
+ {
+  "netc_code": "320107",
+  "name": "Mehrauli Plaza DME KM 2350",
+  "state": "Uttar Pradesh",
+  "district": "Ghaziabad",
+  "nh": "9",
+  "section": "DELHI MEERUT EXPRESSWAY",
+  "piu": "Ghaziabad",
+  "regional_office": "Delhi"
+ },
+ {
+  "netc_code": "320112",
+  "name": "Kashi Plaza DME KM 5823",
+  "state": "Uttar Pradesh",
+  "district": "Meerut",
+  "nh": "334",
+  "section": "Delhi-Meerut Expressway (EPE)",
+  "piu": "Ghaziabad",
+  "regional_office": "Delhi"
+ },
+ {
+  "netc_code": "330073",
+  "name": "Sakatura (Kota Bypass)",
+  "state": "Rajasthan",
+  "district": "Kota",
+  "nh": "27",
+  "section": "Kota Bypass Section of NH-27",
+  "piu": "Kota",
+  "regional_office": "Jaipur"
+ },
+ {
+  "netc_code": "330113",
+  "name": "Six ml (Hanumangarh)",
+  "state": "Rajasthan",
+  "district": "Hanumangarh",
+  "nh": "15 (New 62)",
+  "section": "Suratgarh-Sriganganagar\n2 lane with PS",
+  "piu": "Hanumangarh",
+  "regional_office": "Jaipur"
+ },
+ {
+  "netc_code": "330115",
+  "name": "Kuchera Toll Plaza",
+  "state": "Rajasthan",
+  "district": "nagaur",
+  "nh": "89",
+  "section": "Ajmer - Nagaur",
+  "piu": "Ajmer",
+  "regional_office": "Jaipur"
+ },
+ {
+  "netc_code": "330125",
+  "name": "Seora Toll Plaza",
+  "state": "Rajasthan",
+  "district": "Bikaner",
+  "nh": "911",
+  "section": "Khajuwala-Poogal and Poogal-Dantrour-Jaggasar-Gokul-Goddu-Ranjeetpura-Charanwala-Naukh-Bap",
+  "piu": "Bikaner",
+  "regional_office": "Jaipur"
+ },
+ {
+  "netc_code": "336026",
+  "name": "Danta Dharampur Toll Plaza",
+  "state": "Gujarat",
+  "district": "Banaskantha",
+  "nh": "151A",
+  "section": "Dwarka-Connctig Khambaliya, Jam Nagar, Dhrol, Amran Terminating at its Junction at NH-27 near\nMaliya",
+  "piu": "Rajkot",
+  "regional_office": "Gandhinagar"
+ },
+ {
+  "netc_code": "340060",
+  "name": "Penur Toll Plaza",
+  "state": "Maharashtra",
+  "district": "Solapur",
+  "nh": "965",
+  "section": "Mohol – Wakhari & Wakhari – Khudus Section",
+  "piu": "Pandharpur",
+  "regional_office": "Mumbai"
+ },
+ {
+  "netc_code": "345007",
+  "name": "Dattigaon",
+  "state": "Madhya Pradesh",
+  "district": "Dhar",
+  "nh": "47",
+  "section": "NH-47/ Indore to Gujarat Border",
+  "piu": "Indore",
+  "regional_office": "Bhopal"
+ },
+ {
+  "netc_code": "345010",
+  "name": "Chapra New Delhi",
+  "state": "Madhya Pradesh",
+  "district": "Rajgarh",
+  "nh": "52",
+  "section": "NH-52 Biaora to Dewas",
+  "piu": "Indore",
+  "regional_office": "Bhopal"
+ },
+ {
+  "netc_code": "345057",
+  "name": "Shadol/Dhuwar",
+  "state": "Madhya Pradesh",
+  "district": "Shahdol",
+  "nh": "43",
+  "section": "2 lane+PS road Shahdol- Anuppur at Madhya Pradesh/ Chhatisgarh Border Section from chainage\nkm 142.200 to km 234.000 ( NH 43)",
+  "piu": "Katni",
+  "regional_office": "Bhopal"
+ },
+ {
+  "netc_code": "345068",
+  "name": "Bahoripar Fee Plaza",
+  "state": "Madhya Pradesh",
+  "district": "Jabalpur",
+  "nh": "30",
+  "section": "km 468.000 to km 545.000, Section of NH-30",
+  "piu": "Jabalpur",
+  "regional_office": "Bhopal"
+ },
+ {
+  "netc_code": "352022",
+  "name": "Nathavalasa",
+  "state": "Andhra Pradesh",
+  "district": "Vizianagaram",
+  "nh": "16(old 5)",
+  "section": "Ranastalam- Visakhapatnam",
+  "piu": "Vishakhapatnam",
+  "regional_office": "Vijayawada"
+ },
+ {
+  "netc_code": "352041",
+  "name": "Panchvati Colony(Vishakapatnam Port Connectivity)",
+  "state": "Andhra Pradesh",
+  "district": "Visakhapatnam",
+  "nh": "NE-5 (New NH-16)",
+  "section": "Vishakhapatnam Port Connectivity Project",
+  "piu": "Vishakhapatnam",
+  "regional_office": "Vijayawada"
+ },
+ {
+  "netc_code": "352042",
+  "name": "Goshtani Gate of Navy(Vishakapatnam Port Connectivity)",
+  "state": "Andhra Pradesh",
+  "district": "Visakhapatnam",
+  "nh": "516C",
+  "section": "Vishakhapatnam Port Connectivity Project",
+  "piu": "Vishakhapatnam",
+  "regional_office": "Vijayawada"
+ },
+ {
+  "netc_code": "352065",
+  "name": "Paatimeeda Palli",
+  "state": "Andhra Pradesh",
+  "district": "YSR kadapa",
+  "nh": "18",
+  "section": "Cudappa-Mydukur-Kurnool,NHDP-III",
+  "piu": "Kadapa",
+  "regional_office": "Vijayawada"
+ },
+ {
+  "netc_code": "360029",
+  "name": "Pattarai Toll Plaza",
+  "state": "Tamil Nadu",
+  "district": "Tiruvallur",
+  "nh": "716 ( NH-205",
+  "section": "Tirupati Tiruthani Chennai",
+  "piu": "Chennai-2",
+  "regional_office": "Chennai"
+ },
+ {
+  "netc_code": "360031",
+  "name": "SriPerumbadur",
+  "state": "Tamil Nadu",
+  "district": "Kancheepuram",
+  "nh": "48 ( NH-4)",
+  "section": "Walajhapet - Poonamalai",
+  "piu": "Kancheepuram",
+  "regional_office": "Chennai"
+ },
+ {
+  "netc_code": "360036",
+  "name": "VAGAIKULAM TOLL PLAZA",
+  "state": "Tamil Nadu",
+  "district": "Thoothukudi (Tuticorin)",
+  "nh": "7A mew 138",
+  "section": "Tirunelveli - Tuticorin",
+  "piu": "Tuticorin",
+  "regional_office": "Madurai"
+ },
+ {
+  "netc_code": "375015",
+  "name": "Pipili",
+  "state": "Odisha",
+  "district": "PURI",
+  "nh": "203",
+  "section": "Bhubneshwar - Puri",
+  "piu": "Bhubaneswar",
+  "regional_office": "Bhubaneswar"
+ },
+ {
+  "netc_code": "375016",
+  "name": "Gudipada or Gangapada Toll Plaza",
+  "state": "Odisha",
+  "district": "Khordha",
+  "nh": "5",
+  "section": "Sunakhala - Bhubaneshwar",
+  "piu": "Dhenkanal",
+  "regional_office": "Bhubaneswar"
+ },
+ {
+  "netc_code": "375022",
+  "name": "Brajrajnagar Toll Plaza",
+  "state": "Odisha",
+  "district": "JHARSUGUDA",
+  "nh": "49 (Old NH-200)",
+  "section": "Kanaktora to Jharsuguda",
+  "piu": "Sambalpur",
+  "regional_office": "Bhubaneswar"
+ },
+ {
+  "netc_code": "379007",
+  "name": "Diengpasoh Toll Plaza",
+  "state": "Meghalaya",
+  "district": "Ri Bhoi",
+  "nh": "6",
+  "section": "Shilong bypass",
+  "piu": "Shillong",
+  "regional_office": "Guwahati"
+ },
+ {
+  "netc_code": "380029",
+  "name": "Khaikhat",
+  "state": "Bihar",
+  "district": "Kishanganj",
+  "nh": "327 (E)",
+  "section": "Galgalia-Rehman Ganj Chowk",
+  "piu": "Darbhanga",
+  "regional_office": "Patna"
+ },
+ {
+  "netc_code": "392014",
+  "name": "Hazaribagh-Ranchi Expressway (Pundag)",
+  "state": "Jharkhand",
+  "district": "Ranchi",
+  "nh": "33",
+  "section": "Hazaribagh - Ranchi\nincluding ramgarh bypass",
+  "piu": "Ranchi",
+  "regional_office": "Ranchi"
+ },
+ {
+  "netc_code": "520033",
+  "name": "Rasoolpur Plaza (EPE)",
+  "state": "Uttar Pradesh",
+  "district": "Ghazibad",
+  "nh": "NE-II",
+  "section": "NH NE -II(National Highway on NE-II) (EPE) Eastern peripheral Expressway",
+  "piu": "EPE",
+  "regional_office": "Delhi"
+ },
+ {
+  "netc_code": "520039",
+  "name": "Mirzapur / Kyampur Toll Plaza",
+  "state": "Uttar Pradesh",
+  "district": "Ghazipur",
+  "nh": "29",
+  "section": "Varanasi to Gorakhpur section",
+  "piu": "Gorakhpur",
+  "regional_office": "varanasi"
+ },
+ {
+  "netc_code": "536059",
+  "name": "Kusthala Toll Plaza",
+  "state": "Rajasthan",
+  "district": "Sawai Madhopur",
+  "nh": "NE-4",
+  "section": "Delhi-Vadodra Greenfield alignment (EPC)",
+  "piu": "Dausa",
+  "regional_office": "Jaipur"
+ },
+ {
+  "netc_code": "536061",
+  "name": "Mithegaon Toll Plaza",
+  "state": "Uttar Pradesh",
+  "district": "Ayodhya",
+  "nh": "330A",
+  "section": "Jagdishpur-Ayodhya section",
+  "piu": "Ayodhya",
+  "regional_office": "varanasi"
+ },
+ {
+  "netc_code": "536084",
+  "name": "Chottian User fee Plaza",
+  "state": "Punjab",
+  "district": "Sangrur",
+  "nh": "148B",
+  "section": "Moonak - Jakhal - Budhlada - Bhikhi",
+  "piu": "Chandigarh",
+  "regional_office": "Chandigarh"
+ },
+ {
+  "netc_code": "536091",
+  "name": "Semalkhedi Fee Plaza",
+  "state": "Madhya Pradesh",
+  "district": "Agar Malwa",
+  "nh": "552G",
+  "section": "2 lane with paved shoulders from km. 0+000 to 132+955 of Ujjain–Jhalawar upto Rajasthan border\nof NH-552 G with 0.620 km stretch of Ujjain city in the state of Madhya Pradesh on EPC mode.",
+  "piu": "Ujjain",
+  "regional_office": "Bhopal"
+ },
+ {
+  "netc_code": "536093",
+  "name": "Jogewal Toll Plaza",
+  "state": "Haryana",
+  "district": "Sirsa",
+  "nh": "54",
+  "section": "Mandi Dabwali (Pb./Hr. Border)-Chautala Road Section from Proposed Mandi Dabwali Bypass",
+  "piu": "Hisar",
+  "regional_office": "Chandigarh"
+ },
+ {
+  "netc_code": "536094",
+  "name": "Dabwali Toll Plaza",
+  "state": "Haryana",
+  "district": "Sirsa",
+  "nh": "54",
+  "section": "Mandi Dabwali (Pb./Hr. Border)-Chautala Road Section from Proposed Mandi Dabwali Bypass",
+  "piu": "Hisar",
+  "regional_office": "Chandigarh"
+ },
+ {
+  "netc_code": "536097",
+  "name": "Abubshehar Toll Plaza",
+  "state": "Haryana",
+  "district": "Sirsa",
+  "nh": "54",
+  "section": "Mandi Dabwali (Pb./Hr. Border)-Chautala Road Section from Proposed Mandi Dabwali Bypass",
+  "piu": "Hisar",
+  "regional_office": "Chandigarh"
+ },
+ {
+  "netc_code": "536098",
+  "name": "Chautala Toll Plaza",
+  "state": "Haryana",
+  "district": "Sirsa",
+  "nh": "54",
+  "section": "Mandi Dabwali (Pb./Hr. Border)-Chautala Road Section from Proposed Mandi Dabwali Bypass",
+  "piu": "Hisar",
+  "regional_office": "Chandigarh"
+ },
+ {
+  "netc_code": "536124",
+  "name": "Chohilanwali Toll Plaza",
+  "state": "Rajasthan",
+  "district": "Hanumangarh",
+  "nh": "754A",
+  "section": "Amritsar-Jamnagar",
+  "piu": "Hanumangarh",
+  "regional_office": "Jaipur"
+ },
+ {
+  "netc_code": "536199",
+  "name": "Shringveerpur Toll Plaza",
+  "state": "Uttar Pradesh",
+  "district": "Prayagraj",
+  "nh": "2 ( new NH-19)",
+  "section": "Allahabad Bypass",
+  "piu": "Prayagraj",
+  "regional_office": "varanasi"
+ },
+ {
+  "netc_code": "536201",
+  "name": "Badkapara Split Plaza",
+  "state": "Rajasthan",
+  "district": "kota",
+  "nh": "NE-4",
+  "section": "Delhi-Vadodra Greenfield alignment (EPC)",
+  "piu": "Dausa",
+  "regional_office": "Jaipur"
+ },
+ {
+  "netc_code": "536206",
+  "name": "Karadiya Toll Plaza",
+  "state": "Rajasthan",
+  "district": "Sawai Madhopur",
+  "nh": "NE-4",
+  "section": "DVE Package-13",
+  "piu": "Kota",
+  "regional_office": "Jaipur"
+ },
+ {
+  "netc_code": "536213",
+  "name": "Hariharnath Toll Plaza",
+  "state": "Jharkhand",
+  "district": "Palamu",
+  "nh": "98",
+  "section": "Hariharganj - Parwa More (HAM)",
+  "piu": "Daltonganj",
+  "regional_office": "Ranchi"
+ },
+ {
+  "netc_code": "536307",
+  "name": "Chechat Toll Plaza",
+  "state": "Rajasthan",
+  "district": "Sawai Madhopur",
+  "nh": "NE-4",
+  "section": "DVE Package-16",
+  "piu": "Kota",
+  "regional_office": "Jaipur"
+ },
+ {
+  "netc_code": "536310",
+  "name": "DodakaToll Plaza",
+  "state": "Gujarat",
+  "district": "Vadodara",
+  "nh": "NE-4",
+  "section": "Vadodara Mumbai Expressway (Padra to Vadodara) (Phase IA - Pkg I) [Km 355.00 to Km 378.740]",
+  "piu": "Godhra",
+  "regional_office": "Gandhinagar"
+ },
+ {
+  "netc_code": "536311",
+  "name": "FajalpurToll Plaza",
+  "state": "Gujarat",
+  "district": "Ahmedabad",
+  "nh": "NE-4",
+  "section": "Vadodara Mumbai Expressway (Padra to Vadodara) (Phase IA - Pkg I) [Km 355.00 to Km 378.740]",
+  "piu": "Godhra",
+  "regional_office": "Gandhinagar"
+ },
+ {
+  "netc_code": "536312",
+  "name": "SamiyalaToll Plaza",
+  "state": "Gujarat",
+  "district": "Kutch",
+  "nh": "NE-4",
+  "section": "Vadodara Mumbai Expressway (Padra to Vadodara) (Phase IA - Pkg I) [Km 355.00 to Km 378.740]",
+  "piu": "Godhra",
+  "regional_office": "Gandhinagar"
+ },
+ {
+  "netc_code": "536313",
+  "name": "SanpaToll Plaza",
+  "state": "Gujarat",
+  "district": "Morbi",
+  "nh": "NE-4",
+  "section": "Vadodara Mumbai Expressway (Padra to Vadodara) (Phase IA - Pkg I) [Km 355.00 to Km 378.740]",
+  "piu": "Godhra",
+  "regional_office": "Gandhinagar"
+ },
+ {
+  "netc_code": "536314",
+  "name": "DahegamToll Plaza",
+  "state": "Gujarat",
+  "district": "Gandhinagar",
+  "nh": "NE-4",
+  "section": "Vadodara Mumbai Expressway (Ankleshwar to Manubar) (Phase IA- Pkg IV)",
+  "piu": "Surat",
+  "regional_office": "Gandhinagar"
+ },
+ {
+  "netc_code": "536325",
+  "name": "Manaklaw TP-02",
+  "state": "Rajasthan",
+  "district": "Sawai Madhopur",
+  "nh": "125A",
+  "section": "Dangiawas - Jajiwal (pkg-1) of Jodhpur ringroad section",
+  "piu": "Jodhpur",
+  "regional_office": "Jaipur"
+ },
+ {
+  "netc_code": "536406",
+  "name": "Hassangarh",
+  "state": "Haryana",
+  "district": "Rohtak",
+  "nh": "NE-5",
+  "section": "Delhi-Amritsar-Katra Expressway",
+  "piu": "Sonepat",
+  "regional_office": "Chandigarh"
+ },
+ {
+  "netc_code": "536407",
+  "name": "Humanyupur",
+  "state": "Haryana",
+  "district": "Rohtak",
+  "nh": "NE-5",
+  "section": "Delhi-Amritsar-Katra Expressway",
+  "piu": "Sonepat",
+  "regional_office": "Chandigarh"
+ },
+ {
+  "netc_code": "536409",
+  "name": "Issapur Kheri",
+  "state": "Haryana",
+  "district": "Sonipat",
+  "nh": "NE-5",
+  "section": "Delhi-Amritsar-Katra Expressway",
+  "piu": "Sonepat",
+  "regional_office": "Chandigarh"
+ },
+ {
+  "netc_code": "536410",
+  "name": "Jamni",
+  "state": "Haryana",
+  "district": "Jind",
+  "nh": "NE-5",
+  "section": "Delhi-Amritsar-Katra Expressway (Ch. 79.090)",
+  "piu": "Bhiwani",
+  "regional_office": "Chandigarh"
+ },
+ {
+  "netc_code": "536412",
+  "name": "Kharak Pandwa",
+  "state": "Haryana",
+  "district": "Kaithal",
+  "nh": "NE-5",
+  "section": "Delhi-Amritsar-Katra Expressway",
+  "piu": "Bhiwani",
+  "regional_office": "Chandigarh"
+ },
+ {
+  "netc_code": "536417",
+  "name": "Laban Toll Plaza",
+  "state": "Rajasthan",
+  "district": "Tonk",
+  "nh": "NE-4",
+  "section": "DVE Package-12",
+  "piu": "Kota",
+  "regional_office": "Jaipur"
+ },
+ {
+  "netc_code": "536459",
+  "name": "TP-24 Nana Masera, Mota Masera",
+  "state": "Gujarat",
+  "district": "Surat",
+  "nh": "754A",
+  "section": "Amritsar -Jamnagar Section 6-lane access controlled Greenfield highway from Km. 4+888 to Km\n130+073 of Rajasthan/Gujarat border to Santalpur section of NH-754A as a part of Amritsar-\nJamnagar Economic Corridor in the State of Gujarat",
+  "piu": "Palanpur",
+  "regional_office": "Gandhinagar"
+ },
+ {
+  "netc_code": "536460",
+  "name": "TP-25 Budhanpur",
+  "state": "Gujarat",
+  "district": "Mehsana",
+  "nh": "754A",
+  "section": "Amritsar -Jamnagar Section ,6-lane access controlled Greenfield highway from Km. 4+888 to Km\n130+073 of Rajasthan/Gujarat border to Santalpur section of NH-754A as a part of Amritsar-\nJamnagar Economic Corridor in the State of Gujarat",
+  "piu": "Palanpur",
+  "regional_office": "Gandhinagar"
+ },
+ {
+  "netc_code": "536461",
+  "name": "TP-26 Tharad",
+  "state": "Gujarat",
+  "district": "Banaskantha",
+  "nh": "754A",
+  "section": "Amritsar -Jamnagar Section ,6-lane access controlled Greenfield highway from Km. 4+888 to Km\n130+073 of Rajasthan/Gujarat border to Santalpur section of NH-754A as a part of Amritsar-\nJamnagar Economic Corridor in the State of Gujarat",
+  "piu": "Palanpur",
+  "regional_office": "Gandhinagar"
+ },
+ {
+  "netc_code": "536462",
+  "name": "TP-27 Jorawargadh",
+  "state": "Gujarat",
+  "district": "Vadodara",
+  "nh": "754A",
+  "section": "Amritsar -Jamnagar Section 6-lane access controlled Greenfield highway from Km. 4+888 to Km\n130+073 of Rajasthan/Gujarat border to Santalpur section of NH-754A as a part of Amritsar-\nJamnagar Economic Corridor in the State of Gujarat",
+  "piu": "Palanpur",
+  "regional_office": "Gandhinagar"
+ },
+ {
+  "netc_code": "536463",
+  "name": "TP-28 Varonosari",
+  "state": "Gujarat",
+  "district": "Varanasi",
+  "nh": "754A",
+  "section": "Amritsar -Jamnagar Section 6-lane access controlled Greenfield highway from Km. 4+888 to Km\n130+073 of Rajasthan/Gujarat border to Santalpur section of NH-754A as a part of Amritsar-\nJamnagar Economic Corridor in the State of Gujarat",
+  "piu": "Palanpur",
+  "regional_office": "Gandhinagar"
+ },
+ {
+  "netc_code": "536464",
+  "name": "TP-29 Bakutra",
+  "state": "Gujarat",
+  "district": "Kutch",
+  "nh": "754A",
+  "section": "Amritsar -Jamnagar Section 6-lane access controlled Greenfield highway from Km. 4+888 to Km\n130+073 of Rajasthan/Gujarat border to Santalpur section of NH-754A as a part of Amritsar-\nJamnagar Economic Corridor in the State of Gujarat",
+  "piu": "Palanpur",
+  "regional_office": "Gandhinagar"
+ },
+ {
+  "netc_code": "536465",
+  "name": "Jamni NH 152D",
+  "state": "Haryana",
+  "district": "Jind",
+  "nh": "152D",
+  "section": "Ismailabad-Gangheri",
+  "piu": "Bhiwani",
+  "regional_office": "Delhi"
+ },
+ {
+  "netc_code": "536486",
+  "name": "TP-23 Mokhupura",
+  "state": "Rajasthan",
+  "district": "Ajmer",
+  "nh": "754A",
+  "section": "Amritsar -Jamnagar Section 6-lane access controlled Greenfield highway from Km. 4+888 to Km\n130+073 of Rajasthan/Gujarat border to Santalpur section of NH-754A as a part of Amritsar-\nJamnagar Economic Corridor in the State of Gujarat",
+  "piu": "Jodhpur",
+  "regional_office": "Jaipur"
+ },
+ {
+  "netc_code": "536487",
+  "name": "Jajoosan",
+  "state": "Rajasthan",
+  "district": "Jalore",
+  "nh": "754A",
+  "section": "Amritsar Jamnagar Economic Corridor",
+  "piu": "JODHPUR",
+  "regional_office": "JAIPUR"
+ },
+ {
+  "netc_code": "536511",
+  "name": "Gella Ki Nagal",
+  "state": "Rajasthan",
+  "district": "Sri Madhopur",
+  "nh": "NE-4C",
+  "section": "Bandikul to Jaipur",
+  "piu": "Dausa",
+  "regional_office": "Jaipur"
+ },
+ {
+  "netc_code": "536512",
+  "name": "Shyamsinghpura Virtual (Entry Exit ) Toll",
+  "state": "Rajasthan",
+  "district": "Shyamsinghpura",
+  "nh": "NE-4C",
+  "section": "Bandikul to Jaipur ( Dausa/Delhi-Mumbai Expressway)",
+  "piu": "DAUSA",
+  "regional_office": "JAIPUR"
+ },
+ {
+  "netc_code": "536514",
+  "name": "Kuri Khurd",
+  "state": "Rajasthan",
+  "district": "Dausa",
+  "nh": "NE-4C",
+  "section": "Bandikul to Jaipur",
+  "piu": "Dausa",
+  "regional_office": "Jaipur"
+ },
+ {
+  "netc_code": "536611",
+  "name": "Sunderpalya (Closed Loop toll )",
+  "state": "Karnataka",
+  "district": "Kolar",
+  "nh": "NE-07",
+  "section": "Bangalore Chennai Expressway (Km 68+620 (Interchange -04 Fee Plaza) on (Bethamangala to\nVenkatgirikota Road-SH-95) Vengasandra & Sunderpalya Village in Kolar District )",
+  "piu": "Bangalore Expressway",
+  "regional_office": "Bangalore"
+ },
+ {
+  "netc_code": "536613",
+  "name": "Hedaginabele (Closed Loop toll )",
+  "state": "Karnataka",
+  "district": "Kolar",
+  "nh": "NE-07",
+  "section": "Bangalore Chennai Expressway (Km 14+756 LHS Fee Plaza Km 14+226 RHS Fee Plaza\nHedigenabele Village in Kolar District)",
+  "piu": "Bangalore Expressway",
+  "regional_office": "Bangalore"
+ },
+ {
+  "netc_code": "536614",
+  "name": "Agrahara (Closed Loop toll)",
+  "state": "Karnataka",
+  "district": "Kolar",
+  "nh": "NE-07",
+  "section": "Bangalore Chennai Expressway (Km 24+131 (Interchange -02 Fee Plaza) on (Malur to Kolar Road)\nAgrahara Village in Kolar District)",
+  "piu": "Bangalore Expressway",
+  "regional_office": "Bangalore"
+ },
+ {
+  "netc_code": "536615",
+  "name": "Krishnarajapura (Closed Loop toll )",
+  "state": "Karnataka",
+  "district": "Kolar",
+  "nh": "NE-07",
+  "section": "Bangalore Chennai Expressway (Km 52+037 (Interchange -03 Fee Plaza) on (Bangarpet to\nBethamangala Road SH-95) Doddaru Karapanahalli & Krishnarajapura Village in Kolar District)",
+  "piu": "Bangalore Expressway",
+  "regional_office": "Bangalore"
+ },
+ {
+  "netc_code": "536618",
+  "name": "Mundka (UER II Expressway )",
+  "state": "Delhi",
+  "district": "West",
+  "nh": "344M and 344N",
+  "section": "Development of 6 lane NH-344M from village Bakoli at NH 1 to Karala-Kanjhawala Road to Nangloi\nNajafgarh Road to Sector 24 Dwarka. Development of 4 lane NH 344N (from km 0+000 to 7+269,\n7.3km ) starting from ,NH 344 M ,Delhi till Bahadurgarh bypass of NH-10 near Bahadurgarh in\nHaryana as spur.",
+  "piu": "Dwarka",
+  "regional_office": "Dellhi"
+ },
+ {
+  "netc_code": "536648",
+  "name": "Tulaheda",
+  "state": "Madhya Pradesh",
+  "district": "Ujjain",
+  "nh": "752D",
+  "section": "4 Lane ujjain-garoth (Package -I,II & III) section of NH-752D",
+  "piu": "Ujjain",
+  "regional_office": "Bhopal"
+ },
+ {
+  "netc_code": "536649",
+  "name": "Khedakhajuriya",
+  "state": "Madhya Pradesh",
+  "district": "Ujjain",
+  "nh": "752D",
+  "section": "4 Lane ujjain-garoth (Package -I,II & III) section of NH-752D",
+  "piu": "Ujjain",
+  "regional_office": "Bhopal"
+ },
+ {
+  "netc_code": "536650",
+  "name": "Mudla Sondhiya",
+  "state": "Madhya Pradesh",
+  "district": "Ujjain",
+  "nh": "752D",
+  "section": "4 Lane ujjain-garoth (Package -I,II & III) section of NH-752D",
+  "piu": "Ujjain",
+  "regional_office": "Bhopal"
+ },
+ {
+  "netc_code": "536651",
+  "name": "Barkheda Barod",
+  "state": "Madhya Pradesh",
+  "district": "Indore",
+  "nh": "752D",
+  "section": "4 Lane ujjain-garoth (Package -III &amp; III) section of NH-752D Toll plaza at Ch. 107+406 of\nNH-752D (Ch. 74+684 of NH-148NG)",
+  "piu": "Ujjain",
+  "regional_office": "Bhopal"
+ },
+ {
+  "netc_code": "536652",
+  "name": "Nayakheda",
+  "state": "Madhya Pradesh",
+  "district": "Malwa",
+  "nh": "752D",
+  "section": "4 Lane ujjain-garoth (Package -I,II & III) section of NH-752D",
+  "piu": "Ujjain",
+  "regional_office": "Bhopal"
+ },
+ {
+  "netc_code": "536653",
+  "name": "Antraliya",
+  "state": "Madhya Pradesh",
+  "district": "Jhalawar",
+  "nh": "752D",
+  "section": "4 Lane ujjain-garoth (Package -I,II & III) section of NH-752D",
+  "piu": "Ujjain",
+  "regional_office": "Bhopal"
+ },
+ {
+  "netc_code": "536654",
+  "name": "Semalikankad",
+  "state": "Madhya Pradesh",
+  "district": "Mandsaur",
+  "nh": "752D",
+  "section": "4 Lane ujjain-garoth (Package -I,II & III) section of NH-752D",
+  "piu": "Ujjain",
+  "regional_office": "Bhopal"
+ },
+ {
+  "netc_code": "536703",
+  "name": "Gurthari",
+  "state": "Punjab",
+  "district": "Mansa",
+  "nh": "54",
+  "section": "stretch from kilometer 10.820 to kilometer 38.220 (Jodhpur Romana-Mandi Dabwali) of National\nHighway no. 64 (New NH-54) in the state of Punjab",
+  "piu": "Bhatinda",
+  "regional_office": "Chandigarh"
+ },
+ {
+  "netc_code": "536705",
+  "name": "Pathrala Toll Plaza",
+  "state": "Punjab",
+  "district": "Sangrur",
+  "nh": "54",
+  "section": "stretch from kilometer 10.820 to kilometer 38.220 (Jodhpur Romana-Mandi Dabwali) of National\nHighway no. 64 (New NH-54) in the state of Punjab",
+  "piu": "Bhatinda",
+  "regional_office": "Chandigarh"
+ },
+ {
+  "netc_code": "540006",
+  "name": "Shilphata NH48 Toll Plaza",
+  "state": "Maharashtra",
+  "district": "Thane",
+  "nh": "48",
+  "section": "Four laning of Mumbai-Pune section of NH-4 [New NH-48] from Km 20/400- Km 131/200",
+  "piu": "MoRTH",
+  "regional_office": "MoRTH"
+ },
+ {
+  "netc_code": "540009",
+  "name": "Dehuroad (Somatane) Toll Plaza",
+  "state": "Maharashtra",
+  "district": "Pune",
+  "nh": "48",
+  "section": "Four laning of Mumbai-Pune section of NH-4 [New NH-48] from Km 20/400- Km 131/200",
+  "piu": "MoRTH",
+  "regional_office": "MoRTH"
+ },
+ {
+  "netc_code": "546000",
+  "name": "NeemthurToll Plaza",
+  "state": "Madhya Pradesh",
+  "district": "Mandsuar",
+  "nh": "NE-4",
+  "section": "Delhi- Vadodara Mumbai Expressway NE-4 in the state of Madhya Pradesh",
+  "piu": "Ratlam",
+  "regional_office": "Bhopal"
+ },
+ {
+  "netc_code": "546001",
+  "name": "GarothToll Plaza",
+  "state": "Madhya Pradesh",
+  "district": "Mandsuar",
+  "nh": "NE-4",
+  "section": "Delhi- Vadodara Mumbai Expressway NE-4 in the state of Madhya Pradesh",
+  "piu": "Ratlam",
+  "regional_office": "Bhopal"
+ },
+ {
+  "netc_code": "546002",
+  "name": "DalavadaToll Plaza",
+  "state": "Madhya Pradesh",
+  "district": "Mandsuar",
+  "nh": "NE-4",
+  "section": "Delhi - Vadodara Mumbai Expressway NE-4 in the state of Madhya Pradesh",
+  "piu": "Ratlam",
+  "regional_office": "Bhopal"
+ },
+ {
+  "netc_code": "546003",
+  "name": "DVE Bhuteda Plaza",
+  "state": "Madhya Pradesh",
+  "district": "Ratlam",
+  "nh": "NE-4",
+  "section": "Delhi- Vadodara Mumbai Expressway NE-4 in the state of Madhya Pradesh",
+  "piu": "Ratlam",
+  "regional_office": "Bhopal"
+ },
+ {
+  "netc_code": "546004",
+  "name": "NayapuraToll Plaza",
+  "state": "Madhya Pradesh",
+  "district": "Ratlam",
+  "nh": "NE-4",
+  "section": "Delhi- Vadodara Mumbai Expressway NE-4 in the state of Madhya Pradesh",
+  "piu": "Ratlam",
+  "regional_office": "Bhopal"
+ },
+ {
+  "netc_code": "546005",
+  "name": "DhamnodToll Plaza",
+  "state": "Madhya Pradesh",
+  "district": "Ratlam",
+  "nh": "NE-4",
+  "section": "Delhi- Vadodara Mumbai Expressway NE-4 in the state of Madhya Pradesh",
+  "piu": "Ratlam",
+  "regional_office": "Bhopal"
+ },
+ {
+  "netc_code": "546006",
+  "name": "TimarwaniToll Plaza",
+  "state": "Madhya Pradesh",
+  "district": "Jhabua",
+  "nh": "NE-4",
+  "section": "Delhi- Vadodara Mumbai Expressway NE-4 in the state of Madhya Pradesh",
+  "piu": "Ratlam",
+  "regional_office": "Bhopal"
+ },
+ {
+  "netc_code": "546008",
+  "name": "Malkisar Toll Plaza",
+  "state": "Rajasthan",
+  "district": "Jhunjhunu",
+  "nh": "754A",
+  "section": "Amritsar -Jamnagar Section",
+  "piu": "Hanumangarh",
+  "regional_office": "Jaipur"
+ },
+ {
+  "netc_code": "546009",
+  "name": "Uchharangdesar Toll Plaza",
+  "state": "Rajasthan",
+  "district": "Bikaner",
+  "nh": "754A",
+  "section": "Amritsar -Jamnagar Section",
+  "piu": "Hanumangarh",
+  "regional_office": "Jaipur"
+ },
+ {
+  "netc_code": "546010",
+  "name": "Norangdesar Toll Plaza",
+  "state": "Rajasthan",
+  "district": "Hanumangarh",
+  "nh": "754A",
+  "section": "Amritsar -Jamnagar Section",
+  "piu": "Hanumangarh",
+  "regional_office": "Jaipur"
+ },
+ {
+  "netc_code": "546011",
+  "name": "Deshnok Toll Plaza",
+  "state": "Rajasthan",
+  "district": "Bikaner",
+  "nh": "754A",
+  "section": "Amritsar -Jamnagar Section",
+  "piu": "Hanumangarh",
+  "regional_office": "Jaipur"
+ },
+ {
+  "netc_code": "546013",
+  "name": "Bungri Toll Plaza",
+  "state": "Rajasthan",
+  "district": "Sirohi",
+  "nh": "754A",
+  "section": "Amritsar -Jamnagar Section",
+  "piu": "Jodhpur",
+  "regional_office": "Jaipur"
+ },
+ {
+  "netc_code": "546015",
+  "name": "Jathon ki Dhani Hanumansagar Toll Plaza",
+  "state": "Rajasthan",
+  "district": "Hanumangarh",
+  "nh": "754A",
+  "section": "Amritsar -Jamnagar Section",
+  "piu": "Jodhpur",
+  "regional_office": "Jaipur"
+ },
+ {
+  "netc_code": "546017",
+  "name": "Khudiyala Toll Plaza",
+  "state": "Rajasthan",
+  "district": "Jodhpur",
+  "nh": "754A",
+  "section": "Amritsar -Jamnagar Section",
+  "piu": "Jodhpur",
+  "regional_office": "Jaipur"
+ },
+ {
+  "netc_code": "546018",
+  "name": "Deogarh Toll Plaza",
+  "state": "Rajasthan",
+  "district": "Rajsamand",
+  "nh": "754A",
+  "section": "Amritsar -Jamnagar Section",
+  "piu": "Jodhpur",
+  "regional_office": "Jaipur"
+ },
+ {
+  "netc_code": "546019",
+  "name": "Ashirway Toll Plaza",
+  "state": "Rajasthan",
+  "district": "Alwar",
+  "nh": "754A",
+  "section": "Amritsar -Jamnagar Section",
+  "piu": "Jodhpur",
+  "regional_office": "Jaipur"
+ },
+ {
+  "netc_code": "546021",
+  "name": "Moothli Toll Plaza",
+  "state": "Rajasthan",
+  "district": "Pali",
+  "nh": "754A",
+  "section": "Amritsar -Jamnagar Section",
+  "piu": "Jodhpur",
+  "regional_office": "Jaipur"
+ },
+ {
+  "netc_code": "546022",
+  "name": "Sangana Toll Plaza",
+  "state": "Rajasthan",
+  "district": "Jodhpur",
+  "nh": "754A",
+  "section": "Amritsar -Jamnagar Section",
+  "piu": "Jodhpur",
+  "regional_office": "Jaipur"
+ },
+ {
+  "netc_code": "570042",
+  "name": "Sheetal Fee Plaza",
+  "state": "Rajasthan",
+  "district": "Alwar",
+  "nh": "NE-4",
+  "section": "Delhi-Vadodra Expressway in the states of Haryana and Rajasthan on EPC Mode",
+  "piu": "Sohna",
+  "regional_office": "Delhi"
+ },
+ {
+  "netc_code": "570046",
+  "name": "Badkapara Fee Plaza",
+  "state": "Rajasthan",
+  "district": "Dausa",
+  "nh": "NE-4",
+  "section": "Delhi-Vadodra Expressway in the states of Haryana and Rajasthan on EPC Mode",
+  "piu": "Dausa",
+  "regional_office": "Jaipur"
+ },
+ {
+  "netc_code": "536710",
+  "name": "Banshidhar",
+  "state": "Jharkhand",
+  "district": "Garhwa",
+  "nh": "75",
+  "section": "four laning from km.219.600 (Khajuri) to Km.260.660 (Wyndhamganj) section of NH-75 in\nthe state of Jharkhand.",
+  "piu": "DALTONGANJ",
+  "regional_office": "RAIPUR"
+ },
+ {
+  "netc_code": "536724",
+  "name": "Dadal TP 20 (Close Loop Toll)",
+  "state": "Rajasthan",
+  "district": "Jaisalmer",
+  "nh": "754 A",
+  "section": "\"Amritsar -Jamnagar Section 6-lane access controlled Greenfield highway from Km. 4+888\nto Km 130+073 of Rajasthan/Gujarat border to Santalpur section of NH-754A as a part of\nAmritsar-Jamnagar Economic Corridor in the State of Gujarat\"",
+  "piu": "JODHPUR",
+  "regional_office": "JAIPUR"
+ },
+ {
+  "netc_code": "536722",
+  "name": "Deora TP 21 (Close Loop Toll)",
+  "state": "Rajasthan",
+  "district": "Jaisalmer",
+  "nh": "754A",
+  "section": "\"Amritsar -Jamnagar Section 6-lane access controlled Greenfield highway from Km. 4+888\nto Km 130+073 of Rajasthan/Gujarat border to Santalpur section of NH-754A as a part of\nAmritsar-Jamnagar Economic Corridor in the State of Gujarat\"",
+  "piu": "JODHPUR",
+  "regional_office": "JAIPUR"
+ },
+ {
+  "netc_code": "536745",
+  "name": "Bajheri Toll Plaza",
+  "state": "Punjab",
+  "district": "Mohali",
+  "nh": "205A",
+  "section": "IT City-Kurali Section of NH-205A",
+  "piu": "CHANDIGARH",
+  "regional_office": "CHANDIGARH"
+ },
+ {
+  "netc_code": "536747",
+  "name": "Ghaneshpur",
+  "state": "Uttarakhand",
+  "district": "Roorkee",
+  "nh": "NH 334",
+  "section": "Delhi - Dehradun",
+  "piu": "ROORKEE",
+  "regional_office": "DEHRADOON"
+ },
+ {
+  "netc_code": null,
+  "name": "Ratowa Toll Plaza",
+  "state": "Assam",
+  "district": "Biswanath,Sonitpur",
+  "nh": "715 & 15",
+  "section": "Biswanath Chariali to Gohpur",
+  "piu": "Guwahati",
+  "regional_office": "Guwahati"
+ },
+ {
+  "netc_code": null,
+  "name": "Sahijana",
+  "state": "Uttar Pradesh",
+  "district": "Lucknow",
+  "nh": "731",
+  "section": "At km/Ch.230.344 near village Sahijana in Lucknow Dist. of Uttar Pradesh",
+  "piu": "Lucknow",
+  "regional_office": "West UP"
+ },
+ {
+  "netc_code": null,
+  "name": "Anjukuzhipatti",
+  "state": "Tamil Nadu",
+  "district": "Dindigul",
+  "nh": "383",
+  "section": "Dindigul - kottampatty",
+  "piu": "Dindigul",
+  "regional_office": "Madurai"
+ },
+ {
+  "netc_code": null,
+  "name": "Bardipada Toll plaza",
+  "state": "Maharashtra",
+  "district": "Nandurbar",
+  "nh": "53",
+  "section": "Balance work of 4 landing from Fagne - Maharashtra Gujarat border section of NH-53",
+  "piu": "Dhule",
+  "regional_office": "Nagpur"
+ }
+]
